@@ -27,9 +27,14 @@ Config file must be in class-path
 
 ## TODOs
 
- * Reload config
  * Thread pool/control
  * NIO?
+ * Custom timeout by binding
+ * Multiple remote-addr (nos only multi DNS A-record)?
+
+## DONEs
+
+ * Reload config (v1.1)
 
 ---
 Inspired in [rinetd](http://www.boutell.com/rinetd/) and [stunnel](https://www.stunnel.org/static/stunnel.html), this bouncer is Java-minimalistic version.

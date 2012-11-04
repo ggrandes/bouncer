@@ -19,17 +19,22 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.net.UnknownHostException;
 
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocketFactory;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.CyclicBarrier;
 
 import java.io.IOException;
 import java.io.BufferedReader;
@@ -48,6 +53,7 @@ public class SimpleBouncer {
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
 	private static final int READ_TIMEOUT = 300000;		// Default 5min timeout
+	private static final long RELOAD_CONFIG = 10000;	// Default 10seconds
 	private static final String CONFIG_FILE = "/bouncer.conf";
 	// Load Balancing Policies
 	private static final int LB_ORDER 	= 0x00000000; 	// Original order, pick next only on error
@@ -64,8 +70,9 @@ public class SimpleBouncer {
 			put("TUN=SSL", TUN_SSL);
 		}
 	});
-	//
-	private boolean running = true;
+	// For graceful reload
+	private List<Acceptator> acceptators = Collections.synchronizedList(new ArrayList<Acceptator>());
+	private CyclicBarrier shutdownBarrier = null; 
 
 	public static void main(final String[] args) throws Exception {
 		final SimpleBouncer bouncer = new SimpleBouncer();
@@ -74,11 +81,49 @@ public class SimpleBouncer {
 			Log.enableDebug(); // Enable debugging messages
 		Log.info("Starting " + bouncer.getClass() + " version " + VERSION + (Log.isDebug() ? " debug-mode": ""));
 		// Read config
-		final InputStream isConfig = bouncer.getClass().getResourceAsStream(CONFIG_FILE);
-		if (isConfig == null) {
-			Log.error("Config not found: " + CONFIG_FILE);
+		final URL urlConfig = bouncer.getClass().getResource(CONFIG_FILE);
+		if (urlConfig == null) {
+			Log.error("Config not found: (classpath)" + CONFIG_FILE);
 			return;
 		}
+		long lastReloaded = 0;
+		while (true) {
+			final URLConnection connConfig = urlConfig.openConnection();
+			connConfig.setUseCaches(false);
+			final long lastModified = connConfig.getLastModified();
+			Log.debug("lastReloaded=" + lastReloaded + " getLastModified()=" + connConfig.getLastModified() + " currentTimeMillis()=" + System.currentTimeMillis());
+			if (lastModified > lastReloaded) {
+				if (lastReloaded > 0) {
+					Log.info("Reloading config");
+				}
+				lastReloaded = lastModified;
+				bouncer.reload(connConfig);
+			}
+			Thread.sleep(RELOAD_CONFIG);
+		}
+	}
+
+	void reload(final URLConnection connConfig) throws IOException {
+		final InputStream isConfig = connConfig.getInputStream();
+		//
+		if (!acceptators.isEmpty()) {
+			shutdownBarrier = new CyclicBarrier(acceptators.size()+1);
+			for (Acceptator accepter : acceptators) {
+				accepter.setShutdown();
+			}
+			if (shutdownBarrier != null) {
+				try {
+					shutdownBarrier.await();
+				} 
+				catch (Exception ign) {
+				}
+				finally {
+					shutdownBarrier = null;
+				}
+			}
+			acceptators.clear();
+		}
+		//
 		final BufferedReader in = new BufferedReader(new InputStreamReader(isConfig));
 		String line = null;
 		try {
@@ -106,7 +151,7 @@ public class SimpleBouncer {
 				Log.info("Readed bind-addr=" + bindaddr + " bind-port=" + bindport + " remote-addr=" + remoteaddr + " remote-port=" + remoteport + " options("+opts+")={" + printableOptions(options) + "}");
 				InetSocketAddress listen = new InetSocketAddress(bindaddr, bindport); 
 				Destination dst = new Destination(remoteaddr, remoteport, opts);
-				bouncer.bounce(listen, dst);
+				bounce(listen, dst);
 			}
 		} finally {
 			closeSilent(in);
@@ -161,7 +206,9 @@ public class SimpleBouncer {
 			ServerSocket listen = new ServerSocket();
 			setupSocket(listen);
 			listen.bind(bind);
-			new Thread(new Acceptator(listen, dst)).start();
+			final Acceptator accepter = new Acceptator(listen, dst);
+			acceptators.add(accepter);
+			new Thread(accepter).start();
 		} catch (IOException e) {
 			Log.error("Error trying to bounce from " + bind + " to " + dst, e);
 		}
@@ -178,6 +225,9 @@ public class SimpleBouncer {
 		try { os.close(); } catch(Exception ign) {}
 	}
 	static void closeSilent(final Socket sock) {
+		try { sock.close(); } catch(Exception ign) {}
+	}
+	static void closeSilent(final ServerSocket sock) {
 		try { sock.close(); } catch(Exception ign) {}
 	}
 
@@ -275,13 +325,19 @@ public class SimpleBouncer {
 	class Acceptator implements Runnable {
 		final ServerSocket listen;
 		final Destination dst;
+		volatile boolean shutdown = false;
+		//
 		Acceptator(final ServerSocket listen, final Destination dst) {
 			this.listen = listen;
 			this.dst = dst;
 		}
+		public void setShutdown() {
+			shutdown = true;
+			closeSilent(listen);
+		}
 		public void run() {
 			try {
-				while (running) {
+				while (!shutdown) {
 					Socket client = listen.accept();
 					setupSocket(client);
 					Log.info("New client from=" + client);
@@ -289,7 +345,17 @@ public class SimpleBouncer {
 				}
 			}
 			catch(Exception e) {
-				Log.error("Acceptator: Generic exception", e);
+				if (!listen.isClosed()) {
+					Log.error("Acceptator: Generic exception", e);
+				}
+			}
+			finally {
+				if (shutdownBarrier != null) {
+					try {
+						shutdownBarrier.await();
+					} catch (Exception ign) {}
+				}
+				Log.info("Acceptator ended: " + listen);
 			}
 		}
 	}
