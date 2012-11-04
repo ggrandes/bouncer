@@ -289,7 +289,7 @@ public class SimpleBouncer {
 				}
 			}
 			catch(Exception e) {
-				Log.error("Generic exception", e);
+				Log.error("Acceptator: Generic exception", e);
 			}
 		}
 	}
@@ -347,7 +347,7 @@ public class SimpleBouncer {
 				Log.error(e.toString());
 			}
 			catch(Exception e) {
-				Log.error("Generic exception", e);
+				Log.error("Connector: Generic exception", e);
 			}
 			finally {
 				// Close all
