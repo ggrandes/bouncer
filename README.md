@@ -7,6 +7,7 @@ Config file must be in class-path
 
     # <bind-addr> <bind-port> <remote-addr> <remote-port> [options]
     0.0.0.0 1234 127.1.2.3 9876
+    127.0.0.1 5678 encrypted.google.com 443 LB=RR,TUN=SSL
  
 * Options are comma separated:
     * Loadbalancing/Failover (only one option can be used)
