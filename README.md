@@ -9,9 +9,10 @@ Config file must be in class-path
     0.0.0.0 1234 127.1.2.3 9876
  
  * Options are comma separated:
-  * **LB=ORDER**: active failover-only in DNS order
-  * **LB=RR**: active LoadBalancing in DNS order (round-robin)
-  * **LB=RAND**: activate LoadBalancing in DNS random order
+  * * Loadbalancing/Failover (only one option can be used)
+   * **LB=ORDER**: active failover-only in DNS order
+   * **LB=RR**: active LoadBalancing in DNS order (round-robin)
+   * **LB=RAND**: activate LoadBalancing in DNS random order
   * **TUN=SSL**: activate SSL tunneling (origin is plain, destination is SSL)
 
 ## Compile (handmade)
