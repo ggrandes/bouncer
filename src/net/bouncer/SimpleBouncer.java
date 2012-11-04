@@ -49,7 +49,7 @@ import java.io.Reader;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
-	public static final double VERSION = 1.0;
+	public static final double VERSION = 1.1;
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
 	private static final int READ_TIMEOUT = 300000;		// Default 5min timeout
