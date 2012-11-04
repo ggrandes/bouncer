@@ -5,6 +5,7 @@ Inspired in [rinetd](http://www.boutell.com/rinetd/) and [stunnel](https://www.s
 SimpleBouncer is an open source (Apache License, Version 2.0) Java application.
 
 ## Config (bouncer.conf)
+Config file must be in class-path
 
     # <bind-addr> <bind-port> <remote-addr> <remote-port> [options]
     0.0.0.0 1234 127.1.2.3 9876
@@ -15,5 +16,7 @@ SimpleBouncer is an open source (Apache License, Version 2.0) Java application.
   * **LB=RAND**: activate LoadBalancing in DNS random order
   * **TUN=SSL**: activate SSL tunneling (origin is plain, destination is SSL)
 
+## Running
 
+    java net.bouncer.SimpleBouncer
 
