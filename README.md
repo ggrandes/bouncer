@@ -27,6 +27,7 @@ Config file must be in class-path
 
 ## TODOs
 
+ * Reload config
  * Thread pool/control
  * NIO?
 
