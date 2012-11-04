@@ -1,6 +1,6 @@
 # Simple Bouncer (TCP)
 
-SimpleBouncer is an open source (Apache License, Version 2.0) Java application.
+SimpleBouncer is an open source (Apache License, Version 2.0) Java application. Do not require any external lib.
 
 ## Config (bouncer.conf)
 Config file must be in class-path
@@ -24,5 +24,10 @@ Config file must be in class-path
 
     java -cp .:bouncer.jar net.bouncer.SimpleBouncer
 
+## TODOs
+
+ * Thread pool/control
+ * NIO?
+
 ---
-Inspired in [rinetd](http://www.boutell.com/rinetd/) and [stunnel](https://www.stunnel.org/static/stunnel.html) this bouncer is Java-minimalistic version.
+Inspired in [rinetd](http://www.boutell.com/rinetd/) and [stunnel](https://www.stunnel.org/static/stunnel.html), this bouncer is Java-minimalistic version.
