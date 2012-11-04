@@ -27,14 +27,23 @@ Config file must be in class-path
 
 ## TODOs
 
- * Thread pool/control
- * NIO?
- * Custom timeout by binding
- * Multiple remote-addr (nos only multi DNS A-record)?
+* Thread pool/control
+* NIO?
+* Custom timeout by binding
+* Multiple remote-addr (nos only multi DNS A-record)?
 
 ## DONEs
 
- * Reload config (v1.1)
+* Reload config (v1.1)
+
+## MISC
+Current harcoded values:
+
+* Buffer length for I/O: 4096bytes (2 buffers for connection)
+* Connection timeout: 30seconds
+* Read timeout: 5minutes
+* Reload config check time interval: 10seconds
+
 
 ---
 Inspired in [rinetd](http://www.boutell.com/rinetd/) and [stunnel](https://www.stunnel.org/static/stunnel.html), this bouncer is Java-minimalistic version.
