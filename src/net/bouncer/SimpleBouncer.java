@@ -14,11 +14,13 @@
  */
 package net.bouncer;
 
+import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
@@ -52,6 +54,7 @@ public class SimpleBouncer {
 	public static final double VERSION = 1.1;
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
+	private static final int CONNECT_TIMEOUT = 30000;	// Default 30seconds timeout
 	private static final int READ_TIMEOUT = 300000;		// Default 5min timeout
 	private static final long RELOAD_CONFIG = 10000;	// Default 10seconds
 	private static final String CONFIG_FILE = "/bouncer.conf";
@@ -307,15 +310,23 @@ public class SimpleBouncer {
 				Log.info("Connecting to " + addr + ":" + port + (isSSL? " (SSL)": ""));
 				if (isSSL) {
 					SocketFactory factory = SSLSocketFactory.getDefault();
-					sock = factory.createSocket(addr.getHostAddress(), port);
+					sock = factory.createSocket();
 				}
 				else {
-					sock = new Socket(addr, port);
+					sock = new Socket();
 				}
+				sock.connect(new InetSocketAddress(addr, port), CONNECT_TIMEOUT); 
+			} catch(SocketTimeoutException e) {
+				Log.error("Error connecting to " + addr + ":" + port + (isSSL? " (SSL) ": " ") + e.toString());
+			} catch(ConnectException e) {
+				Log.error("Error connecting to " + addr + ":" + port + (isSSL? " (SSL) ": " ") + e.toString());
 			} catch (IOException e) {
 				Log.error("Error connecting to " + addr + ":" + port + (isSSL? " (SSL)": ""), e);
 			}
-			return sock;
+			if ((sock != null) && sock.isConnected()) {
+				return sock;
+			}
+			return null;
 		}
 	}
 
@@ -380,6 +391,9 @@ public class SimpleBouncer {
 				// Remote
 				dst.resolve();
 				remote = dst.connect();
+				if (remote == null) {
+					return;
+				}
 				setupSocket(remote);
 				remote_os = remote.getOutputStream();
 				remote_is = remote.getInputStream();
