@@ -31,7 +31,8 @@ Config file must be in class-path
 * Thread pool/control
 * NIO?
 * Custom timeout by binding
-* Multiple remote-addr (nos only multi DNS A-record)?
+* Multiple remote-addr (not only multi DNS A-record)?
+* Reverse tunnels (like ssh -R)
 
 ## DONEs
 
