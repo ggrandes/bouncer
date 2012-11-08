@@ -33,6 +33,7 @@ Config file must be in class-path
 * Custom timeout by binding
 * Multiple remote-addr (not only multi DNS A-record)?
 * Reverse tunnels (like ssh -R)
+* Use Log4J
 
 ## DONEs
 
