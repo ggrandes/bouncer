@@ -57,7 +57,7 @@ Current harcoded values:
 
 ## DOC
 
-Schema about Reverse Tunneling:
+#### Schema about Reverse Tunneling:
     
 ![Reverse Tunneling](https://raw.github.com/ggrandes/bouncer/master/doc/reverse_tunneling.png "Reverse Tunneling")
 
@@ -66,6 +66,11 @@ Schema about Reverse Tunneling:
 3. Machine-B request to Machine-A new SubChannel over MUX (Tunnel).
 4. Machine-A open connection to Machine-C (Server).
 5. Done: Machine-D is able to speak with Machine-C
+
+###### Notes about security:
+
+* Machine-B (MUX-IN) should be in DMZ.
+* Machine-A (MUX-OUT) and Machine-C (Server) may be in internal network.
 
 ---
 Inspired in [rinetd](http://www.boutell.com/rinetd/) and [stunnel](https://www.stunnel.org/static/stunnel.html), this bouncer is Java-minimalistic version.
