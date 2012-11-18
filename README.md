@@ -82,5 +82,20 @@ Current harcoded values:
 * Machine-B (MUX-IN) should be in DMZ.
 * Machine-A (MUX-OUT) and Machine-C (Server) may be in internal network.
 
+#### Schema about Forward port:
+    
+![Forward port](https://raw.github.com/ggrandes/bouncer/master/doc/forward_port.png "Forward port")
+
+1. Machine-A (Client) init connection to Machine-B (Bouncer)
+2. Machine-B init connection to Machine-C (Server)
+3. Done: Machine-A is able to speak with Machine-C
+
+###### Notes about security:
+
+* Machine-A (Client) may be in Internal network.
+* Machine-B (Bouncer) may be in DMZ.
+* Machine-C (Server) may be in External network.
+
+
 ---
 Inspired in [rinetd](http://www.boutell.com/rinetd/) and [stunnel](https://www.stunnel.org/static/stunnel.html), this bouncer is Java-minimalistic version.
