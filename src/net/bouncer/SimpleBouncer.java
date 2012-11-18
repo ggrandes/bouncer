@@ -829,7 +829,7 @@ public class SimpleBouncer {
 							msg.fromWire(is);
 							router.onReceiveFromRemote(this, msg);
 						} catch (SocketTimeoutException e) {
-							Log.info(this.getClass().getSimpleName() + e.toString());
+							Log.info(this.getClass().getSimpleName() + " " + e.toString());
 							continue;
 						} catch (EOFException e) {
 							break;
@@ -1113,7 +1113,7 @@ public class SimpleBouncer {
 						msg.fromWire(is);
 						router.onReceiveFromLocal(this, msg);
 					} catch (SocketTimeoutException e) {
-						Log.info(this.getClass().getSimpleName() + e.toString());
+						Log.info(this.getClass().getSimpleName() + " " + e.toString());
 						continue;
 					} catch (EOFException e) {
 						break;
