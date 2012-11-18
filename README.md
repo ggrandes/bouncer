@@ -61,6 +61,11 @@ Schema about Reverse Tunneling:
     
 ![Reverse Tunneling](https://raw.github.com/ggrandes/bouncer/master/doc/reverse_tunneling.png "Reverse Tunneling")
 
+1. Machine-A with MUX-OUT init connection to Machine-B (MUX-IN)
+2. Machine-D (Client) init connection to Machine-B (MUX-IN)
+3. Machine-B request to Machine-A new SubChannel over MUX (Tunnel).
+4. Machine-A open connection to Machine-C (Server).
+5. Done: Machine-D is able to speak with Machine-C
 
 ---
 Inspired in [rinetd](http://www.boutell.com/rinetd/) and [stunnel](https://www.stunnel.org/static/stunnel.html), this bouncer is Java-minimalistic version.
