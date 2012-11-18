@@ -3,11 +3,22 @@
 SimpleBouncer is an open source (Apache License, Version 2.0) Java application. Do not require any external lib.
 
 ## Config (bouncer.conf)
-Config file must be in class-path
+Config file must be in class-path, general format is:
+
+    # <left-addr> <left-port> <right-addr> <right-port> [options]
+
+* Options are comma separated:
+    * Loadbalancing/Failover (only one option can be used)
+        * **LB=ORDER**: active failover-only in DNS order
+        * **LB=RR**: active LoadBalancing in DNS order (round-robin)
+        * **LB=RAND**: activate LoadBalancing in DNS random order
+    * **TUN=SSL**: activate SSL tunneling (origin is plain, destination is SSL)
+    * **MUX=IN**: activate input-terminator multiplexor (for reverse tunnels)
+    * **MUX=OUT**: activate output-initiator multiplexor (for reverse tunnels)
 
 ##### Example config of simple forward:
 
-    # <bind-addr> <bind-port> <remote-addr> <remote-port> [options]
+    # <listen-addr> <listen-port> <remote-addr> <remote-port> [options]
     0.0.0.0 1234 127.1.2.3 9876
     127.0.0.1 5678 encrypted.google.com 443 LB=RR,TUN=SSL
     
@@ -20,18 +31,9 @@ Config file must be in class-path
 
 ###### Machine-B (MUX-IN):
  
-    # <bind-tun-addr> <bind-tun-port> <bind-addr> <bind-port> MUX-IN
+    # <listen-tun-addr> <listen-tun-port> <listen-addr> <listen-port> MUX-IN
     192.168.2.1 5555 127.0.0.1 8080 MUX=IN
  
-* Options are comma separated:
-    * Loadbalancing/Failover (only one option can be used)
-        * **LB=ORDER**: active failover-only in DNS order
-        * **LB=RR**: active LoadBalancing in DNS order (round-robin)
-        * **LB=RAND**: activate LoadBalancing in DNS random order
-    * **TUN=SSL**: activate SSL tunneling (origin is plain, destination is SSL)
-    * **MUX=IN**: activate input-terminator multiplexor (for reverse tunnels)
-    * **MUX=OUT**: activate output-initiator multiplexor (for reverse tunnels)
-
 ## Compile (handmade)
 
     mkdir classes
