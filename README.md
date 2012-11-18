@@ -34,37 +34,6 @@ Config file must be in class-path, general format is:
     # <listen-tun-addr> <listen-tun-port> <listen-addr> <listen-port> MUX-IN
     192.168.2.1 5555 127.0.0.1 8080 MUX=IN
  
-## Compile (handmade)
-
-    mkdir classes
-    javac -d classes/ src/net/bouncer/SimpleBouncer.java
-    jar cvf bouncer.jar -C classes/ .
-
-## Running
-
-    java -cp .:bouncer.jar net.bouncer.SimpleBouncer
-
-## TODOs
-
-* NIO?
-* Custom timeout by binding
-* Multiple remote-addr (not only multi DNS A-record)?
-* Use Log4J
-
-## DONEs
-
-* Reload config (v1.1)
-* Thread pool/control (v1.2)
-* Reverse tunnels (like ssh -R) (v1.2)
-
-## MISC
-Current harcoded values:
-
-* Buffer length for I/O: 4096bytes (2 buffers for connection)
-* Connection timeout: 30seconds
-* Read timeout: 5minutes
-* Reload config check time interval: 10seconds
-
 ## DOC
 
 #### Schema about Reverse Tunneling:
@@ -95,6 +64,41 @@ Current harcoded values:
 * Machine-A (Client) may be in Internal network.
 * Machine-B (Bouncer) may be in DMZ.
 * Machine-C (Server) may be in External network.
+
+---
+
+## Compile (handmade)
+
+    mkdir classes
+    javac -d classes/ src/net/bouncer/SimpleBouncer.java
+    jar cvf bouncer.jar -C classes/ .
+
+## Running
+
+    java -cp .:bouncer.jar net.bouncer.SimpleBouncer
+
+---
+
+## TODOs
+
+* NIO?
+* Custom timeout by binding
+* Multiple remote-addr (not only multi DNS A-record)?
+* Use Log4J
+
+## DONEs
+
+* Reload config (v1.1)
+* Thread pool/control (v1.2)
+* Reverse tunnels (like ssh -R) (v1.2)
+
+## MISC
+Current harcoded values:
+
+* Buffer length for I/O: 4096bytes (2 buffers for connection)
+* Connection timeout: 30seconds
+* Read timeout: 5minutes
+* Reload config check time interval: 10seconds
 
 
 ---
