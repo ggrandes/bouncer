@@ -2,6 +2,8 @@
 
 SimpleBouncer is an open source (Apache License, Version 2.0) Java application. Do not require any external lib.
 
+---
+
 ## Config (bouncer.conf)
 Config file must be in class-path, general format is:
 
