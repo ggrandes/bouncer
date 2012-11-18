@@ -339,7 +339,7 @@ public class SimpleBouncer {
 			} catch (Exception ign) {}
 		}
 	}
-	
+
 	void reload(final URLConnection connConfig) throws IOException {
 		final InputStream isConfig = connConfig.getInputStream();
 		//
@@ -506,7 +506,7 @@ public class SimpleBouncer {
 	interface BouncerAddress {
 		public String toString();
 	}
-	
+
 	/**
 	 * Representation of listen address 
 	 */
@@ -671,7 +671,7 @@ public class SimpleBouncer {
 		//
 		OutboundAddress left;
 		OutboundAddress right;
-		
+
 		MuxClient(OutboundAddress left, OutboundAddress right) {
 			this.left = left;
 			this.right = right;
@@ -764,7 +764,7 @@ public class SimpleBouncer {
 			}
 		}
 
-		class MuxClientRemote implements Shutdownable, Awaiter, Runnable { // Remote is MUX
+		abstract class MuxClientConnection implements Shutdownable, Awaiter, Runnable { // Remote is MUX, Local is RAW
 			OutboundAddress outboundAddress;
 			Socket sock;
 			InputStream is;
@@ -772,14 +772,11 @@ public class SimpleBouncer {
 			MuxClientMessageRouter router;
 			boolean shutdown = false;
 			//
-			public MuxClientRemote(OutboundAddress outboundAddress) throws IOException {
+			public MuxClientConnection(OutboundAddress outboundAddress) throws IOException {
 				this.outboundAddress = outboundAddress;
 			}
 			public void setRouter(MuxClientMessageRouter router) {
 				this.router = router;
-			}
-			public void sendRemote(Message msg) throws IOException {
-				msg.toWire(os);
 			}
 			@Override
 			public void setShutdown() {
@@ -790,6 +787,15 @@ public class SimpleBouncer {
 			}
 			public void close() {
 				setShutdown();
+			}
+		}
+
+		class MuxClientRemote extends MuxClientConnection { // Remote is MUX
+			public MuxClientRemote(OutboundAddress outboundAddress) throws IOException {
+				super(outboundAddress);
+			}
+			public void sendRemote(Message msg) throws IOException {
+				msg.toWire(os);
 			}
 			@Override
 			public void run() {
@@ -849,17 +855,12 @@ public class SimpleBouncer {
 				Log.info(this.getClass().getSimpleName() + " end");
 			}
 		}
-		class MuxClientLocal implements Shutdownable, Runnable { // Local is RAW
-			OutboundAddress outboundAddress;
-			Socket sock;
-			InputStream is;
-			OutputStream os;
-			MuxClientMessageRouter router;
-			boolean shutdown = false;
+
+		class MuxClientLocal extends MuxClientConnection { // Local is RAW
 			int id;
 			//
 			public MuxClientLocal(OutboundAddress outboundAddress) throws IOException {
-				this.outboundAddress = outboundAddress;
+				super(outboundAddress);
 				outboundAddress.resolve();
 				sock = outboundAddress.connect();
 				if (sock == null)
@@ -870,21 +871,8 @@ public class SimpleBouncer {
 			public void setId(int id) {
 				this.id = id;
 			}
-			public void setRouter(MuxClientMessageRouter router) {
-				this.router = router;
-			}
 			public void sendLocal(Message msg) throws IOException {
 				msg.toWire(os);
-			}
-			@Override
-			public void setShutdown() {
-				shutdown = true;
-				closeSilent(is);
-				closeSilent(os);
-				closeSilent(sock);
-			}
-			public void close() {
-				setShutdown();
 			}
 			@Override
 			public void run() {
@@ -961,8 +949,6 @@ public class SimpleBouncer {
 			}
 		}
 
-		// ============================================
-
 		class MuxServerMessageRouter {
 			void onReceiveFromLocal(MuxServerLocal local, MuxPacket msg) { // Local is MUX
 				//Log.info(this.getClass().getSimpleName() + " onReceiveFromLocal " + msg);
@@ -1004,11 +990,11 @@ public class SimpleBouncer {
 			}
 		}
 
-		class MuxServerListenLocal implements Shutdownable, Awaiter, Runnable { // Local is MUX
+		abstract class MuxServerListen implements Shutdownable, Awaiter, Runnable { // Local is MUX, Remote is RAW
 			ServerSocket listen;
 			boolean shutdown = false;
 			InboundAddress inboundAddress;
-			public MuxServerListenLocal(InboundAddress inboundAddress) throws IOException {
+			public MuxServerListen(InboundAddress inboundAddress) throws IOException {
 				inboundAddress.resolve();
 				listen = inboundAddress.listen();
 			}
@@ -1027,19 +1013,7 @@ public class SimpleBouncer {
 					try {
 						Socket socket = listen.accept();
 						Log.info(this.getClass().getSimpleName() + " new socket: " + socket);
-						if (local == null) {
-							local = new MuxServerLocal(socket);
-							local.setRouter(router);
-							reloadables.add(local);
-							listenRemote(); 
-							// Solo puede haber un cliente, asi que bloqueamos este thread
-							//local.run();
-							threadPool.submit(local);
-						}
-						else {
-							// Solo puede haber un cliente, asi que cerramos esa conexion
-							closeSilent(socket);
-						}
+						attender(socket);
 					} catch (IOException e) {
 						if (!shutdown)
 							e.printStackTrace();
@@ -1051,15 +1025,53 @@ public class SimpleBouncer {
 				awaitShutdown();
 				Log.info(this.getClass().getSimpleName() + " end");
 			}
+			//
+			protected abstract void attender(Socket socket) throws IOException;
 		}
-		class MuxServerLocal implements Shutdownable, Awaiter, Runnable { // Local is MUX
+
+		class MuxServerListenLocal extends MuxServerListen { // Local is MUX
+			public MuxServerListenLocal(InboundAddress inboundAddress) throws IOException {
+				super(inboundAddress);
+			}
+			@Override
+			protected void attender(Socket socket) throws IOException {
+				if (local == null) {
+					local = new MuxServerLocal(socket);
+					local.setRouter(router);
+					reloadables.add(local);
+					listenRemote(); 
+					// Solo puede haber un cliente, asi que bloqueamos este thread
+					//local.run();
+					threadPool.submit(local);
+				}
+				else {
+					// Solo puede haber un cliente, asi que cerramos esa conexion
+					closeSilent(socket);
+				}
+			}
+		}
+
+		class MuxServerListenRemote extends MuxServerListen { // Remote is RAW
+			public MuxServerListenRemote(InboundAddress inboundAddress) throws IOException {
+				super(inboundAddress);
+			}
+			@Override
+			protected void attender(Socket socket) throws IOException {
+				MuxServerRemote remote = new MuxServerRemote(socket);
+				remote.setRouter(router);
+				mapRemotes.put(remote.getId(), remote);
+				threadPool.submit(remote);
+			}
+		}
+
+		abstract class MuxServerConnection implements Shutdownable, Awaiter, Runnable { // Local is MUX, Remote is RAW
 			Socket sock;
 			InputStream is;
 			OutputStream os;
 			MuxServerMessageRouter router;
 			boolean shutdown = false;
 			//
-			public MuxServerLocal(Socket sock) throws IOException {
+			public MuxServerConnection(Socket sock) throws IOException {
 				this.sock = sock;
 				is = new BufferedInputStream(sock.getInputStream(), BUFFER_LEN<<1);
 				os = new BufferedOutputStream(sock.getOutputStream(), BUFFER_LEN<<1);
@@ -1079,6 +1091,16 @@ public class SimpleBouncer {
 			}
 			public void close() {
 				setShutdown();
+			}
+		}
+
+		class MuxServerLocal extends MuxServerConnection { // Local is MUX
+			//
+			public MuxServerLocal(Socket sock) throws IOException {
+				super(sock);
+			}
+			public void sendLocal(Message msg) throws IOException {
+				msg.toWire(os);
 			}
 			@Override
 			public void run() {
@@ -1116,78 +1138,18 @@ public class SimpleBouncer {
 			}
 		}
 
-		class MuxServerListenRemote implements Shutdownable, Awaiter, Runnable { // Remote is RAW
-			ServerSocket listen;
-			boolean shutdown = false;
-			InboundAddress inboundAddress;
-			public MuxServerListenRemote(InboundAddress inboundAddress) throws IOException {
-				inboundAddress.resolve();
-				listen = inboundAddress.listen();
-			}
-			@Override
-			public void setShutdown() {
-				shutdown = true;
-				closeSilent(listen);
-			}
-			public void close() {
-				setShutdown();
-			}
-			@Override
-			public void run() {
-				Log.info(this.getClass().getSimpleName() + " start");
-				while (!shutdown) {
-					try {
-						Socket socket = listen.accept();
-						Log.info(this.getClass().getSimpleName() + " new socket: " + socket);
-						MuxServerRemote remote = new MuxServerRemote(socket);
-						remote.setRouter(router);
-						mapRemotes.put(remote.getId(), remote);
-						threadPool.submit(remote);
-					} catch (IOException e) {
-						if (!shutdown)
-							e.printStackTrace();
-						try { Thread.sleep(500); } catch(InterruptedException ign) {}
-					}
-				}
-				close();
-				Log.info(this.getClass().getSimpleName() + " await end");
-				awaitShutdown();
-				Log.info(this.getClass().getSimpleName() + " end");
-			}
-		}
-
-		class MuxServerRemote implements Shutdownable, Runnable { // Remote is RAW
-			Socket sock;
-			InputStream is;
-			OutputStream os;
-			MuxServerMessageRouter router;
-			boolean shutdown = false;
+		class MuxServerRemote extends MuxServerConnection { // Remote is RAW
 			int id;
 			//
 			public MuxServerRemote(Socket sock) throws IOException {
-				this.sock = sock;
-				is = new BufferedInputStream(sock.getInputStream(), BUFFER_LEN<<1);
-				os = new BufferedOutputStream(sock.getOutputStream(), BUFFER_LEN<<1);
+				super(sock);
 				id = sock.getPort();
 			}
 			public int getId() {
 				return id;
 			}
-			public void setRouter(MuxServerMessageRouter router) {
-				this.router = router;
-			}
 			public void sendRemote(Message msg) throws IOException {
 				msg.toWire(os);
-			}
-			@Override
-			public void setShutdown() {
-				shutdown = true;
-				closeSilent(is);
-				closeSilent(os);
-				closeSilent(sock);
-			}
-			public void close() {
-				setShutdown();
 			}
 			@Override
 			public void run() {
