@@ -1015,6 +1015,7 @@ public class SimpleBouncer {
 				while (!shutdown) {
 					try {
 						Socket socket = listen.accept();
+						setupSocket(socket);
 						Log.info(this.getClass().getSimpleName() + " new socket: " + socket);
 						attender(socket);
 					} catch (IOException e) {
