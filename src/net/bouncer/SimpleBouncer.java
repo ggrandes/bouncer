@@ -801,7 +801,7 @@ public class SimpleBouncer {
 			public MuxClientRemote(OutboundAddress outboundAddress) throws IOException {
 				super(outboundAddress);
 			}
-			public void sendRemote(Message msg) throws IOException {
+			public void sendRemote(MuxPacket msg) throws IOException {
 				msg.toWire(os);
 			}
 			@Override
@@ -881,7 +881,7 @@ public class SimpleBouncer {
 			public void setId(int id) {
 				this.id = id;
 			}
-			public void sendLocal(Message msg) throws IOException {
+			public void sendLocal(RawPacket msg) throws IOException {
 				msg.toWire(os);
 			}
 			@Override
@@ -1118,7 +1118,7 @@ public class SimpleBouncer {
 			public MuxServerLocal(Socket sock) throws IOException {
 				super(sock);
 			}
-			public void sendLocal(Message msg) throws IOException {
+			public void sendLocal(MuxPacket msg) throws IOException {
 				msg.toWire(os);
 			}
 			@Override
@@ -1171,7 +1171,7 @@ public class SimpleBouncer {
 			public int getId() {
 				return id;
 			}
-			public void sendRemote(Message msg) throws IOException {
+			public void sendRemote(RawPacket msg) throws IOException {
 				msg.toWire(os);
 			}
 			@Override
