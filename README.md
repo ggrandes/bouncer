@@ -87,12 +87,13 @@ Config file must be in class-path, general format is:
 * Custom timeout by binding
 * Multiple remote-addr (not only multi DNS A-record)?
 * Use Log4J
+* FlowControl in MUX
 
 ## DONEs
 
 * Reload config (v1.1)
 * Thread pool/control (v1.2)
-* Reverse tunnels (like ssh -R) (v1.2)
+* Reverse tunnels (like ssh -R) over MUX (multiplexed channels) (v1.2)
 
 ## MISC
 Current harcoded values:
