@@ -1386,6 +1386,12 @@ public class SimpleBouncer {
 			}
 			idChannel = intFromByteArray(header, 0);
 			payLoadLength = intFromByteArray(header, 4);
+			// Check payLoadLength
+			if ((payLoadLength & 0xFFFF) > BUFFER_LEN) {
+				final String err = "Invalid PayLoadLength (max expected: " + BUFFER_LEN + " readed: " + (payLoadLength & 0xFFFF) + ")";
+				clear();
+				throw new IOException(err);
+			}
 			// Check MAGIC
 			if ((payLoadLength & 0xFFFF0000) != (payLoadLengthMAGIC & 0xFFFF0000)) {
 				final String err = "Invalid MAGIC (expected: " + (payLoadLengthMAGIC & 0xFFFF0000) + " readed: " + (payLoadLength & 0xFFFF0000) + ")";
