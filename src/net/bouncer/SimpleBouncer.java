@@ -135,7 +135,7 @@ public class SimpleBouncer {
 				}
 			}
 			catch(UnknownHostException e) {
-				Log.error(e.toString());
+				Log.error(this.getClass().getSimpleName() + " " + e.toString());
 			}
 			catch(Exception e) {
 				if (!listen.isClosed()) {
@@ -192,7 +192,7 @@ public class SimpleBouncer {
 				notify(new EventNewSocket(this, remote));
 			}
 			catch(UnknownHostException e) {
-				Log.error(e.toString());
+				Log.error(this.getClass().getSimpleName() + " " + e.toString());
 			}
 			catch(Exception e) {
 				Log.error("GenericConnector: Generic exception", e);
@@ -625,6 +625,7 @@ public class SimpleBouncer {
 				Log.error("Error connecting to " + addr + ":" + port + (isSSL? " (SSL)": ""), e);
 			}
 			if ((sock != null) && sock.isConnected()) {
+				Log.info("Connected to " + addr + ":" + port + (isSSL? " (SSL)": ""));
 				return sock;
 			}
 			return null;
@@ -714,7 +715,7 @@ public class SimpleBouncer {
 		// ============================================
 
 		class MuxClientMessageRouter {
-			void onReceiveFromRemote(MuxClientRemote remote, MuxPacket msg) { // Remote is MUX
+			synchronized void onReceiveFromRemote(MuxClientRemote remote, MuxPacket msg) { // Remote is MUX
 				//Log.info(this.getClass().getSimpleName() + " onReceiveFromRemote " + msg);
 				if (msg.syn()) { // New SubChannel
 					try {
@@ -724,7 +725,7 @@ public class SimpleBouncer {
 						// Send FIN
 						closeLocal(msg.getIdChannel());
 					} catch (IOException e) {
-						e.printStackTrace();
+						Log.error(this.getClass().getSimpleName() + "::onReceiveFromRemote " + e.toString(), e);
 						// Send FIN
 						closeLocal(msg.getIdChannel());
 					}
@@ -744,22 +745,28 @@ public class SimpleBouncer {
 						synchronized(mapLocals) {
 							local = mapLocals.get(msg.getIdChannel());
 						}
+						if (local == null)
+							return;
 						RawPacket raw = new RawPacket();
 						raw.put(msg.getIdChannel(), msg.getBufferLen(), msg.getBuffer());
 						local.sendLocal(raw);
 					} catch (IOException e) {
-						e.printStackTrace();
+						Log.error(this.getClass().getSimpleName() + "::onReceiveFromRemote " + e.toString(), e);
+					} catch (Exception e) {
+						Log.error(this.getClass().getSimpleName() + "::onReceiveFromRemote " + e.toString(), e);
 					}
 				}
 			}
-			void onReceiveFromLocal(MuxClientLocal local, RawPacket msg) { // Local is RAW
+			synchronized void onReceiveFromLocal(MuxClientLocal local, RawPacket msg) { // Local is RAW
 				//Log.info(this.getClass().getSimpleName() + " onReceiveFromLocal " + msg);
 				try {
 					MuxPacket mux = new MuxPacket();
 					mux.put(msg.getIdChannel(), msg.getBufferLen(), msg.getBuffer());
 					remote.sendRemote(mux);
 				} catch (IOException e) {
-					e.printStackTrace();
+					Log.error(this.getClass().getSimpleName() + "::onReceiveFromLocal " + e.toString(), e);
+				} catch (Exception e) {
+					Log.error(this.getClass().getSimpleName() + "::onReceiveFromLocal " + e.toString(), e);
 				}
 			}
 		}
@@ -802,7 +809,7 @@ public class SimpleBouncer {
 				while (!shutdown) {
 					while (!shutdown) {
 						try {
-							Log.info("Connecting: " + outboundAddress);
+							Log.info(this.getClass().getSimpleName() + " Connecting: " + outboundAddress);
 							outboundAddress.resolve();
 							sock = outboundAddress.connect();
 							if (sock == null)
@@ -814,7 +821,7 @@ public class SimpleBouncer {
 						}
 						catch (Exception e) {
 							if (sock != null)
-								Log.error(e.toString());
+								Log.error(this.getClass().getSimpleName() + " " + e.toString());
 							closeSilent(is);
 							closeSilent(os);
 							closeSilent(sock);
@@ -836,9 +843,9 @@ public class SimpleBouncer {
 						} catch (IOException e) {
 							if (!sock.isClosed() && !shutdown) {
 								if (e.getMessage().equals("Connection reset")) {
-									Log.info(e.toString());
+									Log.info(this.getClass().getSimpleName() + " " + e.toString());
 								} else {
-									Log.error(e.toString(), e);
+									Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
 								}
 							}
 							break;
@@ -879,20 +886,23 @@ public class SimpleBouncer {
 			}
 			@Override
 			public void run() {
+				Log.info(this.getClass().getSimpleName() + "::run socket: " + sock);
 				while (!shutdown) {
 					RawPacket msg = new RawPacket();
 					try {
+						//Log.info(this.getClass().getSimpleName() + "::run fromWire: " + sock);
 						msg.fromWire(is);
 						msg.setIdChannel(id);
+						//Log.info(this.getClass().getSimpleName() + "::run onReceiveFromLocal: " + sock);
 						router.onReceiveFromLocal(this, msg);
 					} catch (EOFException e) {
 						break;
 					} catch (IOException e) {
 						if (!sock.isClosed() && !shutdown) {
 							if (e.getMessage().equals("Connection reset")) {
-								Log.info(e.toString());
+								Log.info(this.getClass().getSimpleName() + " " + e.toString());
 							} else {
-								Log.error(e.toString(), e);
+								Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
 							}
 						}
 						break;
@@ -953,7 +963,7 @@ public class SimpleBouncer {
 		}
 
 		class MuxServerMessageRouter {
-			void onReceiveFromLocal(MuxServerLocal local, MuxPacket msg) { // Local is MUX
+			synchronized void onReceiveFromLocal(MuxServerLocal local, MuxPacket msg) { // Local is MUX
 				//Log.info(this.getClass().getSimpleName() + " onReceiveFromLocal " + msg);
 				if (msg.syn()) { 
 					// What?
@@ -973,22 +983,28 @@ public class SimpleBouncer {
 						synchronized(mapRemotes) {
 							remote = mapRemotes.get(msg.getIdChannel());
 						}
+						if (remote == null)
+							return;
 						RawPacket raw = new RawPacket();
 						raw.put(msg.getIdChannel(), msg.getBufferLen(), msg.getBuffer());
 						remote.sendRemote(raw);
 					} catch (IOException e) {
-						e.printStackTrace();
+						Log.error(this.getClass().getSimpleName() + "::onReceiveFromLocal " + e.toString(), e);
+					} catch (Exception e) {
+						Log.error(this.getClass().getSimpleName() + "::onReceiveFromLocal " + e.toString(), e);
 					}
 				}
 			}
-			void onReceiveFromRemote(MuxServerRemote remote, RawPacket msg) { // Remote is RAW
+			synchronized void onReceiveFromRemote(MuxServerRemote remote, RawPacket msg) { // Remote is RAW
 				//Log.info(this.getClass().getSimpleName() + " onReceiveFromRemote " + msg);
 				try {
 					MuxPacket mux = new MuxPacket();
 					mux.put(msg.getIdChannel(), msg.getBufferLen(), msg.getBuffer());
 					local.sendLocal(mux);
 				} catch (IOException e) {
-					e.printStackTrace();
+					Log.error(this.getClass().getSimpleName() + "::onReceiveFromRemote " + e.toString(), e);
+				} catch (Exception e) {
+					Log.error(this.getClass().getSimpleName() + "::onReceiveFromRemote " + e.toString(), e);
 				}
 			}
 		}
@@ -1011,7 +1027,7 @@ public class SimpleBouncer {
 			}
 			@Override
 			public void run() {
-				Log.info(this.getClass().getSimpleName() + " start");
+				Log.info(this.getClass().getSimpleName() + "::run listen: " + listen);
 				while (!shutdown) {
 					try {
 						Socket socket = listen.accept();
@@ -1020,7 +1036,7 @@ public class SimpleBouncer {
 						attender(socket);
 					} catch (IOException e) {
 						if (!shutdown)
-							e.printStackTrace();
+							Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
 						try { Thread.sleep(500); } catch(InterruptedException ign) {}
 					}
 				}
@@ -1038,7 +1054,8 @@ public class SimpleBouncer {
 				super(inboundAddress);
 			}
 			@Override
-			protected void attender(Socket socket) throws IOException {
+			protected synchronized void attender(Socket socket) throws IOException {
+				Log.info(this.getClass().getSimpleName() + " attending socket: " + socket);
 				if (local == null) {
 					local = new MuxServerLocal(socket);
 					local.setRouter(router);
@@ -1060,7 +1077,8 @@ public class SimpleBouncer {
 				super(inboundAddress);
 			}
 			@Override
-			protected void attender(Socket socket) throws IOException {
+			protected synchronized void attender(Socket socket) throws IOException {
+				Log.info(this.getClass().getSimpleName() + " attending socket: " + socket);
 				MuxServerRemote remote = new MuxServerRemote(socket);
 				remote.setRouter(router);
 				mapRemotes.put(remote.getId(), remote);
@@ -1108,6 +1126,7 @@ public class SimpleBouncer {
 			}
 			@Override
 			public void run() {
+				Log.info(this.getClass().getSimpleName() + "::run socket: " + sock);
 				while (!shutdown) {
 					MuxPacket msg = new MuxPacket();
 					try {
@@ -1121,9 +1140,9 @@ public class SimpleBouncer {
 					} catch (IOException e) {
 						if (!sock.isClosed() && !shutdown) {
 							if (e.getMessage().equals("Connection reset")) {
-								Log.info(e.toString());
+								Log.info(this.getClass().getSimpleName() + " " + e.toString());
 							} else {
-								Log.error(e.toString(), e);
+								Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
 							}
 						}
 						break;
@@ -1160,13 +1179,14 @@ public class SimpleBouncer {
 			}
 			@Override
 			public void run() {
+				Log.info(this.getClass().getSimpleName() + "::run socket: " + sock);
 				// Send SYN
 				try {
 					MuxPacket mux = new MuxPacket();
 					mux.syn(id);
 					local.sendLocal(mux);
 				} catch (IOException e) {
-					e.printStackTrace();
+					Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
 				}
 				//
 				while (!shutdown) {
@@ -1180,9 +1200,9 @@ public class SimpleBouncer {
 					} catch (IOException e) {
 						if (!sock.isClosed() && !shutdown) {
 							if (e.getMessage().equals("Connection reset")) {
-								Log.info(e.toString());
+								Log.info(this.getClass().getSimpleName() + " " + e.toString());
 							} else {
-								Log.error(e.toString(), e);
+								Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
 							}
 						}
 						break;
@@ -1346,7 +1366,7 @@ public class SimpleBouncer {
 			// write header
 			os.write(header);
 			// write payload
-			if (payLoadLength > 0)
+			if ((payLoadLength & 0xFFFF) > 0)
 				os.write(payload, 0, payLoadLength);
 			os.flush();
 		}
@@ -1360,34 +1380,41 @@ public class SimpleBouncer {
 				throw new EOFException("EOF");
 			}
 			if (len != header.length) {
+				final String err = "Invalid HEADER (expected: " + header.length + " readed: " + len + ")";
 				clear();
-				throw new IOException("Invalid HEADER");
+				throw new IOException(err);
 			}
 			idChannel = intFromByteArray(header, 0);
 			payLoadLength = intFromByteArray(header, 4);
 			// Check MAGIC
 			if ((payLoadLength & 0xFFFF0000) != (payLoadLengthMAGIC & 0xFFFF0000)) {
+				final String err = "Invalid MAGIC (expected: " + (payLoadLengthMAGIC & 0xFFFF0000) + " readed: " + (payLoadLength & 0xFFFF0000) + ")";
 				clear();
-				throw new IOException("Invalid MAGIC");
+				throw new IOException(err);
 			}
 			payLoadLength &= 0xFFFF; // Limit to 64KB
 			// read payload
 			if (payLoadLength > 0) {
-				len = is.read(payload, 0, payLoadLength);
-				if (len != payLoadLength) {
+				int readed = 0;
+				while (readed < payLoadLength) {
+					readed += is.read(payload, readed, payLoadLength-readed);
+				}
+				if (readed != payLoadLength) {
+					final String err = "Invalid PAYLOAD (expected: " + payLoadLength + " readed: " + readed + ")";
 					clear();
-					throw new IOException("Invalid PAYLOAD");
+					// XXX: BUG: Aqui peta: Invalid PAYLOAD (expected: 4096 readed: 2912)
+					throw new IOException(err);
 				}
 			}
 		}
 		//
-		private final void intToByteArray(int v, byte[] buf, int offset) {
+		private static final void intToByteArray(int v, byte[] buf, int offset) {
 			buf[offset+0] = (byte)((v >> 24) & 0xFF);
 			buf[offset+1] = (byte)((v >> 16) & 0xFF);
 			buf[offset+2] = (byte)((v >> 8) & 0xFF);
 			buf[offset+3] = (byte)((v >> 0) & 0xFF);
 		}
-		private final int intFromByteArray(byte[] buf, int offset) {
+		private static final int intFromByteArray(byte[] buf, int offset) {
 			int v = 0;
 			v |= ((((int)buf[offset+0]) & 0xFF) << 24);
 			v |= ((((int)buf[offset+1]) & 0xFF) << 16);
@@ -1448,7 +1475,7 @@ public class SimpleBouncer {
 		}
 		static void error(final String str, final Throwable t) {
 			System.out.println(getTimeStamp() + " [ERROR] " + str);
-			t.printStackTrace(System.err);
+			t.printStackTrace(System.out);
 		}
 	}
 
