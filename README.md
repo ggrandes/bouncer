@@ -1,6 +1,6 @@
 # Simple Bouncer (TCP)
 
-SimpleBouncer is an open source (Apache License, Version 2.0) Java application. Do not require any external lib.
+SimpleBouncer is an open source (Apache License, Version 2.0) Java network proxy. Do not require any external lib.
 
 ---
 
