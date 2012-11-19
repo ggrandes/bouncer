@@ -1101,9 +1101,6 @@ public class SimpleBouncer {
 			public void setRouter(MuxServerMessageRouter router) {
 				this.router = router;
 			}
-			public void sendLocal(Message msg) throws IOException {
-				msg.toWire(os);
-			}
 			@Override
 			public void setShutdown() {
 				shutdown = true;
