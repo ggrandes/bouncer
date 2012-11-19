@@ -125,12 +125,12 @@ public class SimpleBouncer {
 			try {
 				inboundAddress.resolve();
 				listen = inboundAddress.listen();
-				Log.info("GenericAcceptator started: " + inboundAddress);
+				Log.info(this.getClass().getSimpleName() + " started: " + inboundAddress);
 				notify(new EventLifeCycle(this, true));
 				while (!shutdown) {
 					Socket client = listen.accept();
 					setupSocket(client);
-					Log.info("New client from=" + client);
+					Log.info(this.getClass().getSimpleName() + " New client from=" + client);
 					notify(new EventNewSocket(this, client));
 				}
 			}
@@ -139,7 +139,7 @@ public class SimpleBouncer {
 			}
 			catch(Exception e) {
 				if (!listen.isClosed()) {
-					Log.error("GenericAcceptator: Generic exception", e);
+					Log.error(this.getClass().getSimpleName() + " Generic exception", e);
 				}
 			}
 			finally {
@@ -176,7 +176,7 @@ public class SimpleBouncer {
 		@Override
 		public void run() {
 			try {
-				Log.info("GenericConnector started: " + outboundAddress);
+				Log.info(this.getClass().getSimpleName() + " started: " + outboundAddress);
 				notify(new EventLifeCycle(this, true));
 				while (!shutdown) {
 					// Remote
@@ -185,7 +185,7 @@ public class SimpleBouncer {
 					if (remote != null) {
 						break;
 					}
-					Log.info("GenericConnector cannot connect (waiting for retry): " + outboundAddress);
+					Log.info(this.getClass().getSimpleName() + " cannot connect (waiting for retry): " + outboundAddress);
 					Thread.sleep(5000);
 					return;
 				}
@@ -195,12 +195,12 @@ public class SimpleBouncer {
 				Log.error(this.getClass().getSimpleName() + " " + e.toString());
 			}
 			catch(Exception e) {
-				Log.error("GenericConnector: Generic exception", e);
+				Log.error(this.getClass().getSimpleName() + " Generic exception", e);
 			}
 			finally {
 				// Close all
 				//closeSilent(remote);
-				Log.info("GenericConnector ended: " + outboundAddress);
+				Log.info(this.getClass().getSimpleName() + " ended: " + outboundAddress);
 				notify(new EventLifeCycle(this, false));
 			}
 		}
@@ -216,7 +216,7 @@ public class SimpleBouncer {
 		}
 		@Override
 		public void event(Event evt) {
-			Log.info(this.getClass().getSimpleName() + " " + evt);
+			Log.info(this.getClass().getSimpleName() + "::event " + evt);
 			if (evt instanceof EventNewSocket) {
 				EventNewSocket event = (EventNewSocket) evt;
 				Socket client = event.sock;
@@ -234,16 +234,16 @@ public class SimpleBouncer {
 		}
 		@Override
 		public void event(Event evt) {
-			Log.info(this.getClass().getSimpleName() + " " + evt);
+			Log.info(this.getClass().getSimpleName() + "::event " + evt);
 			if (evt instanceof EventNewSocket) {
 				EventNewSocket event = (EventNewSocket) evt;
 				Socket remote = event.sock;
-				Log.info("Bouncer from " + client + " to " + remote);
+				Log.info(this.getClass().getSimpleName() + " Bouncer from " + client + " to " + remote);
 				try {
 					threadPool.submit(new PlainSocketTransfer(client, remote));
 					threadPool.submit(new PlainSocketTransfer(remote, client));
 				} catch (IOException e) {
-					Log.error("RinetdStyleAdapterRemote Error", e);
+					Log.error(this.getClass().getSimpleName() + "::event IOException", e);
 				}
 			}
 		}
@@ -282,12 +282,12 @@ public class SimpleBouncer {
 					}
 				} catch(Exception ign) {}
 				if (!sockin.isClosed() && !shutdown) {
-					Log.error("PlainSocketTransfer: " + e.toString() + " " + sockin);
+					Log.error(this.getClass().getSimpleName() + " " + e.toString() + " " + sockin);
 				}
 			} finally {
 				closeSilent(is);
 				closeSilent(os);
-				Log.info("PlainSocketTransfer: Connection closed " + sockin);
+				Log.info(this.getClass().getSimpleName() + " Connection closed " + sockin);
 			}
 		}
 		boolean transfer() throws IOException {
@@ -346,12 +346,12 @@ public class SimpleBouncer {
 		if (!reloadables.isEmpty()) {
 			shutdownBarrier = new CyclicBarrier(reloadables.size()+1);
 			for (Shutdownable shut : reloadables) {
-				Log.info("Shuting down: " + shut.getClass().getSimpleName());
+				Log.info(this.getClass().getSimpleName() + " Shuting down: " + shut.getClass().getSimpleName());
 				shut.setShutdown();
 			}
-			Log.info("Waiting for " + reloadables.size() + " threads to shutdown");
+			Log.info(this.getClass().getSimpleName() + " Waiting for " + reloadables.size() + " threads to shutdown");
 			awaitShutdown();
-			Log.info("Shutdown completed");
+			Log.info(this.getClass().getSimpleName() + " Shutdown completed");
 			shutdownBarrier = null;
 			reloadables.clear();
 		}
@@ -368,7 +368,7 @@ public class SimpleBouncer {
 				final String[] toks = line.split("( |\t)+"); 
 				// Invalid number of params
 				if (toks.length < 4) { 
-					Log.error("Invalid config line: " + line);
+					Log.error(this.getClass().getSimpleName() + " Invalid config line: " + line);
 					continue;
 				}
 				// Start bouncers
@@ -381,7 +381,7 @@ public class SimpleBouncer {
 				final String options = ((toks.length > 4) ? toks[4] : "");
 				final int opts = parseOptions(options);
 				//
-				Log.info("Readed bind-addr=" + bindaddr + " bind-port=" + bindport + " remote-addr=" + remoteaddr + " remote-port=" + remoteport + " options("+opts+")={" + printableOptions(options) + "}");
+				Log.info(this.getClass().getSimpleName() + " Readed bind-addr=" + bindaddr + " bind-port=" + bindport + " remote-addr=" + remoteaddr + " remote-port=" + remoteport + " options("+opts+")={" + printableOptions(options) + "}");
 				start(bindaddr, bindport, remoteaddr, remoteport, opts);
 			}
 		} finally {
@@ -458,7 +458,7 @@ public class SimpleBouncer {
 				threadPool.submit(acceptator);
 			}
 		} catch (Exception e) {
-			Log.error("Error trying to bounce from " + eleft + " to " + eright, e);
+			Log.error(this.getClass().getSimpleName() + " Error trying to bounce from " + eleft + " to " + eright, e);
 		}
 	}
 
@@ -528,7 +528,7 @@ public class SimpleBouncer {
 		}
 		void resolve() throws UnknownHostException {
 			addrs = InetAddress.getAllByName(host);
-			Log.info("Resolved host=" + host + " [" + fromArrAddress(addrs) + "]");
+			Log.info(this.getClass().getSimpleName() + " Resolved host=" + host + " [" + fromArrAddress(addrs) + "]");
 		}
 		InetSocketAddress[] getSocketAddress() {
 			InetSocketAddress[] socks = new InetSocketAddress[addrs.length];
@@ -568,7 +568,7 @@ public class SimpleBouncer {
 		}
 		void resolve() throws UnknownHostException {
 			addrs = InetAddress.getAllByName(host);
-			Log.info("Resolved host=" + host + " [" + fromArrAddress(addrs) + "]");
+			Log.info(this.getClass().getSimpleName() + " Resolved host=" + host + " [" + fromArrAddress(addrs) + "]");
 		}
 		Socket connect() {
 			if (addrs == null) {
@@ -600,7 +600,7 @@ public class SimpleBouncer {
 				try {
 					setupSocket(remote);
 				} catch (SocketException e) {
-					Log.error("Error setting parameters to socket: " + remote);
+					Log.error(this.getClass().getSimpleName() + " Error setting parameters to socket: " + remote);
 				}
 			}
 			return remote;
@@ -608,7 +608,7 @@ public class SimpleBouncer {
 		Socket connect(final InetAddress addr, final boolean isSSL) {
 			Socket sock = null;
 			try {
-				Log.info("Connecting to " + addr + ":" + port + (isSSL? " (SSL)": ""));
+				Log.info(this.getClass().getSimpleName() + " Connecting to " + addr + ":" + port + (isSSL? " (SSL)": ""));
 				if (isSSL) {
 					SocketFactory factory = SSLSocketFactory.getDefault();
 					sock = factory.createSocket();
@@ -618,14 +618,14 @@ public class SimpleBouncer {
 				}
 				sock.connect(new InetSocketAddress(addr, port), CONNECT_TIMEOUT); 
 			} catch(SocketTimeoutException e) {
-				Log.error("Error connecting to " + addr + ":" + port + (isSSL? " (SSL) ": " ") + e.toString());
+				Log.error(this.getClass().getSimpleName() + " Error connecting to " + addr + ":" + port + (isSSL? " (SSL) ": " ") + e.toString());
 			} catch(ConnectException e) {
-				Log.error("Error connecting to " + addr + ":" + port + (isSSL? " (SSL) ": " ") + e.toString());
+				Log.error(this.getClass().getSimpleName() + " Error connecting to " + addr + ":" + port + (isSSL? " (SSL) ": " ") + e.toString());
 			} catch (IOException e) {
-				Log.error("Error connecting to " + addr + ":" + port + (isSSL? " (SSL)": ""), e);
+				Log.error(this.getClass().getSimpleName() + " Error connecting to " + addr + ":" + port + (isSSL? " (SSL)": ""), e);
 			}
 			if ((sock != null) && sock.isConnected()) {
-				Log.info("Connected to " + addr + ":" + port + (isSSL? " (SSL)": ""));
+				Log.info(this.getClass().getSimpleName() + " Connected to " + addr + ":" + port + (isSSL? " (SSL)": ""));
 				return sock;
 			}
 			return null;
@@ -679,14 +679,14 @@ public class SimpleBouncer {
 		}
 
 		void openRemote() throws IOException { // Entry Point
-			Log.info(this.getClass().getSimpleName() + " openRemote");
+			Log.info(this.getClass().getSimpleName() + "::openRemote " + right);
 			remote = new MuxClientRemote(right);
 			remote.setRouter(router);
 			threadPool.submit(remote);
 		}
 
 		void openLocal(int id) throws IOException {
-			Log.info(this.getClass().getSimpleName() + " openLocal id=" + id);
+			Log.info(this.getClass().getSimpleName() + "::openLocal id=" + id);
 			MuxClientLocal local = new MuxClientLocal(left);
 			local.setId(id);
 			local.setRouter(router);
@@ -716,10 +716,10 @@ public class SimpleBouncer {
 
 		class MuxClientMessageRouter {
 			synchronized void onReceiveFromRemote(MuxClientRemote remote, MuxPacket msg) { // Remote is MUX
-				//Log.info(this.getClass().getSimpleName() + " onReceiveFromRemote " + msg);
+				//Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 				if (msg.syn()) { // New SubChannel
 					try {
-						Log.info(this.getClass().getSimpleName() + " onReceiveFromRemote " + msg);
+						Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 						openLocal(msg.getIdChannel());
 					} catch (ConnectException e) {
 						// Send FIN
@@ -731,7 +731,7 @@ public class SimpleBouncer {
 					}
 				}
 				else if (msg.fin()) { // TODO: End SubChannel
-					Log.info(this.getClass().getSimpleName() + " onReceiveFromRemote " + msg);
+					Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 					MuxClientLocal local;
 					synchronized(mapLocals) {
 						local = mapLocals.remove(msg.getIdChannel());
@@ -758,7 +758,7 @@ public class SimpleBouncer {
 				}
 			}
 			synchronized void onReceiveFromLocal(MuxClientLocal local, RawPacket msg) { // Local is RAW
-				//Log.info(this.getClass().getSimpleName() + " onReceiveFromLocal " + msg);
+				//Log.info(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
 				try {
 					MuxPacket mux = new MuxPacket();
 					mux.put(msg.getIdChannel(), msg.getBufferLen(), msg.getBuffer());
@@ -816,7 +816,7 @@ public class SimpleBouncer {
 								throw new ConnectException();
 							is = new BufferedInputStream(sock.getInputStream(), BUFFER_LEN<<1);
 							os = new BufferedOutputStream(sock.getOutputStream(), BUFFER_LEN<<1);
-							Log.info("Connected: " + sock);
+							Log.info(this.getClass().getSimpleName() + " Connected: " + sock + " SendBufferSize=" + sock.getSendBufferSize() + " ReceiveBufferSize=" + sock.getReceiveBufferSize());
 							break;
 						}
 						catch (Exception e) {
@@ -964,12 +964,12 @@ public class SimpleBouncer {
 
 		class MuxServerMessageRouter {
 			synchronized void onReceiveFromLocal(MuxServerLocal local, MuxPacket msg) { // Local is MUX
-				//Log.info(this.getClass().getSimpleName() + " onReceiveFromLocal " + msg);
+				//Log.info(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
 				if (msg.syn()) { 
 					// What?
 				}
 				else if (msg.fin()) { // End SubChannel
-					Log.info(this.getClass().getSimpleName() + " onReceiveFromLocal " + msg);
+					Log.info(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
 					MuxServerRemote remote;
 					synchronized(mapRemotes) {
 						remote = mapRemotes.remove(msg.getIdChannel());
@@ -996,7 +996,7 @@ public class SimpleBouncer {
 				}
 			}
 			synchronized void onReceiveFromRemote(MuxServerRemote remote, RawPacket msg) { // Remote is RAW
-				//Log.info(this.getClass().getSimpleName() + " onReceiveFromRemote " + msg);
+				//Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 				try {
 					MuxPacket mux = new MuxPacket();
 					mux.put(msg.getIdChannel(), msg.getBufferLen(), msg.getBuffer());
@@ -1032,7 +1032,7 @@ public class SimpleBouncer {
 					try {
 						Socket socket = listen.accept();
 						setupSocket(socket);
-						Log.info(this.getClass().getSimpleName() + " new socket: " + socket);
+						Log.info(this.getClass().getSimpleName() + " new socket: " + socket + " SendBufferSize=" + socket.getSendBufferSize() + " ReceiveBufferSize=" + socket.getReceiveBufferSize());
 						attender(socket);
 					} catch (IOException e) {
 						if (!shutdown)
