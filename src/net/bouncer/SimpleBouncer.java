@@ -1397,7 +1397,10 @@ public class SimpleBouncer {
 			if (payLoadLength > 0) {
 				int readed = 0;
 				while (readed < payLoadLength) {
-					readed += is.read(payload, readed, payLoadLength-readed);
+					len = is.read(payload, readed, payLoadLength-readed);
+					if (len < 0)
+						break;
+					readed += len;
 				}
 				if (readed != payLoadLength) {
 					final String err = "Invalid PAYLOAD (expected: " + payLoadLength + " readed: " + readed + ")";
