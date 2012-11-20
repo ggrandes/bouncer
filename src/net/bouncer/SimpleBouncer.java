@@ -742,7 +742,7 @@ public class SimpleBouncer {
 						closeLocal(msg.getIdChannel());
 					}
 				}
-				else if (msg.fin()) { // TODO: End SubChannel
+				else if (msg.fin()) { // End SubChannel
 					Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 					MuxClientLocal local;
 					synchronized(mapLocals) {
@@ -1242,7 +1242,6 @@ public class SimpleBouncer {
 
 		class MuxServerRemote extends MuxServerConnection { // Remote is RAW
 			int id;
-			//boolean isLocked = false;
 			int isLocked = 0;
 			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(OUTPUT_BUFFERS+1);
 			//
@@ -1494,7 +1493,7 @@ public class SimpleBouncer {
 		public void fromWire(final InputStream is) throws IOException  {
 			int len;
 			// read header
-			len = is.read(header);
+			len = fullRead(is, header, header.length);
 			if (len < 0) {
 				clear();
 				throw new EOFException("EOF");
@@ -1521,20 +1520,28 @@ public class SimpleBouncer {
 			payLoadLength &= 0xFFFF; // Limit to 64KB
 			// read payload
 			if (payLoadLength > 0) {
-				int readed = 0;
-				while (readed < payLoadLength) {
-					len = is.read(payload, readed, payLoadLength-readed);
-					if (len < 0)
-						break;
-					readed += len;
-				}
-				if (readed != payLoadLength) {
-					final String err = "Invalid PAYLOAD (expected: " + payLoadLength + " readed: " + readed + ")";
+				len = fullRead(is, payload, payLoadLength);
+				if (len != payLoadLength) {
+					final String err = "Invalid PAYLOAD (expected: " + payLoadLength + " readed: " + len + ")";
 					clear();
 					// XXX: BUG: Aqui peta: Invalid PAYLOAD (expected: 4096 readed: 2912)
 					throw new IOException(err);
 				}
 			}
+		}
+		private final int fullRead(final InputStream is, final byte[] buf, final int len) throws IOException {
+			int readed;
+			if (len > 0) {
+				int total = 0;
+				while (total < len) {
+					readed = is.read(buf, total, len-total);
+					if (readed < 0)
+						break;
+					total += readed;
+				}
+				return total;
+			}
+			return 0;
 		}
 		//
 		private static final void intToByteArray(int v, byte[] buf, int offset) {
