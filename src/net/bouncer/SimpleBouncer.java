@@ -37,10 +37,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.EOFException;
@@ -57,9 +57,10 @@ import java.io.Reader;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
-	public static final String VERSION = "1.2beta1";
+	public static final String VERSION = "1.3beta1";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
+	private static final int OUTPUT_BUFFERS = 10;
 	private static final int CONNECT_TIMEOUT = 30000;	// Default 30seconds timeout
 	private static final int READ_TIMEOUT = 300000;		// Default 5min timeout
 	private static final long RELOAD_CONFIG = 10000;	// Default 10seconds
@@ -433,14 +434,14 @@ public class SimpleBouncer {
 	void start(final String leftaddr, final int leftport, final String rightaddr, final int rightport, final int opts) {
 		BouncerAddress eleft = null, eright = null;
 		try {
-			if (isOption(opts, MUX_IN)) { // Muxer TODO
+			if (isOption(opts, MUX_IN)) {
 				InboundAddress left = new InboundAddress(leftaddr, leftport, opts); // MUX
 				InboundAddress right = new InboundAddress(rightaddr, rightport, opts); // PLAIN
 				eleft = left;
 				eright = right;
 				new MuxServer(left, right).listenLocal();
 			}
-			else if (isOption(opts, MUX_OUT)) { // Demuxer TODO
+			else if (isOption(opts, MUX_OUT)) {
 				OutboundAddress left = new OutboundAddress(leftaddr, leftport, opts); // PLAIN
 				OutboundAddress right = new OutboundAddress(rightaddr, rightport, opts); // MUX
 				eleft = left;
@@ -485,7 +486,9 @@ public class SimpleBouncer {
 	static void setupSocket(final Socket sock) throws SocketException {
 		sock.setKeepAlive(true);
 		sock.setReuseAddress(true);
-		sock.setSoTimeout(READ_TIMEOUT); // SocketTimeoutException 
+		sock.setSoTimeout(READ_TIMEOUT); // SocketTimeoutException
+		sock.setSendBufferSize(BUFFER_LEN*OUTPUT_BUFFERS);
+		sock.setReceiveBufferSize(BUFFER_LEN*OUTPUT_BUFFERS);
 	}
 
 	static String fromArrAddress(final InetAddress[] addrs) {
@@ -711,12 +714,21 @@ public class SimpleBouncer {
 				}
 			}
 		}
+		void sendACK(int id) {
+			// Send ACK
+			try {
+				MuxPacket mux = new MuxPacket();
+				mux.ack(id);
+				remote.sendRemote(mux);
+			} catch (IOException ign) {
+			}
+		}
 
 		// ============================================
 
 		class MuxClientMessageRouter {
 			synchronized void onReceiveFromRemote(MuxClientRemote remote, MuxPacket msg) { // Remote is MUX
-				//Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
+				//Log.debug(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 				if (msg.syn()) { // New SubChannel
 					try {
 						Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
@@ -739,7 +751,17 @@ public class SimpleBouncer {
 					if (local != null)
 						local.close();
 				}
+				else if (msg.ack()) { // TODO: Flow-Control ACK
+					Log.debug(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
+					MuxClientLocal local;
+					synchronized(mapLocals) {
+						local = mapLocals.get(msg.getIdChannel());
+					}
+					if (local != null)
+						local.unlock();
+				}
 				else { // Data
+					Log.debug(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 					try {
 						MuxClientLocal local;
 						synchronized(mapLocals) {
@@ -758,8 +780,9 @@ public class SimpleBouncer {
 				}
 			}
 			synchronized void onReceiveFromLocal(MuxClientLocal local, RawPacket msg) { // Local is RAW
-				//Log.info(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
+				Log.debug(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
 				try {
+					local.lock();
 					MuxPacket mux = new MuxPacket();
 					mux.put(msg.getIdChannel(), msg.getBufferLen(), msg.getBuffer());
 					remote.sendRemote(mux);
@@ -814,8 +837,10 @@ public class SimpleBouncer {
 							sock = outboundAddress.connect();
 							if (sock == null)
 								throw new ConnectException();
-							is = new BufferedInputStream(sock.getInputStream(), BUFFER_LEN<<1);
-							os = new BufferedOutputStream(sock.getOutputStream(), BUFFER_LEN<<1);
+							//is = new BufferedInputStream(sock.getInputStream(), BUFFER_LEN<<1);
+							//os = new BufferedOutputStream(sock.getOutputStream(), BUFFER_LEN<<1);
+							is = sock.getInputStream();
+							os = sock.getOutputStream();
 							Log.info(this.getClass().getSimpleName() + " Connected: " + sock + " SendBufferSize=" + sock.getSendBufferSize() + " ReceiveBufferSize=" + sock.getReceiveBufferSize());
 							break;
 						}
@@ -868,6 +893,8 @@ public class SimpleBouncer {
 
 		class MuxClientLocal extends MuxClientConnection { // Local is RAW
 			int id;
+			int isLocked = 0;
+			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(OUTPUT_BUFFERS+1);
 			//
 			public MuxClientLocal(OutboundAddress outboundAddress) throws IOException {
 				super(outboundAddress);
@@ -875,14 +902,41 @@ public class SimpleBouncer {
 				sock = outboundAddress.connect();
 				if (sock == null)
 					throw new ConnectException();
-				is = new BufferedInputStream(sock.getInputStream(), BUFFER_LEN<<1);
-				os = new BufferedOutputStream(sock.getOutputStream(), BUFFER_LEN<<1);
+				//is = new BufferedInputStream(sock.getInputStream(), BUFFER_LEN<<1);
+				//os = new BufferedOutputStream(sock.getOutputStream(), BUFFER_LEN<<1);
+				is = sock.getInputStream();
+				os = sock.getOutputStream();
+				threadPool.submit(new Runnable() {
+					@Override
+					public void run() {
+						while (!shutdown) {
+							try {						
+								RawPacket msg = queue.take();
+								msg.toWire(os);
+								// TODO: send back ACK flow-control
+								sendACK(msg.getIdChannel()); // Send ACK
+							} catch (IOException e) {
+								Log.error(this.getClass().getSimpleName() + "::sendLocal " + e.toString(), e);
+							} catch (Exception e) {
+								Log.error(this.getClass().getSimpleName() + "::sendLocal " + e.toString(), e);
+							}
+						}
+					}
+				});
+			}
+			public void unlock() {
+				isLocked--;
+			}
+			public void lock() {
+				isLocked++;
+			}
+			public boolean isLocked() {
+				return (isLocked == OUTPUT_BUFFERS);
 			}
 			public void setId(int id) {
 				this.id = id;
 			}
-			public void sendLocal(RawPacket msg) throws IOException {
-				msg.toWire(os);
+			public void sendLocal(final RawPacket msg) throws IOException {
 			}
 			@Override
 			public void run() {
@@ -891,6 +945,9 @@ public class SimpleBouncer {
 					RawPacket msg = new RawPacket();
 					try {
 						//Log.info(this.getClass().getSimpleName() + "::run fromWire: " + sock);
+						while (isLocked()) {
+							try { Thread.sleep(1); } catch(Exception ign) {}
+						}
 						msg.fromWire(is);
 						msg.setIdChannel(id);
 						//Log.info(this.getClass().getSimpleName() + "::run onReceiveFromLocal: " + sock);
@@ -961,10 +1018,19 @@ public class SimpleBouncer {
 				}
 			}
 		}
+		void sendACK(int id) {
+			// Send ACK
+			try {
+				MuxPacket mux = new MuxPacket();
+				mux.ack(id);
+				local.sendLocal(mux);
+			} catch (IOException ign) {
+			}
+		}
 
 		class MuxServerMessageRouter {
 			synchronized void onReceiveFromLocal(MuxServerLocal local, MuxPacket msg) { // Local is MUX
-				//Log.info(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
+				//Log.debug(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
 				if (msg.syn()) { 
 					// What?
 				}
@@ -977,7 +1043,17 @@ public class SimpleBouncer {
 					if (remote != null)
 						remote.close();
 				}
-				else {
+				else if (msg.ack()) { // TODO: Flow-Control ACK
+					Log.debug(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
+					MuxServerRemote remote;
+					synchronized(mapRemotes) {
+						remote = mapRemotes.get(msg.getIdChannel());
+					}
+					if (remote != null)
+						remote.unlock();
+				}
+				else { // Data
+					Log.debug(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
 					try {
 						MuxServerRemote remote;
 						synchronized(mapRemotes) {
@@ -996,8 +1072,9 @@ public class SimpleBouncer {
 				}
 			}
 			synchronized void onReceiveFromRemote(MuxServerRemote remote, RawPacket msg) { // Remote is RAW
-				//Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
+				Log.debug(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 				try {
+					remote.lock();
 					MuxPacket mux = new MuxPacket();
 					mux.put(msg.getIdChannel(), msg.getBufferLen(), msg.getBuffer());
 					local.sendLocal(mux);
@@ -1095,8 +1172,10 @@ public class SimpleBouncer {
 			//
 			public MuxServerConnection(Socket sock) throws IOException {
 				this.sock = sock;
-				is = new BufferedInputStream(sock.getInputStream(), BUFFER_LEN<<1);
-				os = new BufferedOutputStream(sock.getOutputStream(), BUFFER_LEN<<1);
+				//is = new BufferedInputStream(sock.getInputStream(), BUFFER_LEN<<1);
+				//os = new BufferedOutputStream(sock.getOutputStream(), BUFFER_LEN<<1);
+				is = sock.getInputStream();
+				os = sock.getOutputStream();
 			}
 			public void setRouter(MuxServerMessageRouter router) {
 				this.router = router;
@@ -1163,16 +1242,49 @@ public class SimpleBouncer {
 
 		class MuxServerRemote extends MuxServerConnection { // Remote is RAW
 			int id;
+			//boolean isLocked = false;
+			int isLocked = 0;
+			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(OUTPUT_BUFFERS+1);
 			//
 			public MuxServerRemote(Socket sock) throws IOException {
 				super(sock);
 				id = sock.getPort();
+				threadPool.submit(new Runnable() {
+					@Override
+					public void run() {
+						while (!shutdown) {
+							try {
+								RawPacket msg = queue.take();
+								msg.toWire(os);
+								// TODO: send back ACK flow-control
+								sendACK(msg.getIdChannel()); // Send ACK
+							} catch (IOException e) {
+								Log.error(this.getClass().getSimpleName() + "::sendRemote " + e.toString(), e);
+							} catch (Exception e) {
+								Log.error(this.getClass().getSimpleName() + "::sendRemote " + e.toString(), e);
+							}
+						}
+					}
+				});
+			}
+			public void unlock() {
+				isLocked--;
+			}
+			public void lock() {
+				isLocked++;
+			}
+			public boolean isLocked() {
+				return (isLocked == OUTPUT_BUFFERS);
 			}
 			public int getId() {
 				return id;
 			}
-			public void sendRemote(RawPacket msg) throws IOException {
-				msg.toWire(os);
+			public void sendRemote(final RawPacket msg) throws IOException {
+				try {
+					queue.put(msg);
+				} catch (InterruptedException e) {
+					Log.error(this.getClass().getSimpleName() + "::sendRemote " + e.toString(), e);
+				}
 			}
 			@Override
 			public void run() {
@@ -1189,6 +1301,9 @@ public class SimpleBouncer {
 				while (!shutdown) {
 					RawPacket msg = new RawPacket();
 					try {
+						while (isLocked()) {
+							try { Thread.sleep(1); } catch(Exception ign) {}
+						}
 						msg.fromWire(is);
 						msg.setIdChannel(id);
 						router.onReceiveFromRemote(this, msg);
@@ -1296,8 +1411,9 @@ public class SimpleBouncer {
 		private static final int payLoadLengthMAGIC = 0x69420000;
 		private static final int MUX_SYN = 0x80000000;
 		private static final int MUX_FIN = 0x40000000;
+		private static final int MUX_ACK = 0x20000000;
 		private byte[] header = new byte[8];
-		private int idChannel = 0; 			// 4 bytes (SYN/FIN flags in hi-nibble)
+		private int idChannel = 0; 			// 4 bytes (SYN/FIN/ACK flags in hi-nibble)
 		private int payLoadLength = 0;		// 4 bytes (magic in hi-nibble)
 		private byte[] payload = new byte[BUFFER_LEN];
 		//
@@ -1333,11 +1449,18 @@ public class SimpleBouncer {
 			this.idChannel = ((idChannel & 0x0FFFFFFF) | MUX_FIN);
 			this.payLoadLength = 0;
 		}
+		public void ack(final int idChannel) {
+			this.idChannel = ((idChannel & 0x0FFFFFFF) | MUX_ACK);
+			this.payLoadLength = 0;
+		}
 		public boolean syn() {
 			return ((idChannel & MUX_SYN) != 0);
 		}
 		public boolean fin() {
 			return ((idChannel & MUX_FIN) != 0);
+		}
+		public boolean ack() {
+			return ((idChannel & MUX_ACK) != 0);
 		}
 		//
 		@Override
@@ -1440,6 +1563,8 @@ public class SimpleBouncer {
 				sb.append("[SYN]");
 			} else if (fin()) {
 				sb.append("[FIN]");
+			} else if (ack()) {
+				sb.append("[ACK]");
 			} else {
 				//if (payLoadLength > 0) sb.append(new String(payload, 0, payLoadLength));
 			}
@@ -1469,18 +1594,18 @@ public class SimpleBouncer {
 		}
 		static void debug(final String str) {
 			if (isDebugEnabled) {
-				System.out.println(getTimeStamp() + " [DEBUG] " + str);
+				System.out.println(getTimeStamp() + " [DEBUG] " + "[" + Thread.currentThread().getName() + "] " + str);
 			}
 		}
 		static void info(final String str) {
-			System.out.println(getTimeStamp() + " [INFO] " + str);
+			System.out.println(getTimeStamp() + " [INFO] " + "[" + Thread.currentThread().getName() + "] " + str);
 		}
 		static void error(final String str) {
-			System.out.println(getTimeStamp() + " [ERROR] " + str);
+			System.out.println(getTimeStamp() + " [ERROR] " + "[" + Thread.currentThread().getName() + "] " + str);
 
 		}
 		static void error(final String str, final Throwable t) {
-			System.out.println(getTimeStamp() + " [ERROR] " + str);
+			System.out.println(getTimeStamp() + " [ERROR] " + "[" + Thread.currentThread().getName() + "] " + str);
 			t.printStackTrace(System.out);
 		}
 	}
