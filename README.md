@@ -98,7 +98,9 @@ Config file must be in class-path, general format is:
 ## MISC
 Current harcoded values:
 
-* Buffer length for I/O: 4096bytes (2 buffers for connection)
+* Buffer length for I/O: 4096bytes
+* Output Buffers: 3
+* TCP SO_SNDBUF/SO_RCVBUF: BufferLength * OutputBuffers 
 * Connection timeout: 30seconds
 * Read timeout: 5minutes
 * Reload config check time interval: 10seconds
