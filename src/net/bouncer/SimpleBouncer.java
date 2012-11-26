@@ -24,6 +24,7 @@ import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
+
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -36,6 +37,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CyclicBarrier;
@@ -55,7 +57,7 @@ import java.io.Reader;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
-	public static final String VERSION = "1.3beta1";
+	public static final String VERSION = "1.4beta1";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
 	private static final int OUTPUT_BUFFERS = 3;
@@ -63,25 +65,6 @@ public class SimpleBouncer {
 	private static final int READ_TIMEOUT = 300000;		// Default 5min timeout
 	private static final long RELOAD_CONFIG = 10000;	// Default 10seconds
 	private static final String CONFIG_FILE = "/bouncer.conf";
-	// Load Balancing Policies
-	private static final int LB_ORDER 	= 0x00000000; 	// Original order, pick next only on error
-	private static final int LB_RR 		= 0x00000001;	// Round robin
-	private static final int LB_RAND 	= 0x00000002;	// Random pick
-	private static final int TUN_SSL	= 0x00000010;	// Client is Plain, Remote is SSL (like stunnel)
-	private static final int MUX_OUT	= 0x00000100;	// Multiplexor initiator (outbound)
-	private static final int MUX_IN		= 0x00000200;	// Multiplexor terminator (inbound)
-	//
-	@SuppressWarnings("serial")
-	private final static Map<String, Integer> MAP_OPTIONS = Collections.unmodifiableMap(new HashMap<String, Integer>() {
-		{
-			put("LB=ORDER", LB_ORDER);
-			put("LB=RR", LB_RR);
-			put("LB=RAND", LB_RAND);
-			put("TUN=SSL", TUN_SSL);
-			put("MUX=OUT", MUX_OUT);
-			put("MUX=IN", MUX_IN);
-		}
-	});
 	// For graceful reload
 	private List<Awaiter> reloadables = Collections.synchronizedList(new ArrayList<Awaiter>());
 	private CyclicBarrier shutdownBarrier = null;
@@ -129,6 +112,10 @@ public class SimpleBouncer {
 				while (!shutdown) {
 					Socket client = listen.accept();
 					setupSocket(client);
+					Integer pReadTimeout = inboundAddress.getOpts().getInteger(Options.P_READ_TIMEOUT);
+					if (pReadTimeout != null) {
+						client.setSoTimeout(pReadTimeout); // SocketTimeoutException
+					}
 					Log.info(this.getClass().getSimpleName() + " New client from=" + client);
 					notify(new EventNewSocket(this, client));
 				}
@@ -378,9 +365,9 @@ public class SimpleBouncer {
 				final int remoteport = Integer.valueOf(toks[3]);
 				//
 				final String options = ((toks.length > 4) ? toks[4] : "");
-				final int opts = parseOptions(options);
+				final Options opts = new Options(options);
 				//
-				Log.info(this.getClass().getSimpleName() + " Readed bind-addr=" + bindaddr + " bind-port=" + bindport + " remote-addr=" + remoteaddr + " remote-port=" + remoteport + " options("+opts+")={" + printableOptions(options) + "}");
+				Log.info(this.getClass().getSimpleName() + " Readed bind-addr=" + bindaddr + " bind-port=" + bindport + " remote-addr=" + remoteaddr + " remote-port=" + remoteport + " options{" + opts + "}");
 				start(bindaddr, bindport, remoteaddr, remoteport, opts);
 			}
 		} finally {
@@ -389,57 +376,17 @@ public class SimpleBouncer {
 		}
 	}
 
-	static boolean isOption(final int opt, final int FLAG) {
-		return ((opt & FLAG) != 0);
-	}
-
-	/**
-	 * Return options in numeric form (bitwise-flags)
-	 * @param string to parse
-	 * @return int with enabled flags
-	 */
-	static int parseOptions(final String str) {
-		final String[] opts = str.toUpperCase().split(",");
-		int ret = 0;
-		for (String opt : opts) {
-			final Integer i = MAP_OPTIONS.get(opt);
-			if (i != null) {
-				ret |= i.intValue();
-			}
-		}
-		return ret;
-	}
-
-	/**
-	 * For humans, return options parsed/validated
-	 * @param string to parse
-	 * @return human readable string
-	 */
-	static String printableOptions(final String str) {
-		final String[] opts = str.toUpperCase().split(",");
-		final StringBuilder sb = new StringBuilder();
-		int i = 0;
-		for (String opt : opts) {
-			if (MAP_OPTIONS.containsKey(opt)) {
-				if (i > 0) sb.append(",");
-				sb.append(opt);
-				i++;
-			}
-		}
-		return sb.toString();
-	}
-
-	void start(final String leftaddr, final int leftport, final String rightaddr, final int rightport, final int opts) {
+	void start(final String leftaddr, final int leftport, final String rightaddr, final int rightport, final Options opts) {
 		BouncerAddress eleft = null, eright = null;
 		try {
-			if (isOption(opts, MUX_IN)) {
+			if (opts.isOption(Options.MUX_IN)) {
 				InboundAddress left = new InboundAddress(leftaddr, leftport, opts); // MUX
 				InboundAddress right = new InboundAddress(rightaddr, rightport, opts); // PLAIN
 				eleft = left;
 				eright = right;
 				new MuxServer(left, right).listenLocal();
 			}
-			else if (isOption(opts, MUX_OUT)) {
+			else if (opts.isOption(Options.MUX_OUT)) {
 				OutboundAddress left = new OutboundAddress(leftaddr, leftport, opts); // PLAIN
 				OutboundAddress right = new OutboundAddress(rightaddr, rightport, opts); // MUX
 				eleft = left;
@@ -513,16 +460,19 @@ public class SimpleBouncer {
 	 */
 	static class InboundAddress implements BouncerAddress {
 		//
-		int opts = 0;
+		Options opts = null;
 		//
 		final String host;
 		final int port;
 		InetAddress[] addrs = null;
 		//
-		InboundAddress(final String host, final int port, final int opts) {
+		InboundAddress(final String host, final int port, final Options opts) {
 			this.host = host;
 			this.port = port;
 			this.opts = opts;
+		}
+		Options getOpts() {
+			return opts;
 		}
 		public String toString() {
 			return host + ":" + port;
@@ -553,16 +503,19 @@ public class SimpleBouncer {
 	static class OutboundAddress implements BouncerAddress {
 		//
 		int roundrobin = 0;
-		int opts = 0;
+		Options opts = null;
 		//
 		final String host;
 		final int port;
 		InetAddress[] addrs = null;
 		//
-		OutboundAddress(final String host, final int port, final int opts) {
+		OutboundAddress(final String host, final int port, final Options opts) {
 			this.host = host;
 			this.port = port;
 			this.opts = opts;
+		}
+		Options getOpts() {
+			return opts;
 		}
 		public String toString() {
 			return host + ":" + port;
@@ -575,16 +528,17 @@ public class SimpleBouncer {
 			if (addrs == null) {
 				return null;
 			}
-			final boolean isSSL = ((opts & TUN_SSL) != 0);
+			final boolean isSSL = opts.isOption(Options.TUN_SSL);
+			final int filterFlags = (Options.LB_ORDER | Options.LB_RR | Options.LB_RAND);
 			Socket remote = null;
-			switch (opts & 0x0F) {
-			case LB_ORDER:
+			switch (opts.getFlags(filterFlags)) {
+			case Options.LB_ORDER:
 				for (InetAddress addr : addrs) {
 					remote = connect(addr, isSSL);
 					if (remote != null) break;
 				}
 				break;
-			case LB_RR:
+			case Options.LB_RR:
 				final int rrbegin = roundrobin;
 				do {
 					remote = connect(addrs[roundrobin++], isSSL);
@@ -592,7 +546,7 @@ public class SimpleBouncer {
 					if (remote != null) break;
 				} while (roundrobin != rrbegin);
 				break;
-			case LB_RAND:
+			case Options.LB_RAND:
 				final Random r = new Random();
 				remote = connect(addrs[(r.nextInt(Integer.MAX_VALUE) % addrs.length)], isSSL);
 				break;
@@ -600,6 +554,10 @@ public class SimpleBouncer {
 			if (remote != null) {
 				try {
 					setupSocket(remote);
+					Integer pReadTimeout = opts.getInteger(Options.P_READ_TIMEOUT);
+					if (pReadTimeout != null) {
+						remote.setSoTimeout(pReadTimeout); // SocketTimeoutException
+					}
 				} catch (SocketException e) {
 					Log.error(this.getClass().getSimpleName() + " Error setting parameters to socket: " + remote);
 				}
@@ -617,7 +575,11 @@ public class SimpleBouncer {
 				else {
 					sock = new Socket();
 				}
-				sock.connect(new InetSocketAddress(addr, port), CONNECT_TIMEOUT); 
+				Integer pConnectTimeout = opts.getInteger(Options.P_CONNECT_TIMEOUT);
+				if (pConnectTimeout == null) {
+					pConnectTimeout = CONNECT_TIMEOUT;
+				}
+				sock.connect(new InetSocketAddress(addr, port), pConnectTimeout); 
 			} catch(SocketTimeoutException e) {
 				Log.error(this.getClass().getSimpleName() + " Error connecting to " + addr + ":" + port + (isSSL? " (SSL) ": " ") + e.toString());
 			} catch(ConnectException e) {
@@ -633,6 +595,157 @@ public class SimpleBouncer {
 		}
 	}
 
+	// TODO
+	static class Options {
+		public static final String S_NULL	= "";
+		public static final Integer I_NULL	= Integer.valueOf(0);
+		// Load Balancing Policies
+		public static final int LB_ORDER 	= 0x00000000; 	// Original order, pick next only on error
+		public static final int LB_RR 		= 0x00000001;	// Round robin
+		public static final int LB_RAND 	= 0x00000002;	// Random pick
+		public static final int TUN_SSL		= 0x00000010;	// Client is Plain, Remote is SSL (like stunnel)
+		public static final int MUX_OUT		= 0x00000100;	// Multiplexor initiator (outbound)
+		public static final int MUX_IN		= 0x00000200;	// Multiplexor terminator (inbound)
+		//
+		public static final String P_CONNECT_TIMEOUT	= "CONNECT_TIMEOUT";
+		public static final String P_READ_TIMEOUT		= "READ_TIMEOUT";
+		//
+		//
+		@SuppressWarnings("serial")
+		private final static Map<String, Integer> MAP_FLAGS = Collections.unmodifiableMap(new HashMap<String, Integer>() {
+			{
+				put("LB=ORDER", LB_ORDER);
+				put("LB=RR", LB_RR);
+				put("LB=RAND", LB_RAND);
+				put("TUN=SSL", TUN_SSL);
+				put("MUX=OUT", MUX_OUT);
+				put("MUX=IN", MUX_IN);
+			}
+		});
+		//
+		String strOpts;
+		int flags;
+		@SuppressWarnings("serial")
+		final Map<String, String> strParams = Collections.synchronizedMap(new HashMap<String, String>() {
+			{
+			}
+		});
+		@SuppressWarnings("serial")
+		final Map<String, Integer> intParams = Collections.synchronizedMap(new HashMap<String, Integer>() {
+			{
+				put(P_CONNECT_TIMEOUT, I_NULL);		// CONNECT_TIMEOUT=millis
+				put(P_READ_TIMEOUT, I_NULL);		// READ_TIMEOUT=millis
+			}
+		});
+		//
+		public Options(String strOpts) {
+			this.strOpts = strOpts;
+			this.flags = parseOptions(strOpts);
+		}
+		
+		public int getFlags(final int filterBits) {
+			return (flags & filterBits);
+		}
+		
+		public String getString(final String name) {
+			final String value = strParams.get(name);
+			if (value == S_NULL) {
+				return null;
+			}
+			System.out.println("getString("+name+")=" + value);
+			return value;
+		}
+
+		public Integer getInteger(final String name) {
+			final Integer value = intParams.get(name);
+			if (value == I_NULL) {
+				return null;
+			}
+			System.out.println("getInteger("+name+")=" + value);
+			return value;
+		}
+
+		/**
+		 * Check is specified flag is active
+		 * @param opt
+		 * @param FLAG
+		 * @return true or false
+		 */
+		boolean isOption(final int FLAG) {
+			return ((flags & FLAG) != 0);
+		}
+
+		/**
+		 * Return options in numeric form (bitwise-flags)
+		 * @param string to parse
+		 * @return int with enabled flags
+		 */
+		int parseOptions(final String str) {
+			final String[] opts = str.split(",");
+			int ret = 0;
+			for (String opt : opts) {
+				final int KEY = 0, VALUE = 1;
+				final String[] optKV = opt.split("=");
+				// Process Flags
+				final Integer i = MAP_FLAGS.get(opt.toUpperCase());
+				if (i != null) {
+					ret |= i.intValue();
+				}
+				// Process String Params
+				final String s = strParams.get(optKV[KEY].toUpperCase());
+				if (s != null) {
+					strParams.put(optKV[KEY], optKV[VALUE]);
+				}
+				// Process Integer Params
+				final Integer ii = intParams.get(optKV[KEY].toUpperCase());
+				if (ii != null) {
+					intParams.put(optKV[KEY], Integer.valueOf(optKV[VALUE]));
+				}
+			}
+			return ret;
+		}
+
+		/**
+		 * For humans, return options parsed/validated
+		 * @return human readable string
+		 */
+		public synchronized String toString() {
+			int i = 0;
+			final StringBuilder sb = new StringBuilder();
+			// Flags
+			for (Entry<String, Integer> e : MAP_FLAGS.entrySet()) {
+				final String key = e.getKey();
+				final Integer value = e.getValue();
+				if ((flags & value) != 0) {
+					if (i > 0) sb.append(",");
+					sb.append(key);
+					i++;
+				}
+			}
+			// Strings
+			for (Entry<String, String> e : strParams.entrySet()) {
+				final String key = e.getKey();
+				final String value = e.getValue();
+				if (value != S_NULL) {
+					if (i > 0) sb.append(",");
+					sb.append(key).append("=").append(value);
+					i++;
+				}
+			}
+			// Integers
+			for (Entry<String, Integer> e : intParams.entrySet()) {
+				final String key = e.getKey();
+				final Integer value = e.getValue();
+				if (value != I_NULL) {
+					if (i > 0) sb.append(",");
+					sb.append(key).append("=").append(value);
+					i++;
+				}
+			}
+			return sb.toString();
+		}
+	}
+	
 	class Event {
 	}
 	class EventLifeCycle extends Event {
@@ -1084,6 +1197,7 @@ public class SimpleBouncer {
 			boolean shutdown = false;
 			InboundAddress inboundAddress;
 			public MuxServerListen(InboundAddress inboundAddress) throws IOException {
+				this.inboundAddress = inboundAddress;
 				inboundAddress.resolve();
 				listen = inboundAddress.listen();
 			}
@@ -1102,6 +1216,10 @@ public class SimpleBouncer {
 					try {
 						Socket socket = listen.accept();
 						setupSocket(socket);
+						Integer pReadTimeout = inboundAddress.getOpts().getInteger(Options.P_READ_TIMEOUT);
+						if (pReadTimeout != null) {
+							socket.setSoTimeout(pReadTimeout.intValue()); // SocketTimeoutException
+						}
 						Log.info(this.getClass().getSimpleName() + " new socket: " + socket + " SendBufferSize=" + socket.getSendBufferSize() + " ReceiveBufferSize=" + socket.getReceiveBufferSize());
 						attender(socket);
 					} catch (IOException e) {
@@ -1127,16 +1245,14 @@ public class SimpleBouncer {
 			protected synchronized void attender(Socket socket) throws IOException {
 				Log.info(this.getClass().getSimpleName() + " attending socket: " + socket);
 				if (local == null) {
-					local = new MuxServerLocal(socket);
+					local = new MuxServerLocal(socket, inboundAddress);
 					local.setRouter(router);
 					reloadables.add(local);
 					listenRemote(); 
-					// Solo puede haber un cliente, asi que bloqueamos este thread
-					//local.run();
 					threadPool.submit(local);
 				}
 				else {
-					// Solo puede haber un cliente, asi que cerramos esa conexion
+					// Only one concurrent client, close the new connection
 					closeSilent(socket);
 				}
 			}
@@ -1149,7 +1265,7 @@ public class SimpleBouncer {
 			@Override
 			protected synchronized void attender(Socket socket) throws IOException {
 				Log.info(this.getClass().getSimpleName() + " attending socket: " + socket);
-				MuxServerRemote remote = new MuxServerRemote(socket);
+				MuxServerRemote remote = new MuxServerRemote(socket, inboundAddress);
 				remote.setRouter(router);
 				mapRemotes.put(remote.getId(), remote);
 				threadPool.submit(remote);
@@ -1158,13 +1274,15 @@ public class SimpleBouncer {
 
 		abstract class MuxServerConnection implements Shutdownable, Awaiter, Runnable { // Local is MUX, Remote is RAW
 			Socket sock;
+			InboundAddress inboundAddress;
 			InputStream is;
 			OutputStream os;
 			MuxServerMessageRouter router;
 			boolean shutdown = false;
 			//
-			public MuxServerConnection(Socket sock) throws IOException {
+			public MuxServerConnection(Socket sock, InboundAddress inboundAddress) throws IOException {
 				this.sock = sock;
+				this.inboundAddress = inboundAddress;
 				is = sock.getInputStream();
 				os = sock.getOutputStream();
 			}
@@ -1185,8 +1303,8 @@ public class SimpleBouncer {
 
 		class MuxServerLocal extends MuxServerConnection { // Local is MUX
 			//
-			public MuxServerLocal(Socket sock) throws IOException {
-				super(sock);
+			public MuxServerLocal(Socket sock, InboundAddress inboundAddress) throws IOException {
+				super(sock, inboundAddress);
 			}
 			public void sendLocal(MuxPacket msg) throws IOException {
 				msg.toWire(os);
@@ -1236,8 +1354,8 @@ public class SimpleBouncer {
 			int isLocked = (BUFFER_LEN * OUTPUT_BUFFERS);
 			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(OUTPUT_BUFFERS<<1);
 			//
-			public MuxServerRemote(Socket sock) throws IOException {
-				super(sock);
+			public MuxServerRemote(Socket sock, InboundAddress inboundAddress) throws IOException {
+				super(sock, inboundAddress);
 				id = sock.getPort();
 				threadPool.submit(new Runnable() {
 					@Override

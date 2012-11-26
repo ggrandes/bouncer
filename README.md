@@ -84,7 +84,6 @@ Config file must be in class-path, general format is:
 ## TODOs
 
 * NIO?
-* Custom timeout by binding
 * Multiple remote-addr (not only multi DNS A-record)?
 * Use Log4J
 * Encryption MUX/Tunnel (AES+PreSharedSecret)
@@ -96,6 +95,7 @@ Config file must be in class-path, general format is:
 * Thread pool/control (v1.2)
 * Reverse tunnels (like ssh -R) over MUX (multiplexed channels) (v1.2)
 * FlowControl in MUX (v1.3)
+* Custom timeout by binding (v1.4)
 
 ## MISC
 Current harcoded values:
