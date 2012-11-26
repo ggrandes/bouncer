@@ -943,24 +943,22 @@ public class SimpleBouncer {
 
 		class MuxClientRemote extends MuxClientConnection { // Remote is MUX
 			//
-			SealerAES sealTX = null;
-			SealerAES sealRX = null;
+			SealerAES seal = null;
 			//
 			public MuxClientRemote(OutboundAddress outboundAddress) throws Exception {
 				super(outboundAddress);
 				if (outboundAddress.getOpts().isOption(Options.MUX_AES)) {
-					sealTX = new SealerAES(outboundAddress.getOpts().getString(Options.P_AES));
-					sealRX = new SealerAES(outboundAddress.getOpts().getString(Options.P_AES));
+					seal = new SealerAES(outboundAddress.getOpts().getString(Options.P_AES));
 				}
 			}
 			public synchronized void sendRemote(MuxPacket msg) throws Exception {
 				// XXX
-				if (sealTX != null) {
+				if (seal != null) {
 					// AES encryption
 					ByteArrayOutputStream baos = new ByteArrayOutputStream(BUFFER_LEN);
 					msg.toWire(baos);
-					byte[] encoded = sealTX.code(baos.toByteArray(), 0, baos.size());
-					byte[] iv = sealTX.getCoder().getIV();
+					byte[] encoded = seal.code(baos.toByteArray(), 0, baos.size());
+					byte[] iv = seal.getCoder().getIV();
 					IOHelper.toWireWithHeader(os, iv, iv.length);
 					IOHelper.toWireWithHeader(os, encoded, encoded.length);
 				}
@@ -998,11 +996,11 @@ public class SimpleBouncer {
 						MuxPacket msg = new MuxPacket();
 						try {
 							// XXX
-							if (sealRX != null) {
+							if (seal != null) {
 								// AES encryption
 								byte[] iv = IOHelper.fromWireWithHeader(is);
 								byte[] encoded = IOHelper.fromWireWithHeader(is);
-								byte[] decoded = sealRX.decode(iv, encoded, 0, encoded.length);
+								byte[] decoded = seal.decode(iv, encoded, 0, encoded.length);
 								ByteArrayInputStream bais = new ByteArrayInputStream(decoded);
 								msg.fromWire(bais);
 							}
@@ -1349,24 +1347,22 @@ public class SimpleBouncer {
 
 		class MuxServerLocal extends MuxServerConnection { // Local is MUX
 			//
-			SealerAES sealTX = null;
-			SealerAES sealRX = null;
+			SealerAES seal = null;
 			//
 			public MuxServerLocal(Socket sock, InboundAddress inboundAddress) throws Exception {
 				super(sock, inboundAddress);
 				if (inboundAddress.getOpts().isOption(Options.MUX_AES)) {
-					sealTX = new SealerAES(inboundAddress.getOpts().getString(Options.P_AES));
-					sealRX = new SealerAES(inboundAddress.getOpts().getString(Options.P_AES));
+					seal = new SealerAES(inboundAddress.getOpts().getString(Options.P_AES));
 				}
 			}
 			public synchronized void sendLocal(MuxPacket msg) throws Exception {
 				// XXX
-				if (sealTX != null) {
+				if (seal != null) {
 					// AES encryption
 					ByteArrayOutputStream baos = new ByteArrayOutputStream(BUFFER_LEN);
 					msg.toWire(baos);
-					byte[] encoded = sealTX.code(baos.toByteArray(), 0, baos.size());
-					byte[] iv = sealTX.getCoder().getIV();
+					byte[] encoded = seal.code(baos.toByteArray(), 0, baos.size());
+					byte[] iv = seal.getCoder().getIV();
 					IOHelper.toWireWithHeader(os, iv, iv.length);
 					IOHelper.toWireWithHeader(os, encoded, encoded.length);
 				}
@@ -1381,11 +1377,11 @@ public class SimpleBouncer {
 					MuxPacket msg = new MuxPacket();
 					try {
 						// XXX
-						if (sealRX != null) {
+						if (seal != null) {
 							// AES encryption
 							byte[] iv = IOHelper.fromWireWithHeader(is);
 							byte[] encoded = IOHelper.fromWireWithHeader(is);
-							byte[] decoded = sealRX.decode(iv, encoded, 0, encoded.length);
+							byte[] decoded = seal.decode(iv, encoded, 0, encoded.length);
 							ByteArrayInputStream bais = new ByteArrayInputStream(decoded);
 							msg.fromWire(bais);
 						}
