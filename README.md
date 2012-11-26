@@ -15,8 +15,10 @@ Config file must be in class-path, general format is:
         * **LB=RR**: active LoadBalancing in DNS order (round-robin)
         * **LB=RAND**: activate LoadBalancing in DNS random order
     * **TUN=SSL**: activate SSL tunneling (origin is plain, destination is SSL)
+    * **MUX=AES**: activate AES encryption in multiplexor (see AES=<key>)
     * **MUX=IN**: activate input-terminator multiplexor (for reverse tunnels)
     * **MUX=OUT**: activate output-initiator multiplexor (for reverse tunnels)
+    * **AES=<key>**: specify the key for AES (no white spaces)
 
 ##### Example config of simple forward:
 
@@ -86,7 +88,6 @@ Config file must be in class-path, general format is:
 * NIO?
 * Multiple remote-addr (not only multi DNS A-record)?
 * Use Log4J
-* Encryption MUX/Tunnel (AES+PreSharedSecret)
 * Encryption MUX/Tunnel (SSL/TLS)
 
 ## DONEs
@@ -96,6 +97,7 @@ Config file must be in class-path, general format is:
 * Reverse tunnels (like ssh -R) over MUX (multiplexed channels) (v1.2)
 * FlowControl in MUX (v1.3)
 * Custom timeout by binding (v1.4)
+* Encryption MUX/Tunnel (AES+PreSharedSecret) (v1.4)
 
 ## MISC
 Current harcoded values:
@@ -106,6 +108,7 @@ Current harcoded values:
 * Connection timeout: 30seconds
 * Read timeout: 5minutes
 * Reload config check time interval: 10seconds
+* Reset Initialization Vector (IV) for AES: { Iterations: 64K, Data: 16MB }
 
 
 ---
