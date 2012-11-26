@@ -87,6 +87,8 @@ Config file must be in class-path, general format is:
 * Custom timeout by binding
 * Multiple remote-addr (not only multi DNS A-record)?
 * Use Log4J
+* Encryption MUX/Tunnel (AES+PreSharedSecret)
+* Encryption MUX/Tunnel (SSL/TLS)
 
 ## DONEs
 
