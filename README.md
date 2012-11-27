@@ -15,10 +15,10 @@ Config file must be in class-path, general format is:
         * **LB=RR**: active LoadBalancing in DNS order (round-robin)
         * **LB=RAND**: activate LoadBalancing in DNS random order
     * **TUN=SSL**: activate SSL tunneling (origin is plain, destination is SSL)
-    * **MUX=AES**: activate AES encryption in multiplexor (see AES=<key>)
+    * **MUX=AES**: activate AES encryption in multiplexor (see AES=key)
     * **MUX=IN**: activate input-terminator multiplexor (for reverse tunnels)
     * **MUX=OUT**: activate output-initiator multiplexor (for reverse tunnels)
-    * **AES=<key>**: specify the key for AES (no white spaces)
+    * **AES=key**: specify the key for AES (no white spaces)
 
 ##### Example config of simple forward:
 
