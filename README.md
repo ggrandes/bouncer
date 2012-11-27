@@ -98,6 +98,7 @@ Config file must be in class-path, general format is:
 * FlowControl in MUX (v1.3)
 * Custom timeout by binding (v1.4)
 * Encryption MUX/Tunnel (AES+PreSharedSecret) (v1.4)
+* Manage better the read timeouts (full-duplex) (v1.4)
 
 ## MISC
 Current harcoded values:
