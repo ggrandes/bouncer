@@ -127,10 +127,10 @@ public class SimpleBouncer {
 					notify(new EventNewSocket(this, client));
 				}
 			}
-			catch(UnknownHostException e) {
+			catch (UnknownHostException e) {
 				Log.error(this.getClass().getSimpleName() + " " + e.toString());
 			}
-			catch(Exception e) {
+			catch (Exception e) {
 				if (!listen.isClosed()) {
 					Log.error(this.getClass().getSimpleName() + " Generic exception", e);
 				}
@@ -184,10 +184,10 @@ public class SimpleBouncer {
 				}
 				notify(new EventNewSocket(this, remote));
 			}
-			catch(UnknownHostException e) {
+			catch (UnknownHostException e) {
 				Log.error(this.getClass().getSimpleName() + " " + e.toString());
 			}
-			catch(Exception e) {
+			catch (Exception e) {
 				Log.error(this.getClass().getSimpleName() + " Generic exception", e);
 			}
 			finally {
@@ -239,8 +239,8 @@ public class SimpleBouncer {
 					st2.setBrother(st1);
 					threadPool.submit(st1);
 					threadPool.submit(st2);
-				} catch (IOException e) {
-					Log.error(this.getClass().getSimpleName() + "::event IOException", e);
+				} catch (Exception e) {
+					Log.error(this.getClass().getSimpleName() + "::event Exception", e);
 				}
 			}
 		}
@@ -294,12 +294,12 @@ public class SimpleBouncer {
 						}
 					}					
 				}
-			} catch (IOException e) {
+			} catch (Exception e) {
 				try {
 					if ((sockin instanceof SSLSocket) && (!sockin.isClosed())) {
 						Thread.sleep(100);
 					}
-				} catch(Exception ign) {}
+				} catch (Exception ign) {}
 				if (!sockin.isClosed() && !shutdown) {
 					Log.error(this.getClass().getSimpleName() + " " + e.toString() + " " + sockin);
 				}
@@ -442,20 +442,20 @@ public class SimpleBouncer {
 	}
 
 	static void closeSilent(final Reader ir) {
-		try { ir.close(); } catch(Exception ign) {}
+		try { ir.close(); } catch (Exception ign) {}
 	}
 	static void closeSilent(final InputStream is) {
-		try { is.close(); } catch(Exception ign) {}
+		try { is.close(); } catch (Exception ign) {}
 	}
 	static void closeSilent(final OutputStream os) {
-		try { os.flush(); } catch(Exception ign) {}
-		try { os.close(); } catch(Exception ign) {}
+		try { os.flush(); } catch (Exception ign) {}
+		try { os.close(); } catch (Exception ign) {}
 	}
 	static void closeSilent(final Socket sock) {
-		try { sock.close(); } catch(Exception ign) {}
+		try { sock.close(); } catch (Exception ign) {}
 	}
 	static void closeSilent(final ServerSocket sock) {
-		try { sock.close(); } catch(Exception ign) {}
+		try { sock.close(); } catch (Exception ign) {}
 	}
 
 	static void setupSocket(final ServerSocket sock) throws SocketException {
@@ -613,11 +613,11 @@ public class SimpleBouncer {
 					pConnectTimeout = CONNECT_TIMEOUT;
 				}
 				sock.connect(new InetSocketAddress(addr, port), pConnectTimeout); 
-			} catch(SocketTimeoutException e) {
+			} catch (SocketTimeoutException e) {
 				Log.error(this.getClass().getSimpleName() + " Error connecting to " + addr + ":" + port + (isSSL? " (SSL) ": " ") + e.toString());
-			} catch(ConnectException e) {
+			} catch (ConnectException e) {
 				Log.error(this.getClass().getSimpleName() + " Error connecting to " + addr + ":" + port + (isSSL? " (SSL) ": " ") + e.toString());
-			} catch (IOException e) {
+			} catch (Exception e) {
 				Log.error(this.getClass().getSimpleName() + " Error connecting to " + addr + ":" + port + (isSSL? " (SSL)": ""), e);
 			}
 			if ((sock != null) && sock.isConnected()) {
@@ -892,7 +892,7 @@ public class SimpleBouncer {
 					} catch (ConnectException e) {
 						// Send FIN
 						closeLocal(msg.getIdChannel());
-					} catch (IOException e) {
+					} catch (Exception e) {
 						Log.error(this.getClass().getSimpleName() + "::onReceiveFromRemote " + e.toString(), e);
 						// Send FIN
 						closeLocal(msg.getIdChannel());
@@ -931,8 +931,6 @@ public class SimpleBouncer {
 						RawPacket raw = new RawPacket();
 						raw.put(msg.getIdChannel(), msg.getBufferLen(), msg.getBuffer());
 						local.sendLocal(raw);
-					} catch (IOException e) {
-						Log.error(this.getClass().getSimpleName() + "::onReceiveFromRemote " + e.toString(), e);
 					} catch (Exception e) {
 						Log.error(this.getClass().getSimpleName() + "::onReceiveFromRemote " + e.toString(), e);
 					}
@@ -945,8 +943,6 @@ public class SimpleBouncer {
 					MuxPacket mux = new MuxPacket();
 					mux.put(msg.getIdChannel(), msg.getBufferLen(), msg.getBuffer());
 					remote.sendRemote(mux);
-				} catch (IOException e) {
-					Log.error(this.getClass().getSimpleName() + "::onReceiveFromLocal " + e.toString(), e);
 				} catch (Exception e) {
 					Log.error(this.getClass().getSimpleName() + "::onReceiveFromLocal " + e.toString(), e);
 				}
@@ -1025,7 +1021,7 @@ public class SimpleBouncer {
 							closeSilent(os);
 							closeSilent(sock);
 							sock = null;
-							try { Thread.sleep(5000); } catch(Exception ign) {}
+							try { Thread.sleep(5000); } catch (Exception ign) {}
 						}
 					}
 					while (!shutdown) {
@@ -1098,8 +1094,6 @@ public class SimpleBouncer {
 								RawPacket msg = queue.take();
 								msg.toWire(os);
 								sendACK(msg); // Send ACK
-							} catch (IOException e) {
-								Log.error(this.getClass().getSimpleName() + "::sendLocal " + e.toString(), e);
 							} catch (Exception e) {
 								Log.error(this.getClass().getSimpleName() + "::sendLocal " + e.toString(), e);
 							}
@@ -1135,7 +1129,7 @@ public class SimpleBouncer {
 					try {
 						//Log.info(this.getClass().getSimpleName() + "::run fromWire: " + sock);
 						while (isLocked()) {
-							try { Thread.sleep(1); } catch(Exception ign) {}
+							try { Thread.sleep(1); } catch (Exception ign) {}
 						}
 						msg.fromWire(is);
 						msg.setIdChannel(id);
@@ -1152,7 +1146,7 @@ public class SimpleBouncer {
 						}
 					} catch (EOFException e) {
 						break;
-					} catch (IOException e) {
+					} catch (Exception e) {
 						if (!sock.isClosed() && !shutdown) {
 							if (e.getMessage().equals("Connection reset")) {
 								Log.info(this.getClass().getSimpleName() + " " + e.toString());
@@ -1274,8 +1268,6 @@ public class SimpleBouncer {
 						RawPacket raw = new RawPacket();
 						raw.put(msg.getIdChannel(), msg.getBufferLen(), msg.getBuffer());
 						remote.sendRemote(raw);
-					} catch (IOException e) {
-						Log.error(this.getClass().getSimpleName() + "::onReceiveFromLocal " + e.toString(), e);
 					} catch (Exception e) {
 						Log.error(this.getClass().getSimpleName() + "::onReceiveFromLocal " + e.toString(), e);
 					}
@@ -1288,8 +1280,6 @@ public class SimpleBouncer {
 					MuxPacket mux = new MuxPacket();
 					mux.put(msg.getIdChannel(), msg.getBufferLen(), msg.getBuffer());
 					local.sendLocal(mux);
-				} catch (IOException e) {
-					Log.error(this.getClass().getSimpleName() + "::onReceiveFromRemote " + e.toString(), e);
 				} catch (Exception e) {
 					Log.error(this.getClass().getSimpleName() + "::onReceiveFromRemote " + e.toString(), e);
 				}
@@ -1329,7 +1319,7 @@ public class SimpleBouncer {
 					} catch (Exception e) {
 						if (!shutdown)
 							Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
-						try { Thread.sleep(500); } catch(InterruptedException ign) {}
+						try { Thread.sleep(500); } catch (InterruptedException ign) {}
 					}
 				}
 				close();
@@ -1497,8 +1487,6 @@ public class SimpleBouncer {
 								RawPacket msg = queue.take();
 								msg.toWire(os);
 								sendACK(msg); // Send ACK
-							} catch (IOException e) {
-								Log.error(this.getClass().getSimpleName() + "::sendRemote " + e.toString(), e);
 							} catch (Exception e) {
 								Log.error(this.getClass().getSimpleName() + "::sendRemote " + e.toString(), e);
 							}
@@ -1542,7 +1530,7 @@ public class SimpleBouncer {
 					RawPacket msg = new RawPacket();
 					try {
 						while (isLocked()) {
-							try { Thread.sleep(1); } catch(Exception ign) {}
+							try { Thread.sleep(1); } catch (Exception ign) {}
 						}
 						msg.fromWire(is);
 						msg.setIdChannel(id);
@@ -1558,7 +1546,7 @@ public class SimpleBouncer {
 						}
 					} catch (EOFException e) {
 						break;
-					} catch (IOException e) {
+					} catch (Exception e) {
 						if (!sock.isClosed() && !shutdown) {
 							if (e.getMessage().equals("Connection reset")) {
 								Log.info(this.getClass().getSimpleName() + " " + e.toString());
@@ -1638,7 +1626,7 @@ public class SimpleBouncer {
 					throw new EOFException("EOF");
 				}
 			}
-			catch(IOException e) {
+			catch (IOException e) {
 				clear();
 				throw e;
 			}
@@ -1900,7 +1888,7 @@ public class SimpleBouncer {
 		//
 		private final Cipher init(final int cipherMode, final byte[] iv) throws Exception {
 			final byte[] keyBuf = md128(key);
-			final Cipher cip = Cipher.getInstance("AES/CBC/PKCS5Padding");
+			final Cipher cip = Cipher.getInstance("AES/CBC/PKCS5Padding"); // Blowfish, CTR, ISO10126PADDING
 			cip.init(cipherMode, new SecretKeySpec(keyBuf, "AES"), new IvParameterSpec(iv));
 			return cip;
 		}
