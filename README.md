@@ -35,7 +35,7 @@ Config file must be in class-path, general format is:
 * If use SSL be careful about permissions of "files.key" (unix 600 may be good)
 * Maybe if AES key is used, you need to protect the "bouncer.conf"
 
-##### Example config of simple forward (you need ONE bouncer):
+##### Example config of simple forward:
 
     # <listen-addr> <listen-port> <remote-addr> <remote-port> [options]
     0.0.0.0 1234 127.1.2.3 9876
@@ -58,6 +58,7 @@ Config file must be in class-path, general format is:
 #### Schema about Reverse Tunneling (you need TWO bouncers):
     
 ![Reverse Tunneling](https://raw.github.com/ggrandes/bouncer/master/doc/reverse_tunneling.png "Reverse Tunneling")
+
 ###### Machine-A and Machine-B are Bouncers in Client-Server configuration.
 
 1. Machine-A (MUX-OUT) init connection to Machine-B (MUX-IN)
@@ -71,7 +72,7 @@ Config file must be in class-path, general format is:
 * Machine-B (MUX-IN) should be in DMZ.
 * Machine-A (MUX-OUT) and Machine-C (Server) may be in internal network.
 
-#### Schema about Forward port:
+#### Schema about Forward port (you need ONE bouncer):
     
 ![Forward port](https://raw.github.com/ggrandes/bouncer/master/doc/forward_port.png "Forward port")
 
