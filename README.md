@@ -16,12 +16,12 @@ Config file must be in class-path, general format is:
         * **LB=ORDER**: active failover-only in DNS order
         * **LB=RR**: active LoadBalancing in DNS order (round-robin)
         * **LB=RAND**: activate LoadBalancing in DNS random order
-* Options for simple Forward
+* Options for Simple Forward (rinetd)
     * **TUN=SSL**: activate SSL tunneling (origin is plain, destination is SSL)
 * Options for Reverse Tunneling (MUX)
     * Select operation of MUX (only one option can be used)
-        * **MUX=IN**: activate input-terminator multiplexor (for reverse tunnels)
-        * **MUX=OUT**: activate output-initiator multiplexor (for reverse tunnels)
+        * **MUX=IN**: activate input-terminator multiplexor
+        * **MUX=OUT**: activate output-initiator multiplexor
     * Options for encryption (optional -AES or SSL or NONE-):
         * **MUX=AES**: activate AES encryption in multiplexor (see AES=key)
             * **AES=key**: specify the key for AES (no white spaces)
