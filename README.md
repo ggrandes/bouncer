@@ -9,16 +9,31 @@ Config file must be in class-path, general format is:
 
     # <left-addr> <left-port> <right-addr> <right-port> [options]
 
-* Options are comma separated:
+###### Options are comma separated:
+
+* Options for outgoing connections
     * Loadbalancing/Failover (only one option can be used)
         * **LB=ORDER**: active failover-only in DNS order
         * **LB=RR**: active LoadBalancing in DNS order (round-robin)
         * **LB=RAND**: activate LoadBalancing in DNS random order
+* Options for simple Forward
     * **TUN=SSL**: activate SSL tunneling (origin is plain, destination is SSL)
-    * **MUX=AES**: activate AES encryption in multiplexor (see AES=key)
-    * **MUX=IN**: activate input-terminator multiplexor (for reverse tunnels)
-    * **MUX=OUT**: activate output-initiator multiplexor (for reverse tunnels)
-    * **AES=key**: specify the key for AES (no white spaces)
+* Options for Reverse Tunneling (MUX)
+    * Select operation of MUX (only one option can be used)
+        * **MUX=IN**: activate input-terminator multiplexor (for reverse tunnels)
+        * **MUX=OUT**: activate output-initiator multiplexor (for reverse tunnels)
+    * Options for encryption (optional -AES or SSL or NONE-):
+        * **MUX=AES**: activate AES encryption in multiplexor (see AES=key)
+            * **AES=key**: specify the key for AES (no white spaces)
+        * **MUX=SSL**: activate SSL encryption in multiplexor (see SSL=xxx) `[TODO]`
+            * **SSL=server.crt:server.key:client.crt**: specify files for SSL config (server/mux-in)
+            * **SSL=client.crt:client.key:server.crt**: specify files for SSL config (client/mux-out)
+
+###### Notes about security:
+
+* If use SSL "files.crt/.key" must be in class-path like "bouncer.conf"
+* If use SSL be careful about permissions of "files.key" (unix 600 may be good)
+* Maybe if AES key is used, you need to protect the "bouncer.conf"
 
 ##### Example config of simple forward:
 
@@ -86,9 +101,11 @@ Config file must be in class-path, general format is:
 ## TODOs
 
 * NIO?
+* JMX?
 * Multiple remote-addr (not only multi DNS A-record)?
 * Use Log4J
-* Encryption MUX/Tunnel (SSL/TLS)
+* Limit number of connections
+* Encryption MUX/Tunnel (SSL/TLS) (v1.5)
 
 ## DONEs
 
