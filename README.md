@@ -4,6 +4,41 @@ SimpleBouncer is an open source (Apache License, Version 2.0) Java network proxy
 
 ---
 
+## DOC
+
+#### Schema about Forward port (you need ONE bouncer):
+    
+![Forward port](https://raw.github.com/ggrandes/bouncer/master/doc/forward_port.png "Forward port")
+
+1. Machine-A (Client) init connection to Machine-B (Bouncer)
+2. Machine-B init connection to Machine-C (Server)
+3. Done: Machine-A is able to speak with Machine-C
+
+###### Notes about security:
+
+* Machine-A (Client) may be in Internal network.
+* Machine-B (Bouncer) may be in DMZ.
+* Machine-C (Server) may be in External network.
+
+#### Schema about Reverse Tunneling (you need TWO bouncers):
+    
+![Reverse Tunneling](https://raw.github.com/ggrandes/bouncer/master/doc/reverse_tunneling.png "Reverse Tunneling")
+
+###### Machine-A and Machine-B are Bouncers in Client-Server configuration.
+
+1. Machine-A (MUX-OUT) init connection to Machine-B (MUX-IN)
+2. Machine-D (Client) init connection to Machine-B
+3. Machine-B request to Machine-A new SubChannel over MUX (Tunnel).
+4. Machine-A open connection to Machine-C (Server).
+5. Done: Machine-D is able to speak with Machine-C
+
+###### Notes about security:
+
+* Machine-B (MUX-IN) should be in DMZ.
+* Machine-A (MUX-OUT) and Machine-C (Server) may be in internal network.
+
+---
+
 ## Config (bouncer.conf)
 Config file must be in class-path, general format is:
 
@@ -53,39 +88,6 @@ Config file must be in class-path, general format is:
     # <listen-tun-addr> <listen-tun-port> <listen-addr> <listen-port> MUX-IN
     192.168.2.1 5555 127.0.0.1 8080 MUX=IN
  
-## DOC
-
-#### Schema about Reverse Tunneling (you need TWO bouncers):
-    
-![Reverse Tunneling](https://raw.github.com/ggrandes/bouncer/master/doc/reverse_tunneling.png "Reverse Tunneling")
-
-###### Machine-A and Machine-B are Bouncers in Client-Server configuration.
-
-1. Machine-A (MUX-OUT) init connection to Machine-B (MUX-IN)
-2. Machine-D (Client) init connection to Machine-B
-3. Machine-B request to Machine-A new SubChannel over MUX (Tunnel).
-4. Machine-A open connection to Machine-C (Server).
-5. Done: Machine-D is able to speak with Machine-C
-
-###### Notes about security:
-
-* Machine-B (MUX-IN) should be in DMZ.
-* Machine-A (MUX-OUT) and Machine-C (Server) may be in internal network.
-
-#### Schema about Forward port (you need ONE bouncer):
-    
-![Forward port](https://raw.github.com/ggrandes/bouncer/master/doc/forward_port.png "Forward port")
-
-1. Machine-A (Client) init connection to Machine-B (Bouncer)
-2. Machine-B init connection to Machine-C (Server)
-3. Done: Machine-A is able to speak with Machine-C
-
-###### Notes about security:
-
-* Machine-A (Client) may be in Internal network.
-* Machine-B (Bouncer) may be in DMZ.
-* Machine-C (Server) may be in External network.
-
 ---
 
 ## Compile (handmade)
