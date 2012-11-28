@@ -109,6 +109,7 @@ Config file must be in class-path, general format is:
 * Multiple remote-addr (not only multi DNS A-record)?
 * Use Log4J
 * Limit number of connections
+* Limit absolute timeout/TTL of a connection
 * Encryption MUX/Tunnel (SSL/TLS) (v1.5)
 
 ## DONEs
