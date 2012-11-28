@@ -66,9 +66,12 @@ Config file must be in class-path, general format is:
 
 ###### Notes about security:
 
-* If use SSL "files.crt/.key" must be in class-path like "bouncer.conf"
-* If use SSL be careful about permissions of "files.key" (unix 600 may be good)
-* Maybe if AES key is used, you need to protect the "bouncer.conf"
+* If use MUX=SSL 
+    * files.crt are X.509 public certificates
+    * files.key are RSA Keys in PKCS#8 format (no encrypted)
+    * files.crt/.key must be in class-path like "bouncer.conf"
+    * be careful about permissions of "files.key" (unix permission 600 may be good)
+* If use MUX=AES, you need to protect the "bouncer.conf" from indiscrete eyes (unix permission 600 may be good).
 
 ##### Example config of simple forward:
 
