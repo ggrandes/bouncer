@@ -60,18 +60,19 @@ Config file must be in class-path, general format is:
     * Options for encryption (optional -AES or SSL or NONE-):
         * **MUX=AES**: activate AES encryption in multiplexor (see AES=key)
             * **AES=key**: specify the key for AES (no white spaces)
-        * **MUX=SSL**: activate SSL encryption in multiplexor (see SSL=xxx) `[TODO]`
+        * **MUX=SSL**: activate SSL encryption in multiplexor (see SSL=xxx)
             * **SSL=server.crt:server.key:client.crt**: specify files for SSL config (server/mux-in)
             * **SSL=client.crt:client.key:server.crt**: specify files for SSL config (client/mux-out)
 
 ###### Notes about security:
 
-* If use MUX=SSL 
+* If use MUX=SSL
+    * Keys/Certificates are pairs, must be configured in the two ends (MUX-IN & MUX-OUT)
     * files.crt are X.509 public certificates
     * files.key are RSA Keys in PKCS#8 format (no encrypted)
     * files.crt/.key must be in class-path like "bouncer.conf"
     * be careful about permissions of "files.key" (unix permission 600 may be good)
-* If use MUX=AES, you need to protect the "bouncer.conf" from indiscrete eyes (unix permission 600 may be good).
+* If use MUX=AES, you need to protect the "bouncer.conf" from indiscrete eyes (unix permission 600 may be good)
 
 ##### Example config of simple forward:
 
@@ -97,7 +98,15 @@ Config file must be in class-path, general format is:
 
     mkdir classes
     javac -d classes/ src/net/bouncer/SimpleBouncer.java
+    # KeyGenerator compilation can output warnings about Sun proprietary API (you can safely ignore it)
+    javac -d classes/ src/net/bouncer/KeyGenerator.java
     jar cvf bouncer.jar -C classes/ .
+
+###### Tested on JDK 1.6.0_34
+
+## RSA Key / X.509 Certificate Generation for MUX-SSL (optional)
+
+    java -cp .:bouncer.jar net.bouncer.KeyGenerator <bits> <days> <CommonName> <filename-without-extension>
 
 ## Running
 
@@ -113,7 +122,6 @@ Config file must be in class-path, general format is:
 * Use Log4J
 * Limit number of connections
 * Limit absolute timeout/TTL of a connection
-* Encryption MUX/Tunnel (SSL/TLS) (v1.5)
 
 ## DONEs
 
@@ -124,6 +132,8 @@ Config file must be in class-path, general format is:
 * Custom timeout by binding (v1.4)
 * Encryption MUX/Tunnel (AES+PreSharedSecret) (v1.4)
 * Manage better the read timeouts (full-duplex) (v1.4)
+* Encryption MUX/Tunnel (SSL/TLS) (v1.5)
+* Key Generator for MUX-SSL/TLS (v1.5)
 
 ## MISC
 Current harcoded values:
@@ -134,7 +144,18 @@ Current harcoded values:
 * Connection timeout: 30seconds
 * Read timeout: 5minutes
 * Reload config check time interval: 10seconds
-* Reset Initialization Vector (IV) for AES: { Iterations: 64K, Data: 16MB }
+* Reset Initialization Vector (IV) for MUX-AES: { Iterations: 64K, Data: 16MB }
+* For MUX-AES encryption/[transformation](http://docs.oracle.com/javase/6/docs/technotes/guides/security/crypto/CryptoSpec.html#SimpleEncrEx) are AES/CBC/PKCS5Padding
+* For MUX-SSL supported Asymmetric Keys are RSA
+* For MUX-SSL enabled [Protocols]](http://docs.oracle.com/javase/6/docs/technotes/guides/security/SunProviders.html#SunJSSEProvider) are:
+    * `TLSv1`
+    * `SSLv3`
+* For MUX-SSL enabled [CipherSuites](http://docs.oracle.com/javase/6/docs/technotes/guides/security/SunProviders.html#SunJSSEProvider) are:
+    * `TLS_RSA_WITH_AES_256_CBC_SHA`
+        * For AES-256 you need [JCE Unlimited Strength](http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html) 
+    * `TLS_RSA_WITH_AES_128_CBC_SHA`
+    * `SSL_RSA_WITH_3DES_EDE_CBC_SHA`
+    * `SSL_RSA_WITH_RC4_128_SHA`
 
 
 ---

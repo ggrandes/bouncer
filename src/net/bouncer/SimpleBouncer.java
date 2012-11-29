@@ -29,11 +29,25 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.net.SocketFactory;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
+import javax.xml.bind.DatatypeConverter;
 
+import java.security.KeyFactory;
+import java.security.KeyStore;
 import java.security.MessageDigest;
+import java.security.PrivateKey;
 import java.security.SecureRandom;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,7 +78,7 @@ import java.io.Reader;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
-	public static final String VERSION = "1.4beta1";
+	public static final String VERSION = "1.5beta1";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
 	private static final int OUTPUT_BUFFERS = 3;
@@ -416,24 +430,44 @@ public class SimpleBouncer {
 
 	void start(final String leftaddr, final int leftport, final String rightaddr, final int rightport, final Options opts) {
 		BouncerAddress eleft = null, eright = null;
+		SSLFactory sslFactory = null;
+		if (opts.isOption(Options.MUX_SSL)) {
+			String[] sslConfig = new String[] { "NULL"};
+			try {
+				sslConfig = opts.getString(Options.P_SSL).split(":");
+				sslFactory = new SSLFactory(sslConfig[0], sslConfig[1], sslConfig[2]);
+			}
+			catch (Exception e) {
+				Log.error(this.getClass().getSimpleName() + " Error creating SSLFactory("+Arrays.asList(sslConfig)+")", e);
+				return;
+			}
+		}
 		try {
 			if (opts.isOption(Options.MUX_IN)) {
-				InboundAddress left = new InboundAddress(leftaddr, leftport, opts); // MUX
-				InboundAddress right = new InboundAddress(rightaddr, rightport, opts); // PLAIN
+				Options lopts = new Options(opts).unsetOptionsPlain();
+				Options ropts = new Options(opts).unsetOptionsMUX();
+				InboundAddress left = new InboundAddress(leftaddr, leftport, lopts); // MUX
+				InboundAddress right = new InboundAddress(rightaddr, rightport, ropts); // PLAIN
+				left.setSSLFactory(sslFactory);
 				eleft = left;
 				eright = right;
 				new MuxServer(left, right).listenLocal();
 			}
 			else if (opts.isOption(Options.MUX_OUT)) {
-				OutboundAddress left = new OutboundAddress(leftaddr, leftport, opts); // PLAIN
-				OutboundAddress right = new OutboundAddress(rightaddr, rightport, opts); // MUX
+				Options lopts = new Options(opts).unsetOptionsMUX();
+				Options ropts = new Options(opts).unsetOptionsPlain();
+				OutboundAddress left = new OutboundAddress(leftaddr, leftport, lopts); // PLAIN
+				OutboundAddress right = new OutboundAddress(rightaddr, rightport, ropts); // MUX
+				right.setSSLFactory(sslFactory);
 				eleft = left;
 				eright = right;
 				new MuxClient(left, right).openRemote();
 			}
 			else {
-				InboundAddress left = new InboundAddress(leftaddr, leftport, opts); // PLAIN
-				OutboundAddress right = new OutboundAddress(rightaddr, rightport, opts); // PLAIN
+				Options lopts = new Options(opts).unsetOptionsMUX();
+				Options ropts = new Options(opts).unsetOptionsMUX();
+				InboundAddress left = new InboundAddress(leftaddr, leftport, lopts); // PLAIN
+				OutboundAddress right = new OutboundAddress(rightaddr, rightport, ropts); // PLAIN
 				eleft = left;
 				eright = right;
 				RinetdStyleAdapterLocal redir = new RinetdStyleAdapterLocal(right);
@@ -501,6 +535,7 @@ public class SimpleBouncer {
 	static class InboundAddress implements BouncerAddress {
 		//
 		Options opts = null;
+		SSLFactory sslFactory = null;
 		//
 		final String host;
 		final int port;
@@ -510,6 +545,9 @@ public class SimpleBouncer {
 			this.host = host;
 			this.port = port;
 			this.opts = opts;
+		}
+		public void setSSLFactory(SSLFactory sslFactory) {
+			this.sslFactory = sslFactory;
 		}
 		Options getOpts() {
 			return opts;
@@ -529,7 +567,13 @@ public class SimpleBouncer {
 			return socks;
 		}
 		ServerSocket listen() throws IOException {
-			ServerSocket listen = new ServerSocket();
+			ServerSocket listen = null;
+			if (opts.isOption(Options.MUX_SSL)) {
+				listen = sslFactory.createSSLServerSocket();
+			}
+			else {
+				listen = new ServerSocket();
+			}
 			InetSocketAddress bind = new InetSocketAddress(addrs[0], port);
 			setupSocket(listen);
 			listen.bind(bind);
@@ -544,6 +588,7 @@ public class SimpleBouncer {
 		//
 		int roundrobin = 0;
 		Options opts = null;
+		SSLFactory sslFactory = null;
 		//
 		final String host;
 		final int port;
@@ -553,6 +598,9 @@ public class SimpleBouncer {
 			this.host = host;
 			this.port = port;
 			this.opts = opts;
+		}
+		public void setSSLFactory(SSLFactory sslFactory) {
+			this.sslFactory = sslFactory;
 		}
 		Options getOpts() {
 			return opts;
@@ -568,27 +616,26 @@ public class SimpleBouncer {
 			if (addrs == null) {
 				return null;
 			}
-			final boolean isSSL = opts.isOption(Options.TUN_SSL);
 			final int filterFlags = (Options.LB_ORDER | Options.LB_RR | Options.LB_RAND);
 			Socket remote = null;
 			switch (opts.getFlags(filterFlags)) {
 			case Options.LB_ORDER:
 				for (InetAddress addr : addrs) {
-					remote = connect(addr, isSSL);
+					remote = connect(addr);
 					if (remote != null) break;
 				}
 				break;
 			case Options.LB_RR:
 				final int rrbegin = roundrobin;
 				do {
-					remote = connect(addrs[roundrobin++], isSSL);
+					remote = connect(addrs[roundrobin++]);
 					roundrobin %= addrs.length;
 					if (remote != null) break;
 				} while (roundrobin != rrbegin);
 				break;
 			case Options.LB_RAND:
 				final Random r = new Random();
-				remote = connect(addrs[(r.nextInt(Integer.MAX_VALUE) % addrs.length)], isSSL);
+				remote = connect(addrs[(r.nextInt(Integer.MAX_VALUE) % addrs.length)]);
 				break;
 			}
 			if (remote != null) {
@@ -604,11 +651,15 @@ public class SimpleBouncer {
 			}
 			return remote;
 		}
-		Socket connect(final InetAddress addr, final boolean isSSL) {
+		Socket connect(final InetAddress addr) {
+			final boolean isSSL = opts.isOption(Options.TUN_SSL|Options.MUX_SSL);
 			Socket sock = null;
 			try {
 				Log.info(this.getClass().getSimpleName() + " Connecting to " + addr + ":" + port + (isSSL? " (SSL)": ""));
-				if (isSSL) {
+				if (opts.isOption(Options.MUX_SSL)) {
+					sock = sslFactory.createSSLSocket();
+				}
+				else if (opts.isOption(Options.TUN_SSL)) {
 					SocketFactory factory = SSLSocketFactory.getDefault();
 					sock = factory.createSocket();
 				}
@@ -619,7 +670,10 @@ public class SimpleBouncer {
 				if (pConnectTimeout == null) {
 					pConnectTimeout = CONNECT_TIMEOUT;
 				}
-				sock.connect(new InetSocketAddress(addr, port), pConnectTimeout); 
+				sock.connect(new InetSocketAddress(addr, port), pConnectTimeout);
+				if (sock instanceof SSLSocket) {
+					((SSLSocket) sock).startHandshake();
+				}
 			} catch (SocketTimeoutException e) {
 				Log.error(this.getClass().getSimpleName() + " Error connecting to " + addr + ":" + port + (isSSL? " (SSL) ": " ") + e.toString());
 			} catch (ConnectException e) {
@@ -649,6 +703,7 @@ public class SimpleBouncer {
 		public static final int MUX_IN		= 0x00000200;	// Multiplexor terminator (inbound)
 		//
 		public static final String P_AES				= "AES";
+		public static final String P_SSL				= "SSL";
 		public static final String P_CONNECT_TIMEOUT	= "CONNECT_TIMEOUT";
 		public static final String P_READ_TIMEOUT		= "READ_TIMEOUT";
 		//
@@ -663,16 +718,16 @@ public class SimpleBouncer {
 				put("MUX=OUT", MUX_OUT);
 				put("MUX=IN", MUX_IN);
 				put("MUX=AES", MUX_AES);
-				put("MUX=SSL", MUX_SSL); // TODO
+				put("MUX=SSL", MUX_SSL);
 			}
 		});
 		//
-		String strOpts;
 		int flags;
 		@SuppressWarnings("serial")
 		final Map<String, String> strParams = Collections.synchronizedMap(new HashMap<String, String>() {
 			{
 				put(P_AES, S_NULL);		// AES=<key>
+				put(P_SSL, S_NULL);		// SSL=server.crt:server.key:client.crt (MUX-IN) || SSL=client.crt:client.key:server.crt (MUX-OUT)
 			}
 		});
 		@SuppressWarnings("serial")
@@ -684,12 +739,27 @@ public class SimpleBouncer {
 		});
 		//
 		public Options(String strOpts) {
-			this.strOpts = strOpts;
 			this.flags = parseOptions(strOpts);
 		}
-
+		// Clone Constructor
+		public Options(Options old) {
+			this.flags = old.flags;
+			for (Entry<String, String> e : old.strParams.entrySet()) {
+				strParams.put(e.getKey(), e.getValue());
+			}
+			for (Entry<String, Integer> e : old.intParams.entrySet()) {
+				intParams.put(e.getKey(), e.getValue());
+			}
+		}
+		//
 		public int getFlags(final int filterBits) {
 			return (flags & filterBits);
+		}
+		public void setFlags(final int bits) {
+			flags |= bits;
+		}
+		public void unsetFlags(final int bits) {
+			flags &= ~bits;
 		}
 
 		public String getString(final String name) {
@@ -699,6 +769,12 @@ public class SimpleBouncer {
 			}
 			return value;
 		}
+		public void setString(final String name, String value) {
+			if (value == null) {
+				value = S_NULL;
+			}
+			strParams.put(name, value);
+		}
 
 		public Integer getInteger(final String name) {
 			final Integer value = intParams.get(name);
@@ -706,6 +782,29 @@ public class SimpleBouncer {
 				return null;
 			}
 			return value;
+		}
+		public void setInteger(final String name, Integer value) {
+			if (value == null) {
+				value = I_NULL;
+			}
+			intParams.put(name, value);
+		}
+
+		/**
+		 * Helper (remove options that only apply to MUX)
+		 */
+		public Options unsetOptionsMUX() {
+			unsetFlags(MUX_OUT|MUX_IN|MUX_AES|MUX_SSL);
+			setString(P_AES, null);
+			setString(P_SSL, null);
+			return this;
+		}
+		/**
+		 * Helper (remove options that only apply to Plain Connections)
+		 */
+		public Options unsetOptionsPlain() {
+			unsetFlags(TUN_SSL);
+			return this;
 		}
 
 		/**
@@ -1046,7 +1145,7 @@ public class SimpleBouncer {
 							}
 							router.onReceiveFromRemote(this, msg);
 						} catch (SocketTimeoutException e) {
-							Log.info(this.getClass().getSimpleName() + " " + e.toString());
+							Log.debug(this.getClass().getSimpleName() + " " + e.toString());
 							sendNOP();
 							continue;
 						} catch (EOFException e) {
@@ -1320,6 +1419,9 @@ public class SimpleBouncer {
 						if (pReadTimeout != null) {
 							socket.setSoTimeout(pReadTimeout.intValue());
 						}
+						if (socket instanceof SSLSocket) {
+							((SSLSocket) socket).startHandshake();
+						}
 						Log.info(this.getClass().getSimpleName() + " new socket: " + socket + " SendBufferSize=" + socket.getSendBufferSize() + " ReceiveBufferSize=" + socket.getReceiveBufferSize());
 						attender(socket);
 					} catch (Exception e) {
@@ -1444,7 +1546,7 @@ public class SimpleBouncer {
 						}
 						router.onReceiveFromLocal(this, msg);
 					} catch (SocketTimeoutException e) {
-						Log.info(this.getClass().getSimpleName() + " " + e.toString());
+						Log.debug(this.getClass().getSimpleName() + " " + e.toString());
 						sendNOP();
 						continue;
 					} catch (EOFException e) {
@@ -1946,6 +2048,113 @@ public class SimpleBouncer {
 		}
 		public String toString() {
 			return this.getClass().getSimpleName() + "("+key.hashCode()+") [coder=" + enc + ":decoder=" + dec + "]";
+		}
+	}
+
+	static class SSLFactory {
+		private final static char[] DEFAULT_PWD = "changeit".toCharArray();
+		//
+		private final KeyStore ks;
+		private final SSLContext ctx;
+		private final SSLParameters sslParams;
+		//
+		public SSLFactory(String priCert, String priKey, String pubCert) throws Exception {
+			ks = initKeyStore(loadX509(priCert), loadPriKey(priKey), loadX509(pubCert));
+			ctx = initSSLContext(ks);
+			sslParams = setupSSLParams(ctx);
+		}
+		public SSLServerSocket createSSLServerSocket() throws IOException {
+			SSLServerSocketFactory factory = ctx.getServerSocketFactory();
+			SSLServerSocket listen = (SSLServerSocket) factory.createServerSocket();
+			listen.setEnabledCipherSuites(sslParams.getCipherSuites());
+			listen.setEnabledProtocols(sslParams.getProtocols());
+			listen.setNeedClientAuth(true); // Force Request Client Certificate
+			return listen;
+		}
+		public SSLSocket createSSLSocket() throws IOException {
+			SSLSocketFactory factory = ctx.getSocketFactory();
+			SSLSocket sock = (SSLSocket) factory.createSocket();
+			sock.setEnabledCipherSuites(sslParams.getCipherSuites());
+			sock.setEnabledProtocols(sslParams.getProtocols());
+			return sock;
+		}
+		//
+		static SSLParameters setupSSLParams(SSLContext ctx) {
+			List<String> protos = new ArrayList<String>();
+			protos.add("TLSv1");
+			protos.add("SSLv3");
+			List<String> suites = new ArrayList<String>();
+			suites.add("TLS_RSA_WITH_AES_256_CBC_SHA");
+			suites.add("TLS_RSA_WITH_AES_128_CBC_SHA");
+			suites.add("SSL_RSA_WITH_3DES_EDE_CBC_SHA");
+			suites.add("SSL_RSA_WITH_RC4_128_SHA");
+			SSLParameters sslParams = ctx.getSupportedSSLParameters();
+			protos.retainAll(Arrays.asList(sslParams.getProtocols()));
+			suites.retainAll(Arrays.asList(sslParams.getCipherSuites()));
+			sslParams.setProtocols(protos.toArray(new String[0]));
+			sslParams.setCipherSuites(suites.toArray(new String[0]));
+			return sslParams;
+		}
+		static PrivateKey loadPriKey(String fileName) throws Exception {
+			PrivateKey key = null;
+			InputStream is = null;
+			try {
+				is = fileName.getClass().getResourceAsStream("/" + fileName);
+				BufferedReader br = new BufferedReader(new InputStreamReader(is));
+				StringBuilder builder = new StringBuilder();
+				boolean inKey = false;
+				for (String line = br.readLine(); line != null; line = br.readLine()) {
+					if (!inKey) {
+						if (line.startsWith("-----BEGIN ") && line.endsWith(" PRIVATE KEY-----")) {
+							inKey = true;
+						}
+						continue;
+					}
+					else {
+						if (line.startsWith("-----END ") && line.endsWith(" PRIVATE KEY-----")) {
+							inKey = false;
+							break;
+						}
+						builder.append(line);
+					}
+				}
+				//
+				byte[] encoded = DatatypeConverter.parseBase64Binary(builder.toString());
+				PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(encoded);
+				KeyFactory kf = KeyFactory.getInstance("RSA");
+				key = kf.generatePrivate(keySpec);
+			} finally {
+				closeSilent(is);
+			}
+			return key;
+		}
+		static X509Certificate loadX509(String fileName) throws Exception {
+			InputStream is = null;
+			X509Certificate crt = null;
+			try {
+				is = fileName.getClass().getResourceAsStream("/" + fileName);
+				CertificateFactory cf = CertificateFactory.getInstance("X.509");
+				crt = (X509Certificate)cf.generateCertificate(is);
+			} finally {
+				closeSilent(is);
+			}
+			return crt;
+		}
+		static KeyStore initKeyStore(X509Certificate priCert, PrivateKey priKey, X509Certificate pubCert) throws Exception {
+			KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+			ks.load(null);
+			ks.setCertificateEntry(pubCert.getSubjectX500Principal().getName(), pubCert);
+			ks.setKeyEntry("private", priKey, DEFAULT_PWD, new Certificate[] { priCert });
+			return ks;
+		}
+		static SSLContext initSSLContext(KeyStore ks) throws Exception {
+			SSLContext ctx = SSLContext.getInstance("TLS");
+			KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+			kmf.init(ks, DEFAULT_PWD);
+			TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+			tmf.init(ks);
+			ctx.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+			return ctx;
 		}
 	}
 
