@@ -102,7 +102,7 @@ Config file must be in class-path, general format is:
     javac -d classes/ src/net/bouncer/KeyGenerator.java
     jar cvf bouncer.jar -C classes/ .
 
-###### Tested on JDK 1.6.0_34
+###### Tested on `JDK 1.6.0_34`
 
 ## RSA Key / X.509 Certificate Generation for MUX-SSL (optional)
 
@@ -140,7 +140,7 @@ Current harcoded values:
 
 * Buffer length for I/O: 4096bytes
 * Output Buffers: 3
-* TCP SO_SNDBUF/SO_RCVBUF: BufferLength * OutputBuffers 
+* TCP `SO_SNDBUF`/`SO_RCVBUF`: BufferLength * OutputBuffers 
 * Connection timeout: 30seconds
 * Read timeout: 5minutes
 * Reload config check time interval: 10seconds
