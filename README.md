@@ -145,7 +145,7 @@ Current harcoded values:
 * Read timeout: 5minutes
 * Reload config check time interval: 10seconds
 * Reset Initialization Vector (IV) for MUX-AES: { Iterations: 64K, Data: 16MB }
-* For MUX-AES encryption/[transformation](http://docs.oracle.com/javase/6/docs/technotes/guides/security/crypto/CryptoSpec.html#SimpleEncrEx) are AES/CBC/PKCS5Padding
+* For MUX-AES encryption/[transformation](http://docs.oracle.com/javase/6/docs/technotes/guides/security/SunProviders.html#SunJCEProvider) are AES/CBC/PKCS5Padding
 * For MUX-SSL supported Asymmetric Keys are RSA
 * For MUX-SSL enabled [Protocols](http://docs.oracle.com/javase/6/docs/technotes/guides/security/SunProviders.html#SunJSSEProvider) are:
     * `TLSv1`
