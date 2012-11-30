@@ -196,7 +196,7 @@ public class SimpleBouncer {
 						break;
 					}
 					Log.info(this.getClass().getSimpleName() + " cannot connect (waiting for retry): " + outboundAddress);
-					Thread.sleep(5000);
+					doSleep(5000);
 					return;
 				}
 				notify(new EventNewSocket(this, remote));
@@ -314,7 +314,7 @@ public class SimpleBouncer {
 			} catch (Exception e) {
 				try {
 					if ((sockin instanceof SSLSocket) && (!sockin.isClosed())) {
-						Thread.sleep(100);
+						doSleep(100);
 					}
 				} catch (Exception ign) {}
 				if (!sockin.isClosed() && !shutdown) {
@@ -364,7 +364,7 @@ public class SimpleBouncer {
 				lastReloaded = lastModified;
 				bouncer.reload(connConfig);
 			}
-			Thread.sleep(RELOAD_CONFIG);
+			doSleep(RELOAD_CONFIG);
 		}
 	}
 
@@ -381,6 +381,15 @@ public class SimpleBouncer {
 		return ret;
 	}
 
+	static void doSleep(final long time) {
+		try { 
+			Thread.sleep(time);
+		} 
+		catch (InterruptedException ie) {
+			Thread.currentThread().interrupt();
+		}
+	}
+	
 	void doTask(final Runnable task) {
 		Log.info("New task: " + task);
 		threadPool.submit(task);
@@ -1137,7 +1146,7 @@ public class SimpleBouncer {
 								Log.error(this.getClass().getSimpleName() + " " + e.toString());
 							close();
 							sock = null;
-							try { Thread.sleep(5000); } catch (Exception ign) {}
+							doSleep(5000);
 						}
 					}
 					while (!shutdown) {
@@ -1181,7 +1190,7 @@ public class SimpleBouncer {
 						}
 						mapLocals.clear();
 					}
-					try { Thread.sleep(1000); } catch (Exception ign) {}
+					doSleep(1000);
 				}
 				Log.info(this.getClass().getSimpleName() + " await end");
 				awaitShutdown(this);
@@ -1246,7 +1255,7 @@ public class SimpleBouncer {
 					try {
 						//Log.info(this.getClass().getSimpleName() + "::run fromWire: " + sock);
 						while (isLocked()) {
-							try { Thread.sleep(1); } catch (Exception ign) {}
+							doSleep(1);
 						}
 						msg.fromWire(is);
 						msg.setIdChannel(id);
@@ -1439,7 +1448,7 @@ public class SimpleBouncer {
 					} catch (Exception e) {
 						if (!shutdown)
 							Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
-						try { Thread.sleep(500); } catch (InterruptedException ign) {}
+						doSleep(500);
 					}
 				}
 				close();
@@ -1650,7 +1659,7 @@ public class SimpleBouncer {
 					RawPacket msg = new RawPacket();
 					try {
 						while (isLocked()) {
-							try { Thread.sleep(1); } catch (Exception ign) {}
+							doSleep(1);
 						}
 						msg.fromWire(is);
 						msg.setIdChannel(id);
