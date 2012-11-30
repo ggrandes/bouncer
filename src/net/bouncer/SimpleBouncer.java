@@ -54,14 +54,17 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
@@ -87,7 +90,7 @@ public class SimpleBouncer {
 	private static final long RELOAD_CONFIG = 10000;	// Default 10seconds
 	private static final String CONFIG_FILE = "/bouncer.conf";
 	// For graceful reload
-	private List<Awaiter> reloadables = Collections.synchronizedList(new ArrayList<Awaiter>());
+	private Set<Awaiter> reloadables = Collections.synchronizedSet(new HashSet<Awaiter>());
 	private CyclicBarrier shutdownBarrier = null;
 
 	private ExecutorService threadPool = Executors.newCachedThreadPool(); 
@@ -151,7 +154,7 @@ public class SimpleBouncer {
 			}
 			finally {
 				Log.info(this.getClass().getSimpleName() + " await end");
-				awaitShutdown();
+				awaitShutdown(this);
 				Log.info(this.getClass().getSimpleName() + " end");
 				notify(new EventLifeCycle(this, false));
 			}
@@ -365,12 +368,16 @@ public class SimpleBouncer {
 		}
 	}
 
-	void awaitShutdown() {
+	boolean awaitShutdown(Awaiter caller) {
 		if (shutdownBarrier != null) {
 			try {
-				shutdownBarrier.await();
+				shutdownBarrier.await(30000, TimeUnit.MILLISECONDS); // Wait 30 seconds
+				return true;
 			} catch (Exception ign) {}
 		}
+		if (caller != null)
+			reloadables.remove(caller);
+		return false;
 	}
 
 	void doTask(final Runnable task) {
@@ -388,8 +395,11 @@ public class SimpleBouncer {
 				shut.setShutdown();
 			}
 			Log.info(this.getClass().getSimpleName() + " Waiting for " + reloadables.size() + " threads to shutdown");
-			awaitShutdown();
-			Log.info(this.getClass().getSimpleName() + " Shutdown completed");
+			if (awaitShutdown(null)) {
+				Log.info(this.getClass().getSimpleName() + " Shutdown completed");
+			} else {
+				Log.error(this.getClass().getSimpleName() + " Shutdown Error");
+			}
 			shutdownBarrier = null;
 			reloadables.clear();
 		}
@@ -1173,7 +1183,7 @@ public class SimpleBouncer {
 					try { Thread.sleep(1000); } catch (Exception ign) {}
 				}
 				Log.info(this.getClass().getSimpleName() + " await end");
-				awaitShutdown();
+				awaitShutdown(this);
 				Log.info(this.getClass().getSimpleName() + " end");
 			}
 		}
@@ -1433,7 +1443,7 @@ public class SimpleBouncer {
 				}
 				close();
 				Log.info(this.getClass().getSimpleName() + " await end");
-				awaitShutdown();
+				awaitShutdown(this);
 				Log.info(this.getClass().getSimpleName() + " end");
 			}
 			//
@@ -1573,7 +1583,7 @@ public class SimpleBouncer {
 					mapRemotes.clear();
 				}
 				Log.info(this.getClass().getSimpleName() + " await end");
-				awaitShutdown();
+				awaitShutdown(this);
 				Log.info(this.getClass().getSimpleName() + " end");
 				local = null;
 			}
