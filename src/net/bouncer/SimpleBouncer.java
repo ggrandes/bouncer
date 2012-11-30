@@ -369,15 +369,16 @@ public class SimpleBouncer {
 	}
 
 	boolean awaitShutdown(Awaiter caller) {
+		boolean ret = false;
 		if (shutdownBarrier != null) {
 			try {
 				shutdownBarrier.await(30000, TimeUnit.MILLISECONDS); // Wait 30 seconds
-				return true;
+				ret = true;
 			} catch (Exception ign) {}
 		}
 		if (caller != null)
 			reloadables.remove(caller);
-		return false;
+		return ret;
 	}
 
 	void doTask(final Runnable task) {
