@@ -938,6 +938,7 @@ public class SimpleBouncer {
 			Log.info(this.getClass().getSimpleName() + "::openRemote " + right);
 			remote = new MuxClientRemote(right);
 			remote.setRouter(router);
+			reloadables.add(remote);
 			doTask(remote);
 		}
 
