@@ -373,7 +373,7 @@ public class SimpleBouncer {
 		boolean ret = false;
 		if (shutdownBarrier != null) {
 			try {
-				shutdownBarrier.await(RELOAD_TIMEOUT, TimeUnit.MILLISECONDS); // Wait 30 seconds
+				shutdownBarrier.await(RELOAD_TIMEOUT, TimeUnit.MILLISECONDS);
 				ret = true;
 			} catch (Exception ign) {}
 		}
