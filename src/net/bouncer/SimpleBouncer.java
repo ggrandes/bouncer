@@ -65,6 +65,7 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
@@ -391,6 +392,31 @@ public class SimpleBouncer {
 		}
 	}
 	
+	final Map<Integer, Runnable> taskList = Collections.synchronizedMap(new HashMap<Integer, Runnable>());
+	final AtomicInteger taskCounter = new AtomicInteger(0);
+	void doAuditedTask(final Runnable task) {
+		final int taskNum = taskCounter.incrementAndGet();
+		Log.info("Task: [" + taskNum + "] New: " + task);
+		threadPool.submit(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					taskList.put(taskNum, task);
+					Log.info("Task [" + taskNum + "] Start: " + task);
+					task.run();
+				}
+				finally {
+					Log.info("Task [" + taskNum + "] End: " + task);
+					taskList.remove(taskNum);
+				}
+			}
+			@Override
+			public String toString() {
+				return task.toString();
+			}
+		});
+	}
+
 	void doTask(final Runnable task) {
 		Log.info("New task: " + task);
 		threadPool.submit(task);
