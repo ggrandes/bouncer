@@ -88,6 +88,7 @@ public class SimpleBouncer {
 	private static final int CONNECT_TIMEOUT = 30000;	// Default 30seconds timeout
 	private static final int READ_TIMEOUT = 300000;		// Default 5min timeout
 	private static final long RELOAD_CONFIG = 10000;	// Default 10seconds
+	private static final long RELOAD_TIMEOUT = 30000;	// Default 30seconds timeout
 	private static final String CONFIG_FILE = "/bouncer.conf";
 	// For graceful reload
 	private Set<Awaiter> reloadables = Collections.synchronizedSet(new HashSet<Awaiter>());
@@ -372,7 +373,7 @@ public class SimpleBouncer {
 		boolean ret = false;
 		if (shutdownBarrier != null) {
 			try {
-				shutdownBarrier.await(30000, TimeUnit.MILLISECONDS); // Wait 30 seconds
+				shutdownBarrier.await(RELOAD_TIMEOUT, TimeUnit.MILLISECONDS); // Wait 30 seconds
 				ret = true;
 			} catch (Exception ign) {}
 		}

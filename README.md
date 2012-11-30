@@ -122,6 +122,7 @@ Config file must be in class-path, general format is:
 * Use Log4J
 * Limit number of connections
 * Limit absolute timeout/TTL of a connection
+* Audit threads / connections
 
 ## DONEs
 
@@ -156,7 +157,7 @@ Current harcoded values:
     * `TLS_RSA_WITH_AES_128_CBC_SHA`
     * `SSL_RSA_WITH_3DES_EDE_CBC_SHA`
     * `SSL_RSA_WITH_RC4_128_SHA`
-
+* Shutdown/Reload timeout: 30seconds
 
 ---
 Inspired in [rinetd](http://www.boutell.com/rinetd/), [stunnel](https://www.stunnel.org/static/stunnel.html) and [openssh](http://www.openssh.org/), this bouncer is Java-minimalistic version.
