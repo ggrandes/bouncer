@@ -1855,7 +1855,7 @@ public class SimpleBouncer {
 			int len;
 			// read header
 			len = IOHelper.fullRead(is, header, header.length);
-			if (len < 0) {
+			if (len <= 0) {
 				clear();
 				throw new EOFException("EOF");
 			}
