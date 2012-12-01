@@ -93,7 +93,11 @@ public class SimpleBouncer {
 	private static final String CONFIG_FILE = "/bouncer.conf";
 	// For graceful reload
 	private Set<Awaiter> reloadables = Collections.synchronizedSet(new HashSet<Awaiter>());
+	private Set<Shutdownable> orderedShutdown = Collections.synchronizedSet(new HashSet<Shutdownable>());
 	private CyclicBarrier shutdownBarrier = null;
+	// Socket Auditing
+	private Set<Socket> cliSockets = Collections.synchronizedSet(new HashSet<Socket>());
+	private Set<ServerSocket> srvSockets = Collections.synchronizedSet(new HashSet<ServerSocket>());
 
 	private ExecutorService threadPool = Executors.newCachedThreadPool(); 
 
@@ -106,7 +110,7 @@ public class SimpleBouncer {
 
 	// ============================== Plain Connections
 
-	class GenericAcceptator implements Shutdownable, Awaiter, Runnable {
+	class GenericAcceptator implements Awaiter, Runnable {
 		InboundAddress inboundAddress;
 		EventListener eventListener;
 		ServerSocket listen;
@@ -134,16 +138,22 @@ public class SimpleBouncer {
 				inboundAddress.resolve();
 				listen = inboundAddress.listen();
 				Log.info(this.getClass().getSimpleName() + " started: " + inboundAddress);
-				notify(new EventLifeCycle(this, true));
 				while (!shutdown) {
-					Socket client = listen.accept();
-					setupSocket(client);
-					Integer pReadTimeout = inboundAddress.getOpts().getInteger(Options.P_READ_TIMEOUT);
-					if (pReadTimeout != null) {
-						client.setSoTimeout(pReadTimeout);
+					try {
+						Socket client = listen.accept();
+						setupSocket(client);
+						Integer pReadTimeout = inboundAddress.getOpts().getInteger(Options.P_READ_TIMEOUT);
+						if (pReadTimeout != null) {
+							client.setSoTimeout(pReadTimeout);
+						}
+						Log.info(this.getClass().getSimpleName() + " New client from=" + client);
+						notify(new EventNewSocket(this, client));
 					}
-					Log.info(this.getClass().getSimpleName() + " New client from=" + client);
-					notify(new EventNewSocket(this, client));
+					catch (Exception e) {
+						if (!listen.isClosed()) {
+							Log.error(this.getClass().getSimpleName() + " Generic exception", e);
+						}
+					}
 				}
 			}
 			catch (UnknownHostException e) {
@@ -158,7 +168,6 @@ public class SimpleBouncer {
 				Log.info(this.getClass().getSimpleName() + " await end");
 				awaitShutdown(this);
 				Log.info(this.getClass().getSimpleName() + " end");
-				notify(new EventLifeCycle(this, false));
 			}
 		}
 	}
@@ -189,7 +198,6 @@ public class SimpleBouncer {
 		public void run() {
 			try {
 				Log.info(this.getClass().getSimpleName() + " started: " + outboundAddress);
-				notify(new EventLifeCycle(this, true));
 				while (!shutdown) {
 					// Remote
 					outboundAddress.resolve();
@@ -213,7 +221,6 @@ public class SimpleBouncer {
 				// Close all
 				//closeSilent(remote);
 				Log.info(this.getClass().getSimpleName() + " ended: " + outboundAddress);
-				notify(new EventLifeCycle(this, false));
 			}
 		}
 	}
@@ -314,17 +321,16 @@ public class SimpleBouncer {
 					}					
 				}
 			} catch (Exception e) {
-				try {
-					if ((sockin instanceof SSLSocket) && (!sockin.isClosed())) {
-						doSleep(100);
-					}
-				} catch (Exception ign) {}
+				if ((sockin instanceof SSLSocket) && (!sockin.isClosed())) {
+					doSleep(100);
+				}
 				if (!sockin.isClosed() && !shutdown) {
 					Log.error(this.getClass().getSimpleName() + " " + e.toString() + " " + sockin);
 				}
 			} finally {
 				closeSilent(is);
 				closeSilent(os);
+				closeSilent(sockin);
 				Log.info(this.getClass().getSimpleName() + " Connection closed " + sockin);
 			}
 		}
@@ -365,6 +371,7 @@ public class SimpleBouncer {
 				}
 				lastReloaded = lastModified;
 				bouncer.reload(connConfig);
+				Log.info("Reloaded config");
 			}
 			doSleep(RELOAD_CONFIG);
 		}
@@ -391,23 +398,35 @@ public class SimpleBouncer {
 			Thread.currentThread().interrupt();
 		}
 	}
-	
-	final Map<Integer, Runnable> taskList = Collections.synchronizedMap(new HashMap<Integer, Runnable>());
+
+	final Map<Integer, AuditableRunner> taskList = Collections.synchronizedMap(new HashMap<Integer, AuditableRunner>());
 	final AtomicInteger taskCounter = new AtomicInteger(0);
+	abstract class AuditableRunner implements Runnable {
+		Thread thread;
+		public void setThread(Thread thread) {
+			this.thread = thread;
+		}
+		public Thread getThread() {
+			return thread;
+		}
+	}
+
 	void doAuditedTask(final Runnable task) {
 		final int taskNum = taskCounter.incrementAndGet();
 		Log.info("Task: [" + taskNum + "] New: " + task);
-		threadPool.submit(new Runnable() {
+		threadPool.submit(new AuditableRunner() {
 			@Override
 			public void run() {
+				setThread(Thread.currentThread());
 				try {
-					taskList.put(taskNum, task);
+					taskList.put(taskNum, this);
 					Log.info("Task [" + taskNum + "] Start: " + task);
 					task.run();
 				}
 				finally {
 					Log.info("Task [" + taskNum + "] End: " + task);
 					taskList.remove(taskNum);
+					setThread(null);
 				}
 			}
 			@Override
@@ -418,15 +437,18 @@ public class SimpleBouncer {
 	}
 
 	void doTask(final Runnable task) {
-		Log.info("New task: " + task);
-		threadPool.submit(task);
+		doAuditedTask(task);
 	}
 
 	void reload(final URLConnection connConfig) throws IOException {
 		final InputStream isConfig = connConfig.getInputStream();
 		//
-		if (!reloadables.isEmpty()) {
+		if (!reloadables.isEmpty() || !orderedShutdown.isEmpty()) {
 			shutdownBarrier = new CyclicBarrier(reloadables.size()+1);
+			for (Shutdownable shut : orderedShutdown) {
+				Log.info(this.getClass().getSimpleName() + " Shuting down: " + shut.getClass().getSimpleName());
+				shut.setShutdown();
+			}
 			for (Shutdownable shut : reloadables) {
 				Log.info(this.getClass().getSimpleName() + " Shuting down: " + shut.getClass().getSimpleName());
 				shut.setShutdown();
@@ -439,6 +461,27 @@ public class SimpleBouncer {
 			}
 			shutdownBarrier = null;
 			reloadables.clear();
+			//
+			doSleep(2000);
+			// Audit Sockets
+			Log.warn(this.getClass().getSimpleName() + " Audit Socket Begin");
+			for (Socket s : cliSockets) {
+				Log.warn("Audit ClientSocket: " + s.toString());
+			}
+			for (ServerSocket s : srvSockets) {
+				Log.warn("Audit ServerSocket: " + s.toString());
+			}
+			Log.warn(this.getClass().getSimpleName() + " Audit Socket End");
+			// Audit Task
+			Map<Integer, AuditableRunner> localTaskList = new HashMap<Integer, AuditableRunner>(taskList);
+			Log.warn(this.getClass().getSimpleName() + " Audit Task Begin");
+			for (Entry<Integer, AuditableRunner> e : localTaskList.entrySet()) {
+				Log.warn("Audit Task: " + e.getKey() + " " + e.getValue());
+				for (StackTraceElement st : e.getValue().getThread().getStackTrace()) {
+					Log.warn("Audit Task: " + e.getKey() + " Stack>>> " + st.toString());
+				}
+			}
+			Log.warn(this.getClass().getSimpleName() + " Audit Task End");
 		}
 		//
 		final BufferedReader in = new BufferedReader(new InputStreamReader(isConfig));
@@ -537,19 +580,23 @@ public class SimpleBouncer {
 		try { os.flush(); } catch (Exception ign) {}
 		try { os.close(); } catch (Exception ign) {}
 	}
-	static void closeSilent(final Socket sock) {
+	void closeSilent(final Socket sock) {
 		try { sock.shutdownInput(); } catch (Exception ign) {}
 		try { sock.shutdownOutput(); } catch (Exception ign) {}
 		try { sock.close(); } catch (Exception ign) {}
+		cliSockets.remove(sock);
 	}
-	static void closeSilent(final ServerSocket sock) {
+	void closeSilent(final ServerSocket sock) {
 		try { sock.close(); } catch (Exception ign) {}
+		srvSockets.remove(sock);
 	}
 
-	static void setupSocket(final ServerSocket sock) throws SocketException {
+	void setupSocket(final ServerSocket sock) throws SocketException {
+		srvSockets.add(sock);
 		sock.setReuseAddress(true);
 	}
-	static void setupSocket(final Socket sock) throws SocketException {
+	void setupSocket(final Socket sock) throws SocketException {
+		cliSockets.add(sock);
 		sock.setKeepAlive(true);
 		sock.setReuseAddress(true);
 		sock.setSoTimeout(READ_TIMEOUT);
@@ -579,7 +626,7 @@ public class SimpleBouncer {
 	/**
 	 * Representation of listen address 
 	 */
-	static class InboundAddress implements BouncerAddress {
+	class InboundAddress implements BouncerAddress {
 		//
 		Options opts = null;
 		SSLFactory sslFactory = null;
@@ -631,7 +678,7 @@ public class SimpleBouncer {
 	/**
 	 * Representation of remote destination
 	 */
-	static class OutboundAddress implements BouncerAddress {
+	class OutboundAddress implements BouncerAddress {
 		//
 		int roundrobin = 0;
 		Options opts = null;
@@ -935,20 +982,7 @@ public class SimpleBouncer {
 		}
 	}
 
-	class Event {
-	}
-	class EventLifeCycle extends Event {
-		public final Object caller;
-		public final boolean startORstop;
-		//
-		EventLifeCycle(Object caller, boolean startORstop) {
-			this.caller = caller;
-			this.startORstop = startORstop;
-		}
-		public String toString() {
-			return (this.getClass().getSimpleName() + " " + caller + " " + (startORstop ? "START" : "STOP"));
-		}
-	}
+	class Event {}
 	class EventNewSocket extends Event {
 		public final Object caller;
 		public final Socket sock;
@@ -985,7 +1019,7 @@ public class SimpleBouncer {
 			Log.info(this.getClass().getSimpleName() + "::openRemote " + right);
 			remote = new MuxClientRemote(right);
 			remote.setRouter(router);
-			reloadables.add(remote);
+			orderedShutdown.add(remote);
 			doTask(remote);
 		}
 
@@ -1103,7 +1137,7 @@ public class SimpleBouncer {
 			}
 		}
 
-		abstract class MuxClientConnection implements Shutdownable, Awaiter, Runnable { // Remote is MUX, Local is RAW
+		abstract class MuxClientConnection implements Shutdownable, Runnable { // Remote is MUX, Local is RAW
 			OutboundAddress outboundAddress;
 			Socket sock;
 			InputStream is;
@@ -1154,6 +1188,12 @@ public class SimpleBouncer {
 				}
 			}
 			@Override
+			public void setShutdown() {
+				shutdown = true;
+				// Graceful Shutdown: don't call close()
+				// close();
+			}
+			@Override
 			public void run() {
 				while (!shutdown) {
 					while (!shutdown) {
@@ -1176,7 +1216,7 @@ public class SimpleBouncer {
 							doSleep(5000);
 						}
 					}
-					while (!shutdown) {
+					while (!shutdown || !mapLocals.isEmpty()) {
 						//
 						MuxPacket msg = new MuxPacket();
 						try {
@@ -1220,7 +1260,7 @@ public class SimpleBouncer {
 					doSleep(1000);
 				}
 				Log.info(this.getClass().getSimpleName() + " await end");
-				awaitShutdown(this);
+				orderedShutdown.remove(this);
 				Log.info(this.getClass().getSimpleName() + " end");
 			}
 		}
@@ -1244,7 +1284,8 @@ public class SimpleBouncer {
 					public void run() {
 						while (!shutdown) {
 							try {						
-								RawPacket msg = queue.take();
+								RawPacket msg = queue.poll(1000, TimeUnit.MILLISECONDS);
+								if (msg == null) continue;
 								msg.toWire(os);
 								sendACK(msg); // Send ACK
 							} catch (Exception e) {
@@ -1277,13 +1318,14 @@ public class SimpleBouncer {
 			@Override
 			public void run() {
 				Log.info(this.getClass().getSimpleName() + "::run socket: " + sock);
-				while (!shutdown) {
-					RawPacket msg = new RawPacket();
+				OUTTER: while (!shutdown) {
 					try {
-						//Log.info(this.getClass().getSimpleName() + "::run fromWire: " + sock);
 						while (isLocked()) {
 							doSleep(1);
+							if (shutdown) break OUTTER;
 						}
+						//Log.info(this.getClass().getSimpleName() + "::run fromWire: " + sock);
+						RawPacket msg = new RawPacket();
 						msg.fromWire(is);
 						msg.setIdChannel(id);
 						//Log.info(this.getClass().getSimpleName() + "::run onReceiveFromLocal: " + sock);
@@ -1439,7 +1481,7 @@ public class SimpleBouncer {
 			}
 		}
 
-		abstract class MuxServerListen implements Shutdownable, Awaiter, Runnable { // Local is MUX, Remote is RAW
+		abstract class MuxServerListen implements Awaiter, Runnable { // Local is MUX, Remote is RAW
 			ServerSocket listen;
 			boolean shutdown = false;
 			InboundAddress inboundAddress;
@@ -1497,7 +1539,7 @@ public class SimpleBouncer {
 				if (local == null) {
 					local = new MuxServerLocal(socket, inboundAddress);
 					local.setRouter(router);
-					reloadables.add(local);
+					orderedShutdown.add(local);
 					listenRemote(); 
 					doTask(local);
 				}
@@ -1522,7 +1564,7 @@ public class SimpleBouncer {
 			}
 		}
 
-		abstract class MuxServerConnection implements Shutdownable, Awaiter, Runnable { // Local is MUX, Remote is RAW
+		abstract class MuxServerConnection implements Shutdownable, Runnable { // Local is MUX, Remote is RAW
 			Socket sock;
 			InboundAddress inboundAddress;
 			InputStream is;
@@ -1576,9 +1618,14 @@ public class SimpleBouncer {
 				}
 			}
 			@Override
+			public void setShutdown() {
+				shutdown = true;
+				// Graceful Shutdown: don't call close()
+			}
+			@Override
 			public void run() {
 				Log.info(this.getClass().getSimpleName() + "::run socket: " + sock);
-				while (!shutdown) {
+				while (!shutdown || !mapRemotes.isEmpty()) {
 					MuxPacket msg = new MuxPacket();
 					try {
 						if (seal != null) {
@@ -1620,7 +1667,7 @@ public class SimpleBouncer {
 					mapRemotes.clear();
 				}
 				Log.info(this.getClass().getSimpleName() + " await end");
-				awaitShutdown(this);
+				orderedShutdown.remove(this);
 				Log.info(this.getClass().getSimpleName() + " end");
 				local = null;
 			}
@@ -1640,7 +1687,8 @@ public class SimpleBouncer {
 					public void run() {
 						while (!shutdown) {
 							try {
-								RawPacket msg = queue.take();
+								RawPacket msg = queue.poll(1000, TimeUnit.MILLISECONDS);
+								if (msg == null) continue;
 								msg.toWire(os);
 								sendACK(msg); // Send ACK
 							} catch (Exception e) {
@@ -1682,12 +1730,13 @@ public class SimpleBouncer {
 					Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
 				}
 				//
-				while (!shutdown) {
-					RawPacket msg = new RawPacket();
+				OUTTER: while (!shutdown) {
 					try {
 						while (isLocked()) {
 							doSleep(1);
+							if (shutdown) break OUTTER;
 						}
+						RawPacket msg = new RawPacket();
 						msg.fromWire(is);
 						msg.setIdChannel(id);
 						router.onReceiveFromRemote(this, msg);
@@ -2233,6 +2282,9 @@ public class SimpleBouncer {
 		}
 		static void info(final String str) {
 			System.out.println(getTimeStamp() + " [INFO] " + "[" + Thread.currentThread().getName() + "] " + str);
+		}
+		static void warn(final String str) {
+			System.out.println(getTimeStamp() + " [WARN] " + "[" + Thread.currentThread().getName() + "] " + str);
 		}
 		static void error(final String str) {
 			System.out.println(getTimeStamp() + " [ERROR] " + "[" + Thread.currentThread().getName() + "] " + str);
