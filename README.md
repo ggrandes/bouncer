@@ -122,7 +122,6 @@ Config file must be in class-path, general format is:
 * Use Log4J
 * Limit number of connections
 * Limit absolute timeout/TTL of a connection
-* Audit threads / connections
 
 ## DONEs
 
@@ -135,6 +134,7 @@ Config file must be in class-path, general format is:
 * Manage better the read timeouts (full-duplex) (v1.4)
 * Encryption MUX/Tunnel (SSL/TLS) (v1.5)
 * Key Generator for MUX-SSL/TLS (v1.5)
+* Audit threads / connections (v1.5)
 
 ## MISC
 Current harcoded values:
