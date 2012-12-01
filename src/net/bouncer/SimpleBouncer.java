@@ -738,23 +738,6 @@ public class SimpleBouncer {
 		}
 	}
 
-	class Event {}
-	class EventNewSocket extends Event {
-		public final Object caller;
-		public final Socket sock;
-		//
-		public EventNewSocket(Object caller, Socket sock) {
-			this.caller = caller;
-			this.sock = sock;
-		}
-		public String toString() {
-			return (this.getClass().getSimpleName() + " " + caller + " " + sock);
-		}
-	}
-	interface EventListener {
-		public void event(Event evt);
-	}
-
 	// ============================================ Plain Connections
 
 	class PlainServer {
