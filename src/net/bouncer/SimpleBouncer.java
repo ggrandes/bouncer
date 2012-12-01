@@ -99,6 +99,9 @@ public class SimpleBouncer {
 	// Socket Auditing
 	private Set<Socket> cliSockets = Collections.synchronizedSet(new HashSet<Socket>());
 	private Set<ServerSocket> srvSockets = Collections.synchronizedSet(new HashSet<ServerSocket>());
+	// Thread Auditing
+	private Map<Integer, AuditableRunner> taskList = Collections.synchronizedMap(new HashMap<Integer, AuditableRunner>());
+	private AtomicInteger taskCounter = new AtomicInteger(0);
 
 	private ExecutorService threadPool = Executors.newCachedThreadPool(); 
 
@@ -156,18 +159,6 @@ public class SimpleBouncer {
 			Thread.sleep(time);
 		} catch (InterruptedException ie) {
 			Thread.currentThread().interrupt();
-		}
-	}
-
-	final Map<Integer, AuditableRunner> taskList = Collections.synchronizedMap(new HashMap<Integer, AuditableRunner>());
-	final AtomicInteger taskCounter = new AtomicInteger(0);
-	abstract class AuditableRunner implements Runnable {
-		Thread thread;
-		public void setThread(Thread thread) {
-			this.thread = thread;
-		}
-		public Thread getThread() {
-			return thread;
 		}
 	}
 
@@ -371,6 +362,16 @@ public class SimpleBouncer {
 	}
 
 	// ============================================ Helper Classes and Interfaces
+
+	abstract class AuditableRunner implements Runnable {
+		Thread thread;
+		public void setThread(Thread thread) {
+			this.thread = thread;
+		}
+		public Thread getThread() {
+			return thread;
+		}
+	}
 
 	interface Shutdownable {
 		public void setShutdown();
