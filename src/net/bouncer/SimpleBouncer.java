@@ -370,6 +370,8 @@ public class SimpleBouncer {
 		return sb.toString();
 	}
 
+	// ============================================ Helper Classes and Interfaces
+
 	interface Shutdownable {
 		public void setShutdown();
 	}
@@ -2168,7 +2170,7 @@ public class SimpleBouncer {
 		}
 	}
 
-	// ============================================
+	// ============================================ Simple Logging
 
 	/**
 	 * Simple logging wrapper (you want log4j/logback/slfj? easy to do!)
