@@ -174,4 +174,39 @@ Current harcoded values:
 * Shutdown/Reload timeout: 30seconds
 
 ---
+
+## Throughput Benchmark for different IO-Buffers values
+
+<table>
+  <tr>
+    <th>IO-Buffers&gt;</th>
+    <th>4</th>
+    <th>8</th>
+    <th>16</th>
+    <th>128</th>
+  </tr>
+  <tr>
+    <th>MUX</th>
+    <td>519KB/s</td>
+    <td>8.9MB/s</td>
+    <td>8.5MB/s</td>
+    <td>8.3MB/s</td>
+  </tr>
+  <tr>
+    <th>MUX=AES</th>
+    <td>427KB/s</td>
+    <td>4.1MB/s</td>
+    <td>5.1MB/s</td>
+    <td>5.5MB/s</td>
+  </tr>
+  <tr>
+    <th>MUX=SSL</th>
+    <td>468KB/s</td>
+    <td>5.9MB/s</td>
+    <td>6.0MB/s</td>
+    <td>6.1MB/s</td>
+  </tr>
+</table>
+
+---
 Inspired in [rinetd](http://www.boutell.com/rinetd/), [stunnel](https://www.stunnel.org/static/stunnel.html) and [openssh](http://www.openssh.org/), this bouncer is Java-minimalistic version.
