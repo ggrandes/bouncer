@@ -208,5 +208,7 @@ Current harcoded values:
   </tr>
 </table>
 
+
+
 ---
 Inspired in [rinetd](http://www.boutell.com/rinetd/), [stunnel](https://www.stunnel.org/static/stunnel.html) and [openssh](http://www.openssh.org/), this bouncer is Java-minimalistic version.
