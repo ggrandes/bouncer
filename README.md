@@ -154,8 +154,8 @@ Config file must be in class-path, general format is:
 Current harcoded values:
 
 * Buffer length for I/O: 4096bytes
-* Output Buffers: 3
-* TCP `SO_SNDBUF`/`SO_RCVBUF`: BufferLength * OutputBuffers 
+* IO-Buffers: 8
+* TCP `SO_SNDBUF`/`SO_RCVBUF`: BufferLength * IO-Buffers 
 * Connection timeout: 30seconds
 * Read timeout: 5minutes
 * Reload config check time interval: 10seconds

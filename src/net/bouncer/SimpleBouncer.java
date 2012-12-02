@@ -86,7 +86,7 @@ public class SimpleBouncer {
 	public static final String VERSION = "1.5beta1";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
-	private static final int OUTPUT_BUFFERS = 3;
+	private static final int IO_BUFFERS = 8;			// Default 8 buffers
 	private static final int CONNECT_TIMEOUT = 30000;	// Default 30seconds timeout
 	private static final int READ_TIMEOUT = 300000;		// Default 5min timeout
 	private static final long RELOAD_CONFIG = 10000;	// Default 10seconds
@@ -341,14 +341,15 @@ public class SimpleBouncer {
 	void setupSocket(final ServerSocket sock) throws SocketException {
 		srvSockets.add(sock);
 		sock.setReuseAddress(true);
+		sock.setReceiveBufferSize(Math.max(sock.getReceiveBufferSize(), BUFFER_LEN*IO_BUFFERS));
 	}
 	void setupSocket(final Socket sock) throws SocketException {
 		cliSockets.add(sock);
 		sock.setKeepAlive(true);
 		sock.setReuseAddress(true);
 		sock.setSoTimeout(READ_TIMEOUT);
-		sock.setSendBufferSize(BUFFER_LEN*OUTPUT_BUFFERS);
-		sock.setReceiveBufferSize(BUFFER_LEN*OUTPUT_BUFFERS);
+		sock.setSendBufferSize(Math.max(sock.getSendBufferSize(), BUFFER_LEN*IO_BUFFERS));
+		sock.setReceiveBufferSize(Math.max(sock.getReceiveBufferSize(), BUFFER_LEN*IO_BUFFERS));
 	}
 
 	static String fromArrAddress(final InetAddress[] addrs) {
@@ -1184,8 +1185,8 @@ public class SimpleBouncer {
 
 		class MuxClientLocal extends MuxClientConnection { // Local is RAW
 			int id;
-			int isLocked = (BUFFER_LEN * OUTPUT_BUFFERS);
-			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(OUTPUT_BUFFERS<<1);
+			int isLocked = (BUFFER_LEN * IO_BUFFERS);
+			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(IO_BUFFERS<<1);
 			long keepalive = System.currentTimeMillis();
 			//
 			public MuxClientLocal(OutboundAddress outboundAddress) throws IOException {
@@ -1592,8 +1593,8 @@ public class SimpleBouncer {
 
 		class MuxServerRemote extends MuxServerConnection { // Remote is RAW
 			int id;
-			int isLocked = (BUFFER_LEN * OUTPUT_BUFFERS);
-			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(OUTPUT_BUFFERS<<1);
+			int isLocked = (BUFFER_LEN * IO_BUFFERS);
+			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(IO_BUFFERS<<1);
 			long keepalive = System.currentTimeMillis();
 			//
 			public MuxServerRemote(Socket sock, InboundAddress inboundAddress) throws IOException {
