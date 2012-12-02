@@ -59,7 +59,7 @@ Config file must be in class-path, general format is:
         * **MUX=OUT**: activate output-initiator multiplexor
     * Options for encryption (optional -AES or SSL or NONE-):
         * **MUX=AES**: activate AES encryption in multiplexor (see AES=key)
-            * **AES=key**: specify the key for AES (no white spaces)
+            * **AES=key**: specify the key for AES (no white spaces, no comma sign, no equals sign)
         * **MUX=SSL**: activate SSL encryption in multiplexor (see SSL=xxx)
             * **SSL=server.crt:server.key:client.crt**: specify files for SSL config (server/mux-in)
             * **SSL=client.crt:client.key:server.crt**: specify files for SSL config (client/mux-out)
@@ -92,6 +92,20 @@ Config file must be in class-path, general format is:
     # <listen-tun-addr> <listen-tun-port> <listen-addr> <listen-port> MUX-IN
     192.168.2.1 5555 127.0.0.1 8080 MUX=IN
  
+##### Same example config of Reverse tunnels but SSL
+
+###### Machine-A (MUX-OUT):
+
+    # <remote-addr> <remote-port> <remote-tun-addr> <remote-tun-port> MUX-OUT
+    192.168.1.1 80 192.168.2.1 5555 MUX=OUT,MUX=SSL,SSL=peerA.crt:peerA.key:peerB.crt
+
+###### Machine-B (MUX-IN):
+ 
+    # <listen-tun-addr> <listen-tun-port> <listen-addr> <listen-port> MUX-IN
+    192.168.2.1 5555 127.0.0.1 8080 MUX=IN,MUX=SSL,SSL=peerB.crt:peerB.key:peerA.crt
+ 
+###### For Encryption Tunnels with AES (no SSL) you can use `MUX=AES,AES=password` in both sides 
+
 ---
 
 ## Compile (handmade)
