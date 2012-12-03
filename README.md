@@ -180,36 +180,32 @@ Current harcoded values:
 
 <table>
   <tr>
-    <th>IO-Buffers&gt;</th>
-    <th>4</th>
-    <th>8</th>
-    <th>16</th>
-    <th>128</th>
-  </tr>
-  <tr>
+    <th></th>
+    <th>Direct</th>
+    <th>Forward</th>
     <th>MUX</th>
-    <td>519KB/s</td>
-    <td>8.9MB/s</td>
-    <td>8.5MB/s</td>
-    <td>8.3MB/s</td>
+    <th>MUX-AES</th>
+    <th>MUX-SSL</th>
   </tr>
   <tr>
-    <th>MUX=AES</th>
-    <td>427KB/s</td>
-    <td>4.1MB/s</td>
-    <td>5.1MB/s</td>
-    <td>5.5MB/s</td>
+    <th>Mbytes</th>
+    <td>39.9</td>
+    <td>31.2</td>
+    <td>20.8</td>
+    <td>7.0</td>
+    <td>7.4</td>
   </tr>
   <tr>
-    <th>MUX=SSL</th>
-    <td>468KB/s</td>
-    <td>5.9MB/s</td>
-    <td>6.0MB/s</td>
-    <td>6.1MB/s</td>
+    <th>Mbits</th>
+    <td>319</td>
+    <td>249</td>
+    <td>166</td>
+    <td>56</td>
+    <td>59</td>
   </tr>
 </table>
 
-###### Values are not accurate, but orientative.
+###### All test run on localhost. Values are not accurate, but orientative. Higher better.
 
 
 ---
