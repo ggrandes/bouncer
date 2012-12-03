@@ -176,7 +176,7 @@ Current harcoded values:
 
 ---
 
-## Throughput Benchmark for different IO-Buffers values
+## Throughput Benchmark
 
 <table>
   <tr>
