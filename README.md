@@ -149,6 +149,7 @@ Config file must be in class-path, general format is:
 * Encryption MUX/Tunnel (SSL/TLS) (v1.5)
 * Key Generator for MUX-SSL/TLS (v1.5)
 * Audit threads / connections (v1.5)
+* Improved FlowControl in MUX (v1.5)
 
 ## MISC
 Current harcoded values:
@@ -175,7 +176,7 @@ Current harcoded values:
 
 ---
 
-## Throughput Benchmark (not accurate, but orientative) for different IO-Buffers values
+## Throughput Benchmark for different IO-Buffers values
 
 <table>
   <tr>
@@ -208,6 +209,7 @@ Current harcoded values:
   </tr>
 </table>
 
+###### Values are not accurate, but orientative.
 
 
 ---

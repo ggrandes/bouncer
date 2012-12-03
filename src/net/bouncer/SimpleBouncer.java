@@ -65,6 +65,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.io.ByteArrayInputStream;
@@ -990,7 +991,7 @@ public class SimpleBouncer {
 		// ============================================
 
 		class MuxClientMessageRouter {
-			synchronized void onReceiveFromRemote(MuxClientRemote remote, MuxPacket msg) { // Remote is MUX
+			void onReceiveFromRemote(MuxClientRemote remote, MuxPacket msg) { // Remote is MUX
 				//Log.debug(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 				if (msg.syn()) { // New SubChannel
 					try {
@@ -1043,10 +1044,9 @@ public class SimpleBouncer {
 					}
 				}
 			}
-			synchronized void onReceiveFromLocal(MuxClientLocal local, RawPacket msg) { // Local is RAW
+			void onReceiveFromLocal(MuxClientLocal local, RawPacket msg) { // Local is RAW
 				Log.debug(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
 				try {
-					local.lock(msg.getBufferLen());
 					MuxPacket mux = new MuxPacket();
 					mux.put(msg.getIdChannel(), msg.getBufferLen(), msg.getBuffer());
 					remote.sendRemote(mux);
@@ -1092,18 +1092,24 @@ public class SimpleBouncer {
 					seal = new SealerAES(outboundAddress.getOpts().getString(Options.P_AES));
 				}
 			}
-			public synchronized void sendRemote(MuxPacket msg) throws IOException, GeneralSecurityException {
+			public void sendRemote(MuxPacket msg) throws IOException, GeneralSecurityException {
 				if (seal != null) {
 					// AES encryption
 					ByteArrayOutputStream baos = new ByteArrayOutputStream(BUFFER_LEN);
 					msg.toWire(baos);
 					byte[] encoded = seal.code(baos.toByteArray(), 0, baos.size());
 					byte[] iv = seal.getCoder().getIV();
-					IOHelper.toWireWithHeader(os, iv, iv.length);
-					IOHelper.toWireWithHeader(os, encoded, encoded.length);
+					baos.reset();
+					IOHelper.toWireWithHeader(baos, iv, iv.length);
+					IOHelper.toWireWithHeader(baos, encoded, encoded.length);
+					synchronized (os) {
+						baos.writeTo(os);
+					}
 				}
 				else {
-					msg.toWire(os);
+					synchronized (os) {
+						msg.toWire(os);
+					}
 				}
 			}
 			@Override
@@ -1185,7 +1191,8 @@ public class SimpleBouncer {
 
 		class MuxClientLocal extends MuxClientConnection { // Local is RAW
 			int id;
-			int isLocked = (BUFFER_LEN * IO_BUFFERS);
+			// XXX: Improving locking method
+			final Semaphore isLocked = new Semaphore(BUFFER_LEN * IO_BUFFERS);
 			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(IO_BUFFERS<<1);
 			long keepalive = System.currentTimeMillis();
 			//
@@ -1207,27 +1214,26 @@ public class SimpleBouncer {
 								msg.toWire(os);
 								sendACK(msg); // Send ACK
 							} catch (Exception e) {
-								Log.error(this.getClass().getSimpleName() + "::sendLocal " + e.toString(), e);
+								Log.error(this.getClass().getName() + "::sendLocal " + e.toString(), e);
 							}
 						}
 					}
 				});
 			}
 			public void unlock(int size) {
-				isLocked += size;
+				isLocked.release(size);
 			}
-			public void lock(int size) {
-				isLocked -= size;
-			}
-			public boolean isLocked() {
-				return (isLocked <= 0);
+			public boolean lock(int size) throws InterruptedException {
+				return isLocked.tryAcquire(size, 3000, TimeUnit.MILLISECONDS);
 			}
 			public void setId(int id) {
 				this.id = id;
 			}
 			public void sendLocal(final RawPacket msg) throws IOException {
 				try {
-					queue.put(msg);
+					while (!queue.offer(msg, 1000, TimeUnit.MILLISECONDS)) {
+						if (shutdown) break;
+					}
 					keepalive = System.currentTimeMillis();
 				} catch (InterruptedException e) {
 					Log.error(this.getClass().getSimpleName() + "::sendLocal " + e.toString(), e);
@@ -1238,14 +1244,14 @@ public class SimpleBouncer {
 				Log.info(this.getClass().getSimpleName() + "::run socket: " + sock);
 				OUTTER: while (!shutdown) {
 					try {
-						while (isLocked()) {
-							doSleep(1);
-							if (shutdown) break OUTTER;
-						}
 						//Log.info(this.getClass().getSimpleName() + "::run fromWire: " + sock);
 						RawPacket msg = new RawPacket();
 						msg.fromWire(is);
 						msg.setIdChannel(id);
+						while (!lock(msg.getBufferLen())) {
+							if (shutdown) break OUTTER;
+							Log.info(this.getClass().getSimpleName() + " Timeout Locking: " + sock);
+						}
 						//Log.info(this.getClass().getSimpleName() + "::run onReceiveFromLocal: " + sock);
 						router.onReceiveFromLocal(this, msg);
 					} catch (SocketTimeoutException e) {
@@ -1343,7 +1349,7 @@ public class SimpleBouncer {
 		}
 
 		class MuxServerMessageRouter {
-			synchronized void onReceiveFromLocal(MuxServerLocal local, MuxPacket msg) { // Local is MUX
+			void onReceiveFromLocal(MuxServerLocal local, MuxPacket msg) { // Local is MUX
 				//Log.debug(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
 				if (msg.syn()) { 
 					// What?
@@ -1386,10 +1392,9 @@ public class SimpleBouncer {
 					}
 				}
 			}
-			synchronized void onReceiveFromRemote(MuxServerRemote remote, RawPacket msg) { // Remote is RAW
+			void onReceiveFromRemote(MuxServerRemote remote, RawPacket msg) { // Remote is RAW
 				Log.debug(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 				try {
-					remote.lock(msg.getBufferLen());
 					MuxPacket mux = new MuxPacket();
 					mux.put(msg.getIdChannel(), msg.getBufferLen(), msg.getBuffer());
 					local.sendLocal(mux);
@@ -1521,18 +1526,24 @@ public class SimpleBouncer {
 					seal = new SealerAES(inboundAddress.getOpts().getString(Options.P_AES));
 				}
 			}
-			public synchronized void sendLocal(MuxPacket msg) throws IOException, GeneralSecurityException {
+			public void sendLocal(MuxPacket msg) throws IOException, GeneralSecurityException {
 				if (seal != null) {
 					// AES encryption
 					ByteArrayOutputStream baos = new ByteArrayOutputStream(BUFFER_LEN);
 					msg.toWire(baos);
 					byte[] encoded = seal.code(baos.toByteArray(), 0, baos.size());
 					byte[] iv = seal.getCoder().getIV();
-					IOHelper.toWireWithHeader(os, iv, iv.length);
-					IOHelper.toWireWithHeader(os, encoded, encoded.length);
+					baos.reset();
+					IOHelper.toWireWithHeader(baos, iv, iv.length);
+					IOHelper.toWireWithHeader(baos, encoded, encoded.length);
+					synchronized (os) {
+						baos.writeTo(os);
+					}
 				}
 				else {
-					msg.toWire(os);
+					synchronized (os) {
+						msg.toWire(os);
+					}
 				}
 			}
 			@Override
@@ -1593,7 +1604,8 @@ public class SimpleBouncer {
 
 		class MuxServerRemote extends MuxServerConnection { // Remote is RAW
 			int id;
-			int isLocked = (BUFFER_LEN * IO_BUFFERS);
+			// XXX: Improving locking method
+			final Semaphore isLocked = new Semaphore(BUFFER_LEN * IO_BUFFERS);
 			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(IO_BUFFERS<<1);
 			long keepalive = System.currentTimeMillis();
 			//
@@ -1610,27 +1622,26 @@ public class SimpleBouncer {
 								msg.toWire(os);
 								sendACK(msg); // Send ACK
 							} catch (Exception e) {
-								Log.error(this.getClass().getSimpleName() + "::sendRemote " + e.toString(), e);
+								Log.error(this.getClass().getName() + "::sendRemote " + e.toString(), e);
 							}
 						}
 					}
 				});
 			}
 			public void unlock(int size) {
-				isLocked += size;
+				isLocked.release(size);
 			}
-			public void lock(int size) {
-				isLocked -= size;
-			}
-			public boolean isLocked() {
-				return (isLocked <= 0);
+			public boolean lock(int size) throws InterruptedException {
+				return isLocked.tryAcquire(size, 3000, TimeUnit.MILLISECONDS);
 			}
 			public int getId() {
 				return id;
 			}
 			public void sendRemote(final RawPacket msg) throws IOException {
 				try {
-					queue.put(msg);
+					while (!queue.offer(msg, 1000, TimeUnit.MILLISECONDS)) {
+						if (shutdown) break;
+					}
 					keepalive = System.currentTimeMillis();
 				} catch (InterruptedException e) {
 					Log.error(this.getClass().getSimpleName() + "::sendRemote " + e.toString(), e);
@@ -1650,13 +1661,13 @@ public class SimpleBouncer {
 				//
 				OUTTER: while (!shutdown) {
 					try {
-						while (isLocked()) {
-							doSleep(1);
-							if (shutdown) break OUTTER;
-						}
 						RawPacket msg = new RawPacket();
 						msg.fromWire(is);
 						msg.setIdChannel(id);
+						while (!lock(msg.getBufferLen())) {
+							if (shutdown) break OUTTER;
+							Log.info(this.getClass().getSimpleName() + " Timeout Locking: " + sock);
+						}
 						router.onReceiveFromRemote(this, msg);
 					} catch (SocketTimeoutException e) { 
 						Log.info(this.getClass().getSimpleName() + " " + e.toString());
