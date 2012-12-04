@@ -159,6 +159,7 @@ Current harcoded values:
 * TCP `SO_SNDBUF`/`SO_RCVBUF`: BufferLength * IO-Buffers 
 * Connection timeout: 30seconds
 * Read timeout: 5minutes
+* MUX Read timeout / keep-alive: 30seconds
 * Reload config check time interval: 10seconds
 * Reset Initialization Vector (IV) for MUX-AES: { Iterations: 64K, Data: 16MB }
 * For MUX-AES encryption/[transformation](http://docs.oracle.com/javase/6/docs/technotes/guides/security/SunProviders.html#SunJCEProvider) are AES/CBC/PKCS5Padding

@@ -84,12 +84,13 @@ import java.io.Reader;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
-	public static final String VERSION = "1.5beta4";
+	public static final String VERSION = "1.5beta5";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
 	private static final int IO_BUFFERS = 8;			// Default 8 buffers
 	private static final int CONNECT_TIMEOUT = 30000;	// Default 30seconds timeout
 	private static final int READ_TIMEOUT = 300000;		// Default 5min timeout
+	private static final int MUX_TIMEOUT = 30000;		// Default 30seconds timeout
 	private static final long RELOAD_CONFIG = 10000;	// Default 10seconds
 	private static final long RELOAD_TIMEOUT = 30000;	// Default 30seconds timeout
 	private static final String CONFIG_FILE = "/bouncer.conf";
@@ -214,26 +215,33 @@ public class SimpleBouncer {
 			}
 			shutdownBarrier = null;
 			reloadables.clear();
-			//
-			// Audit Sockets
-			Log.warn(this.getClass().getSimpleName() + " Audit Socket Begin");
-			for (Socket s : cliSockets) {
-				Log.warn("Audit ClientSocket: " + s.toString());
-			}
-			for (ServerSocket s : srvSockets) {
-				Log.warn("Audit ServerSocket: " + s.toString());
-			}
-			Log.warn(this.getClass().getSimpleName() + " Audit Socket End");
-			// Audit Task
-			Map<Integer, AuditableRunner> localTaskList = new HashMap<Integer, AuditableRunner>(taskList);
-			Log.warn(this.getClass().getSimpleName() + " Audit Task Begin");
-			for (Entry<Integer, AuditableRunner> e : localTaskList.entrySet()) {
-				Log.warn("Audit Task: " + e.getKey() + " " + e.getValue());
-				for (StackTraceElement st : e.getValue().getThread().getStackTrace()) {
-					Log.warn("Audit Task: " + e.getKey() + " Stack>>> " + st.toString());
+			try {
+				//
+				// Audit Sockets
+				Log.warn(this.getClass().getSimpleName() + " Audit Socket Begin");
+				for (Socket s : cliSockets) {
+					Log.warn("Audit ClientSocket: " + s.toString());
+				}
+				for (ServerSocket s : srvSockets) {
+					Log.warn("Audit ServerSocket: " + s.toString());
+				}
+				// Audit Task
+				if (Log.isDebug()) {
+					Log.warn(this.getClass().getSimpleName() + " Audit Socket End");
+					Map<Integer, AuditableRunner> localTaskList = new HashMap<Integer, AuditableRunner>(taskList);
+					Log.warn(this.getClass().getSimpleName() + " Audit Task Begin");
+					for (Entry<Integer, AuditableRunner> e : localTaskList.entrySet()) {
+						Log.debug("Audit Task: " + e.getKey() + " " + e.getValue());
+						for (StackTraceElement st : e.getValue().getThread().getStackTrace()) {
+							Log.debug("Audit Task: " + e.getKey() + " Stack>>> " + st.toString());
+						}
+					}
+					Log.warn(this.getClass().getSimpleName() + " Audit Task End");
 				}
 			}
-			Log.warn(this.getClass().getSimpleName() + " Audit Task End");
+			catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 		//
 		final BufferedReader in = new BufferedReader(new InputStreamReader(isConfig));
@@ -1117,7 +1125,6 @@ public class SimpleBouncer {
 			public void setShutdown() {
 				shutdown = true;
 				// Graceful Shutdown: don't call close()
-				// close();
 			}
 			@Override
 			public void run() {
@@ -1129,6 +1136,9 @@ public class SimpleBouncer {
 							sock = outboundAddress.connect();
 							if (sock == null)
 								throw new ConnectException();
+							try {
+								sock.setSoTimeout(MUX_TIMEOUT); // Timeout for MUX
+							} catch (Exception ign) {} 
 							is = sock.getInputStream();
 							os = sock.getOutputStream();
 							Log.info(this.getClass().getSimpleName() + " Connected: " + sock + " SendBufferSize=" + sock.getSendBufferSize() + " ReceiveBufferSize=" + sock.getReceiveBufferSize());
@@ -1461,6 +1471,9 @@ public class SimpleBouncer {
 			protected synchronized void attender(Socket socket) throws IOException {
 				Log.info(this.getClass().getSimpleName() + " attending socket: " + socket);
 				if (local == null) {
+					try {
+						socket.setSoTimeout(MUX_TIMEOUT); // Timeout for MUX
+					} catch (Exception ign) {} 
 					local = new MuxServerLocal(socket, inboundAddress);
 					local.setRouter(router);
 					orderedShutdown.add(local);
