@@ -84,7 +84,7 @@ import java.io.Reader;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
-	public static final String VERSION = "1.5beta3";
+	public static final String VERSION = "1.5beta4";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
 	private static final int IO_BUFFERS = 8;			// Default 8 buffers
@@ -1105,6 +1105,7 @@ public class SimpleBouncer {
 					IOHelper.toWireWithHeader(baos, encoded, encoded.length);
 					synchronized (os) {
 						baos.writeTo(os);
+						os.flush();
 					}
 				}
 				else {
@@ -1192,7 +1193,6 @@ public class SimpleBouncer {
 
 		class MuxClientLocal extends MuxClientConnection { // Local is RAW
 			int id;
-			// XXX: Improving locking method
 			final Semaphore isLocked = new Semaphore(BUFFER_LEN * IO_BUFFERS);
 			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(IO_BUFFERS<<1);
 			long keepalive = System.currentTimeMillis();
@@ -1540,6 +1540,7 @@ public class SimpleBouncer {
 					IOHelper.toWireWithHeader(baos, encoded, encoded.length);
 					synchronized (os) {
 						baos.writeTo(os);
+						os.flush();
 					}
 				}
 				else {
@@ -1606,7 +1607,6 @@ public class SimpleBouncer {
 
 		class MuxServerRemote extends MuxServerConnection { // Remote is RAW
 			int id;
-			// XXX: Improving locking method
 			final Semaphore isLocked = new Semaphore(BUFFER_LEN * IO_BUFFERS);
 			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(IO_BUFFERS<<1);
 			long keepalive = System.currentTimeMillis();
