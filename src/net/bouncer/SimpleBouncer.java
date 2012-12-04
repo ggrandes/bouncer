@@ -84,7 +84,7 @@ import java.io.Reader;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
-	public static final String VERSION = "1.5beta2";
+	public static final String VERSION = "1.5beta3";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
 	private static final int IO_BUFFERS = 8;			// Default 8 buffers
@@ -155,6 +155,10 @@ public class SimpleBouncer {
 		return ret;
 	}
 
+	static String socketRemoteToString(Socket socket) {
+		return socket.getRemoteSocketAddress().toString();
+	}
+
 	static void doSleep(final long time) {
 		try { 
 			Thread.sleep(time);
@@ -163,13 +167,14 @@ public class SimpleBouncer {
 		}
 	}
 
-	void doAuditedTask(final Runnable task) {
+	void doTask(final Runnable task, final String traceName) {
 		final int taskNum = taskCounter.incrementAndGet();
 		Log.info("Task: [" + taskNum + "] New: " + task);
 		threadPool.submit(new AuditableRunner() {
 			@Override
 			public void run() {
 				setThread(Thread.currentThread());
+				thread.setName("task-" + taskNum + "-" + traceName);
 				try {
 					taskList.put(taskNum, this);
 					Log.info("Task [" + taskNum + "] Start: " + task);
@@ -186,10 +191,6 @@ public class SimpleBouncer {
 				return task.toString();
 			}
 		});
-	}
-
-	void doTask(final Runnable task) {
-		doAuditedTask(task);
 	}
 
 	void reload(final URLConnection connConfig) throws IOException {
@@ -756,7 +757,7 @@ public class SimpleBouncer {
 		public void listenLocal() { // Entry Point
 			PlainListen acceptator = new PlainListen();
 			reloadables.add(acceptator);
-			doTask(acceptator);
+			doTask(acceptator, "ForwardListen["+inboundAddress+"|"+outboundAddress+"]");
 		}
 		//
 		class PlainListen implements Awaiter, Runnable {
@@ -784,7 +785,7 @@ public class SimpleBouncer {
 								client.setSoTimeout(pReadTimeout);
 							}
 							Log.info(this.getClass().getSimpleName() + " New client from=" + client);
-							doTask(new PlainConnector(client));
+							doTask(new PlainConnector(client), "ForwardConnect["+inboundAddress + "|" + outboundAddress + "|" + socketRemoteToString(client)+"]");
 						} catch (Exception e) {
 							if (!listen.isClosed()) {
 								Log.error(this.getClass().getSimpleName() + " Generic exception", e);
@@ -835,8 +836,8 @@ public class SimpleBouncer {
 					final PlainSocketTransfer st2 = new PlainSocketTransfer(remote, client);
 					st1.setBrother(st2);
 					st2.setBrother(st1);
-					doTask(st1);
-					doTask(st2);
+					doTask(st1, "ForwardTransfer-CliRem["+inboundAddress + "|" + socketRemoteToString(client)+"|"+socketRemoteToString(remote)+"]");
+					doTask(st2, "ForwardTransfer-RemCli["+inboundAddress + "|" + socketRemoteToString(remote)+"|"+socketRemoteToString(client)+"]");
 				} catch (UnknownHostException e) {
 					Log.error(this.getClass().getSimpleName() + " " + e.toString());
 				} catch (Exception e) {
@@ -927,8 +928,8 @@ public class SimpleBouncer {
 		MuxClientRemote remote;
 		HashMap<Integer, MuxClientLocal> mapLocals = new HashMap<Integer, MuxClientLocal>();
 		//
-		OutboundAddress left;
-		OutboundAddress right;
+		final OutboundAddress left;
+		final OutboundAddress right;
 
 		MuxClient(OutboundAddress left, OutboundAddress right) {
 			this.left = left;
@@ -940,7 +941,7 @@ public class SimpleBouncer {
 			remote = new MuxClientRemote(right);
 			remote.setRouter(router);
 			orderedShutdown.add(remote);
-			doTask(remote);
+			doTask(remote, "MuxOutRight["+left+"|"+right+"]");
 		}
 
 		void openLocal(int id) throws IOException {
@@ -951,7 +952,7 @@ public class SimpleBouncer {
 			synchronized(mapLocals) {
 				mapLocals.put(id, local);
 			}
-			doTask(local);
+			doTask(local, "MuxOutLeft-Recv["+left+"|"+right+"|"+id+"]");
 		}
 		void closeLocal(int id) {
 			// Send FIN
@@ -1204,21 +1205,6 @@ public class SimpleBouncer {
 					throw new ConnectException();
 				is = sock.getInputStream();
 				os = sock.getOutputStream();
-				doTask(new Runnable() {
-					@Override
-					public void run() {
-						while (!shutdown) {
-							try {						
-								RawPacket msg = queue.poll(1000, TimeUnit.MILLISECONDS);
-								if (msg == null) continue;
-								msg.toWire(os);
-								sendACK(msg); // Send ACK
-							} catch (Exception e) {
-								Log.error(this.getClass().getName() + "::sendLocal " + e.toString(), e);
-							}
-						}
-					}
-				});
 			}
 			public void unlock(int size) {
 				isLocked.release(size);
@@ -1241,6 +1227,22 @@ public class SimpleBouncer {
 			}
 			@Override
 			public void run() {
+				doTask(new Runnable() {
+					@Override
+					public void run() {
+						while (!shutdown) {
+							try {						
+								RawPacket msg = queue.poll(1000, TimeUnit.MILLISECONDS);
+								if (msg == null) continue;
+								msg.toWire(os);
+								sendACK(msg); // Send ACK
+							} catch (Exception e) {
+								Log.error(this.getClass().getName() + "::sendLocal " + e.toString(), e);
+							}
+						}
+					}
+				}, "MuxOutLeft-Send["+left+"|"+right+"|"+id+"]");
+				//
 				Log.info(this.getClass().getSimpleName() + "::run socket: " + sock);
 				OUTTER: while (!shutdown) {
 					try {
@@ -1294,8 +1296,8 @@ public class SimpleBouncer {
 		MuxServerLocal local = null;
 		HashMap<Integer, MuxServerRemote> mapRemotes = new HashMap<Integer, MuxServerRemote>();
 		//
-		InboundAddress left;
-		InboundAddress right;
+		final InboundAddress left;
+		final InboundAddress right;
 		//
 		MuxServer(InboundAddress left, InboundAddress right) {
 			this.left = left;
@@ -1305,13 +1307,13 @@ public class SimpleBouncer {
 		void listenLocal() throws IOException { // Entry Point
 			localListen = new MuxServerListenLocal(left); // Local is MUX
 			reloadables.add(localListen);
-			doTask(localListen);
+			doTask(localListen, "MuxInListenLeft["+left+"|"+right+"]");
 		}
 
 		void listenRemote() throws IOException {
 			remoteListen = new MuxServerListenRemote(right); // Remote is RAW
 			reloadables.add(remoteListen);
-			doTask(remoteListen);
+			doTask(remoteListen, "MuxInListenRight["+left+"|"+right+"]");
 		}
 		void closeRemote(int id) {
 			// Send FIN
@@ -1464,7 +1466,7 @@ public class SimpleBouncer {
 					local.setRouter(router);
 					orderedShutdown.add(local);
 					listenRemote(); 
-					doTask(local);
+					doTask(local, "MuxInLeft["+left+"|"+right+"|"+socketRemoteToString(socket)+"]");
 				}
 				else {
 					// Only one concurrent client, close the new connection
@@ -1483,7 +1485,7 @@ public class SimpleBouncer {
 				MuxServerRemote remote = new MuxServerRemote(socket, inboundAddress);
 				remote.setRouter(router);
 				mapRemotes.put(remote.getId(), remote);
-				doTask(remote);
+				doTask(remote, "MuxInRight-Recv["+left+"|"+right+"|"+socketRemoteToString(socket)+"|"+socket.getPort()+"]");
 			}
 		}
 
@@ -1612,21 +1614,6 @@ public class SimpleBouncer {
 			public MuxServerRemote(Socket sock, InboundAddress inboundAddress) throws IOException {
 				super(sock, inboundAddress);
 				id = sock.getPort();
-				doTask(new Runnable() {
-					@Override
-					public void run() {
-						while (!shutdown) {
-							try {
-								RawPacket msg = queue.poll(1000, TimeUnit.MILLISECONDS);
-								if (msg == null) continue;
-								msg.toWire(os);
-								sendACK(msg); // Send ACK
-							} catch (Exception e) {
-								Log.error(this.getClass().getName() + "::sendRemote " + e.toString(), e);
-							}
-						}
-					}
-				});
 			}
 			public void unlock(int size) {
 				isLocked.release(size);
@@ -1649,6 +1636,22 @@ public class SimpleBouncer {
 			}
 			@Override
 			public void run() {
+				doTask(new Runnable() {
+					@Override
+					public void run() {
+						while (!shutdown) {
+							try {
+								RawPacket msg = queue.poll(1000, TimeUnit.MILLISECONDS);
+								if (msg == null) continue;
+								msg.toWire(os);
+								sendACK(msg); // Send ACK
+							} catch (Exception e) {
+								Log.error(this.getClass().getName() + "::sendRemote " + e.toString(), e);
+							}
+						}
+					}
+				}, "MuxInRight-Send["+inboundAddress+"|"+socketRemoteToString(sock)+"|"+id+"]");
+				//
 				Log.info(this.getClass().getSimpleName() + "::run socket: " + sock);
 				// Send SYN
 				try {
