@@ -215,7 +215,6 @@ public class SimpleBouncer {
 			shutdownBarrier = null;
 			reloadables.clear();
 			//
-			doSleep(2000);
 			// Audit Sockets
 			Log.warn(this.getClass().getSimpleName() + " Audit Socket Begin");
 			for (Socket s : cliSockets) {
