@@ -1733,26 +1733,6 @@ public class SimpleBouncer {
 			}
 			@Override
 			public void run() {
-				doTask(new Runnable() {
-					@Override
-					public void run() {
-						while (!shutdown) {
-							try {
-								RawPacket msg = queue.poll(1000, TimeUnit.MILLISECONDS);
-								if (msg == null) continue;
-								msg.toWire(os);
-								sendACK(msg); // Send ACK
-							} catch (IOException e) {
-								if (!sock.isClosed() && !shutdown) {
-									Log.error(this.getClass().getName() + "::sendRemote " + e.toString());
-								}
-							} catch (Exception e) {
-								Log.error(this.getClass().getName() + " Generic exception", e);
-							}
-						}
-					}
-				}, "MuxInRight-Send["+inboundAddress+"|"+socketRemoteToString(sock)+"|"+id+"]", ClientId.getId());
-				//
 				Log.info(this.getClass().getSimpleName() + "::run socket: " + sock);
 				// Send SYN
 				try {
@@ -1765,6 +1745,28 @@ public class SimpleBouncer {
 					unlock(1);
 				} catch (Exception e) {
 					Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
+				}
+				//
+				if (!shutdown) {
+					doTask(new Runnable() {
+						@Override
+						public void run() {
+							while (!shutdown) {
+								try {
+									RawPacket msg = queue.poll(1000, TimeUnit.MILLISECONDS);
+									if (msg == null) continue;
+									msg.toWire(os);
+									sendACK(msg); // Send ACK
+								} catch (IOException e) {
+									if (!sock.isClosed() && !shutdown) {
+										Log.error(this.getClass().getName() + "::sendRemote " + e.toString());
+									}
+								} catch (Exception e) {
+									Log.error(this.getClass().getName() + " Generic exception", e);
+								}
+							}
+						}
+					}, "MuxInRight-Send["+inboundAddress+"|"+socketRemoteToString(sock)+"|"+id+"]", ClientId.getId());
 				}
 				//
 				OUTTER: while (!shutdown) {
