@@ -84,7 +84,7 @@ import java.io.Reader;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
-	public static final String VERSION = "1.5beta5";
+	public static final String VERSION = "1.5beta6";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
 	private static final int IO_BUFFERS = 8;			// Default 8 buffers
@@ -168,14 +168,15 @@ public class SimpleBouncer {
 		}
 	}
 
-	void doTask(final Runnable task, final String traceName) {
+	void doTask(final Runnable task, final String traceName, final int clientId) {
 		final int taskNum = taskCounter.incrementAndGet();
 		Log.info("Task: [" + taskNum + "] New: " + task);
 		threadPool.submit(new AuditableRunner() {
 			@Override
 			public void run() {
+				setClientId(clientId);
 				setThread(Thread.currentThread());
-				thread.setName("task-" + taskNum + "-" + traceName);
+				thread.setName("task" + taskNum + ":th" + ThreadId.getId() + ":id" + SimpleHex.intAsHex(clientId) + ":" + traceName);
 				try {
 					taskList.put(taskNum, this);
 					Log.info("Task [" + taskNum + "] Start: " + task);
@@ -380,6 +381,61 @@ public class SimpleBouncer {
 		}
 		public Thread getThread() {
 			return thread;
+		}
+		public int getClientId() {
+			return ClientId.getId();
+		}
+		public void setClientId(int clientId) {
+			ClientId.setId(clientId);
+		}
+		//
+	}
+
+	static class ThreadId {
+		private static final AtomicInteger atomicId = new AtomicInteger(0);
+		//
+		private static final ThreadLocal<Integer> localId = new ThreadLocal<Integer>() {
+			@Override protected Integer initialValue() {
+				return atomicId.incrementAndGet();
+			}
+		};
+		//
+		public static int getId() {
+			return localId.get();
+		}
+	}
+
+	static class ClientId {
+		private static final AtomicInteger atomicId = new AtomicInteger(0);
+		//
+		private static final ThreadLocal<Integer> localId = new ThreadLocal<Integer>() {
+			@Override protected Integer initialValue() {
+				return atomicId.incrementAndGet();
+			}
+		};
+		//
+		public static int genId() {
+			return atomicId.incrementAndGet();
+		}
+		public static int getId() {
+			return localId.get();
+		}
+		public static void setId(final Integer id) {
+			localId.set(id);
+		}
+	}
+	
+	// Fast int/long/byte[] to Hex String (left-zero-padding)
+	static class SimpleHex {
+		private static final char[] HEX_CHARS = "0123456789abcdef".toCharArray();
+
+		public static String intAsHex(final int input) {
+			final char[] sb = new char[8];
+			final int len = (sb.length-1);
+			for (int i = 0; i <= len; i++) { // MSB
+				sb[i] = HEX_CHARS[((int)(input >>> ((len - i)<<2))) & 0xF];
+			}
+			return new String(sb);
 		}
 	}
 
@@ -764,7 +820,7 @@ public class SimpleBouncer {
 		public void listenLocal() { // Entry Point
 			PlainListen acceptator = new PlainListen();
 			reloadables.add(acceptator);
-			doTask(acceptator, "ForwardListen["+inboundAddress+"|"+outboundAddress+"]");
+			doTask(acceptator, "ForwardListen["+inboundAddress+"|"+outboundAddress+"]", ClientId.genId());
 		}
 		//
 		class PlainListen implements Awaiter, Runnable {
@@ -792,7 +848,7 @@ public class SimpleBouncer {
 								client.setSoTimeout(pReadTimeout);
 							}
 							Log.info(this.getClass().getSimpleName() + " New client from=" + client);
-							doTask(new PlainConnector(client), "ForwardConnect["+inboundAddress + "|" + outboundAddress + "|" + socketRemoteToString(client)+"]");
+							doTask(new PlainConnector(client), "ForwardConnect["+inboundAddress + "|" + outboundAddress + "|" + socketRemoteToString(client)+"]", ClientId.genId());
 						} catch (Exception e) {
 							if (!listen.isClosed()) {
 								Log.error(this.getClass().getSimpleName() + " Generic exception", e);
@@ -843,8 +899,8 @@ public class SimpleBouncer {
 					final PlainSocketTransfer st2 = new PlainSocketTransfer(remote, client);
 					st1.setBrother(st2);
 					st2.setBrother(st1);
-					doTask(st1, "ForwardTransfer-CliRem["+inboundAddress + "|" + socketRemoteToString(client)+"|"+socketRemoteToString(remote)+"]");
-					doTask(st2, "ForwardTransfer-RemCli["+inboundAddress + "|" + socketRemoteToString(remote)+"|"+socketRemoteToString(client)+"]");
+					doTask(st1, "ForwardTransfer-CliRem["+inboundAddress + "|" + socketRemoteToString(client)+"|"+socketRemoteToString(remote)+"]", ClientId.getId());
+					doTask(st2, "ForwardTransfer-RemCli["+inboundAddress + "|" + socketRemoteToString(remote)+"|"+socketRemoteToString(client)+"]", ClientId.getId());
 				} catch (UnknownHostException e) {
 					Log.error(this.getClass().getSimpleName() + " " + e.toString());
 				} catch (Exception e) {
@@ -948,7 +1004,7 @@ public class SimpleBouncer {
 			remote = new MuxClientRemote(right);
 			remote.setRouter(router);
 			orderedShutdown.add(remote);
-			doTask(remote, "MuxOutRight["+left+"|"+right+"]");
+			doTask(remote, "MuxOutRight["+left+"|"+right+"]", ClientId.genId());
 		}
 
 		void openLocal(int id) throws IOException {
@@ -959,7 +1015,7 @@ public class SimpleBouncer {
 			synchronized(mapLocals) {
 				mapLocals.put(id, local);
 			}
-			doTask(local, "MuxOutLeft-Recv["+left+"|"+right+"|"+id+"]");
+			doTask(local, "MuxOutLeft-Recv["+left+"|"+right+"|"+id+"]", ClientId.genId());
 		}
 		void closeLocal(int id) {
 			// Send FIN
@@ -1250,7 +1306,7 @@ public class SimpleBouncer {
 							}
 						}
 					}
-				}, "MuxOutLeft-Send["+left+"|"+right+"|"+id+"]");
+				}, "MuxOutLeft-Send["+left+"|"+right+"|"+id+"]", ClientId.getId());
 				//
 				Log.info(this.getClass().getSimpleName() + "::run socket: " + sock);
 				OUTTER: while (!shutdown) {
@@ -1316,13 +1372,13 @@ public class SimpleBouncer {
 		void listenLocal() throws IOException { // Entry Point
 			localListen = new MuxServerListenLocal(left); // Local is MUX
 			reloadables.add(localListen);
-			doTask(localListen, "MuxInListenLeft["+left+"|"+right+"]");
+			doTask(localListen, "MuxInListenLeft["+left+"|"+right+"]", ClientId.genId());
 		}
 
 		void listenRemote() throws IOException {
 			remoteListen = new MuxServerListenRemote(right); // Remote is RAW
 			reloadables.add(remoteListen);
-			doTask(remoteListen, "MuxInListenRight["+left+"|"+right+"]");
+			doTask(remoteListen, "MuxInListenRight["+left+"|"+right+"]", ClientId.genId());
 		}
 		void closeRemote(int id) {
 			// Send FIN
@@ -1478,7 +1534,7 @@ public class SimpleBouncer {
 					local.setRouter(router);
 					orderedShutdown.add(local);
 					listenRemote(); 
-					doTask(local, "MuxInLeft["+left+"|"+right+"|"+socketRemoteToString(socket)+"]");
+					doTask(local, "MuxInLeft["+left+"|"+right+"|"+socketRemoteToString(socket)+"]", ClientId.genId());
 				}
 				else {
 					// Only one concurrent client, close the new connection
@@ -1497,7 +1553,7 @@ public class SimpleBouncer {
 				MuxServerRemote remote = new MuxServerRemote(socket, inboundAddress);
 				remote.setRouter(router);
 				mapRemotes.put(remote.getId(), remote);
-				doTask(remote, "MuxInRight-Recv["+left+"|"+right+"|"+socketRemoteToString(socket)+"|"+socket.getPort()+"]");
+				doTask(remote, "MuxInRight-Recv["+left+"|"+right+"|"+socketRemoteToString(socket)+"|"+socket.getPort()+"]", ClientId.genId());
 			}
 		}
 
@@ -1662,7 +1718,7 @@ public class SimpleBouncer {
 							}
 						}
 					}
-				}, "MuxInRight-Send["+inboundAddress+"|"+socketRemoteToString(sock)+"|"+id+"]");
+				}, "MuxInRight-Send["+inboundAddress+"|"+socketRemoteToString(sock)+"|"+id+"]", ClientId.getId());
 				//
 				Log.info(this.getClass().getSimpleName() + "::run socket: " + sock);
 				// Send SYN
