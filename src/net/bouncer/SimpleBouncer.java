@@ -84,7 +84,7 @@ import java.io.Reader;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
-	public static final String VERSION = "1.5beta7";
+	public static final String VERSION = "1.5beta8";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
 	private static final int IO_BUFFERS = 8;			// Default 8 buffers
@@ -1025,7 +1025,7 @@ public class SimpleBouncer {
 			doTask(remote, "MuxOutRight["+left+"|"+right+"]", ClientId.newId());
 		}
 
-		void openLocal(int id) throws IOException {
+		void openLocal(int id) {
 			Log.info(this.getClass().getSimpleName() + "::openLocal id=" + id);
 			MuxClientLocal local = new MuxClientLocal(left);
 			local.setId(id);
@@ -1080,27 +1080,9 @@ public class SimpleBouncer {
 
 		class MuxClientMessageRouter {
 			void onReceiveFromRemote(MuxClientRemote remote, MuxPacket msg) { // Remote is MUX
-				//Log.debug(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 				if (msg.syn()) { // New SubChannel
-					try {
-						Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
-						openLocal(msg.getIdChannel());
-						// Send SYN/ACK
-						try {
-							MuxPacket mux = new MuxPacket();
-							mux.syn(msg.getIdChannel());
-							remote.sendRemote(mux);
-						} catch (Exception ign) {
-						}
-					} catch (IOException e) {
-						Log.error(this.getClass().getSimpleName() + "::onReceiveFromRemote openLocal("+msg.getIdChannel()+") " + e.toString());
-						// Send FIN
-						closeLocal(msg.getIdChannel());
-					} catch (Exception e) {
-						Log.error(this.getClass().getSimpleName() + "::onReceiveFromRemote " + e.toString(), e);
-						// Send FIN
-						closeLocal(msg.getIdChannel());
-					}
+					Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
+					openLocal(msg.getIdChannel());
 				}
 				else if (msg.fin()) { // End SubChannel
 					Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
@@ -1151,7 +1133,7 @@ public class SimpleBouncer {
 			MuxClientMessageRouter router;
 			boolean shutdown = false;
 			//
-			public MuxClientConnection(OutboundAddress outboundAddress) throws IOException {
+			public MuxClientConnection(OutboundAddress outboundAddress) {
 				this.outboundAddress = outboundAddress;
 			}
 			public void setRouter(MuxClientMessageRouter router) {
@@ -1271,7 +1253,6 @@ public class SimpleBouncer {
 						}
 						mapLocals.clear();
 					}
-					doSleep(1000);
 				}
 				Log.info(this.getClass().getSimpleName() + " await end");
 				orderedShutdown.remove(this);
@@ -1285,14 +1266,8 @@ public class SimpleBouncer {
 			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(IO_BUFFERS<<1);
 			long keepalive = System.currentTimeMillis();
 			//
-			public MuxClientLocal(OutboundAddress outboundAddress) throws IOException {
+			public MuxClientLocal(OutboundAddress outboundAddress)  {
 				super(outboundAddress);
-				outboundAddress.resolve();
-				sock = outboundAddress.connect();
-				if (sock == null)
-					throw new ConnectException("Unable to connect to " + outboundAddress);
-				is = sock.getInputStream();
-				os = sock.getOutputStream();
 			}
 			public void unlock(int size) {
 				isLocked.release(size);
@@ -1315,27 +1290,54 @@ public class SimpleBouncer {
 			}
 			@Override
 			public void run() {
-				doTask(new Runnable() {
-					@Override
-					public void run() {
-						while (!shutdown) {
-							try {						
-								RawPacket msg = queue.poll(1000, TimeUnit.MILLISECONDS);
-								if (msg == null) continue;
-								msg.toWire(os);
-								sendACK(msg); // Send ACK
-							} catch (IOException e) {
-								if (!sock.isClosed() && !shutdown) {
-									Log.error(this.getClass().getName() + "::sendLocal " + e.toString());
+				Log.info(this.getClass().getSimpleName() + "::run " + outboundAddress);
+				//
+				// TODO
+				try {
+					outboundAddress.resolve();
+					sock = outboundAddress.connect();
+					if (sock == null)
+						throw new ConnectException("Unable to connect to " + outboundAddress);
+					is = sock.getInputStream();
+					os = sock.getOutputStream();
+					// Send SYN/ACK
+					try {
+						MuxPacket mux = new MuxPacket();
+						mux.syn(id);
+						remote.sendRemote(mux);
+					} catch (Exception ign) {
+					}
+				} catch (Exception e) {
+					if (e instanceof IOException) {
+						Log.error(this.getClass().getSimpleName() + " " + e.toString());
+					} else {
+						Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
+					}
+					setShutdown();
+				}
+				//
+				if (!shutdown) {
+					doTask(new Runnable() {
+						@Override
+						public void run() {
+							while (!shutdown) {
+								try {						
+									RawPacket msg = queue.poll(1000, TimeUnit.MILLISECONDS);
+									if (msg == null) continue;
+									msg.toWire(os);
+									sendACK(msg); // Send ACK
+								} catch (IOException e) {
+									if (!sock.isClosed() && !shutdown) {
+										Log.error(this.getClass().getName() + "::sendLocal " + e.toString());
+									}
+								} catch (Exception e) {
+									Log.error(this.getClass().getName() + " Generic exception", e);
 								}
-							} catch (Exception e) {
-								Log.error(this.getClass().getName() + " Generic exception", e);
 							}
 						}
-					}
-				}, "MuxOutLeft-Send["+left+"|"+right+"|"+id+"]", ClientId.getId());
+					}, "MuxOutLeft-Send["+left+"|"+right+"|"+id+"]", ClientId.getId());
+				}
 				//
-				Log.info(this.getClass().getSimpleName() + "::run socket: " + sock);
 				OUTTER: while (!shutdown) {
 					try {
 						//Log.info(this.getClass().getSimpleName() + "::run fromWire: " + sock);
