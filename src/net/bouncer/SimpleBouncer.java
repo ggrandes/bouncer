@@ -1075,6 +1075,11 @@ public class SimpleBouncer {
 		// ============================================
 
 		class MuxClientMessageRouter {
+			MuxClientLocal getLocal(final int id) {
+				synchronized(mapLocals) {
+					return mapLocals.get(id);
+				}
+			}
 			void onReceiveFromRemote(MuxClientRemote remote, MuxPacket msg) { // Remote is MUX
 				//Log.debug(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 				if (msg.syn()) { // New SubChannel
@@ -1100,19 +1105,13 @@ public class SimpleBouncer {
 				}
 				else if (msg.fin()) { // End SubChannel
 					Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
-					MuxClientLocal local;
-					synchronized(mapLocals) {
-						local = mapLocals.remove(msg.getIdChannel());
-					}
+					MuxClientLocal local = getLocal(msg.getIdChannel());
 					if (local != null)
 						local.setShutdown();
 				}
 				else if (msg.ack()) { // Flow-Control ACK
 					Log.debug(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
-					MuxClientLocal local;
-					synchronized(mapLocals) {
-						local = mapLocals.get(msg.getIdChannel());
-					}
+					MuxClientLocal local = getLocal(msg.getIdChannel());
 					if (local != null)
 						local.unlock(msg.ackSize());
 				}
@@ -1122,10 +1121,7 @@ public class SimpleBouncer {
 				else { // Data
 					Log.debug(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 					try {
-						MuxClientLocal local;
-						synchronized(mapLocals) {
-							local = mapLocals.get(msg.getIdChannel());
-						}
+						MuxClientLocal local = getLocal(msg.getIdChannel());
 						if (local == null)
 							return;
 						RawPacket raw = new RawPacket();
@@ -1448,31 +1444,27 @@ public class SimpleBouncer {
 		}
 
 		class MuxServerMessageRouter {
+			MuxServerRemote getRemote(final int id) {
+				synchronized(mapRemotes) {
+					return mapRemotes.get(id);
+				}
+			}
 			void onReceiveFromLocal(MuxServerLocal local, MuxPacket msg) { // Local is MUX
 				//Log.debug(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
 				if (msg.syn()) { // This is SYN/ACK 
-					MuxServerRemote remote;
-					synchronized(mapRemotes) {
-						remote = mapRemotes.get(msg.getIdChannel());
-					}
+					MuxServerRemote remote = getRemote(msg.getIdChannel());
 					if (remote != null)
 						remote.unlock(BUFFER_LEN * IO_BUFFERS);
 				}
 				else if (msg.fin()) { // End SubChannel
 					Log.info(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
-					MuxServerRemote remote;
-					synchronized(mapRemotes) {
-						remote = mapRemotes.remove(msg.getIdChannel());
-					}
+					MuxServerRemote remote = getRemote(msg.getIdChannel());
 					if (remote != null)
 						remote.setShutdown();
 				}
 				else if (msg.ack()) { // Flow-Control ACK
 					Log.debug(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
-					MuxServerRemote remote;
-					synchronized(mapRemotes) {
-						remote = mapRemotes.get(msg.getIdChannel());
-					}
+					MuxServerRemote remote = getRemote(msg.getIdChannel());
 					if (remote != null)
 						remote.unlock(msg.ackSize());
 				}
@@ -1482,10 +1474,7 @@ public class SimpleBouncer {
 				else { // Data
 					Log.debug(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
 					try {
-						MuxServerRemote remote;
-						synchronized(mapRemotes) {
-							remote = mapRemotes.get(msg.getIdChannel());
-						}
+						MuxServerRemote remote = getRemote(msg.getIdChannel());
 						if (remote == null)
 							return;
 						RawPacket raw = new RawPacket();
