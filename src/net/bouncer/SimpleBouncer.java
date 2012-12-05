@@ -429,7 +429,7 @@ public class SimpleBouncer {
 			localId.set(id);
 		}
 	}
-	
+
 	// Fast int/long/byte[] to Hex String (left-zero-padding)
 	static class SimpleHex {
 		private static final char[] HEX_CHARS = "0123456789abcdef".toCharArray();
@@ -1072,14 +1072,15 @@ public class SimpleBouncer {
 			}
 		}
 
+		MuxClientLocal getLocal(final int id) {
+			synchronized(mapLocals) {
+				return mapLocals.get(id);
+			}
+		}
+
 		// ============================================
 
 		class MuxClientMessageRouter {
-			MuxClientLocal getLocal(final int id) {
-				synchronized(mapLocals) {
-					return mapLocals.get(id);
-				}
-			}
 			void onReceiveFromRemote(MuxClientRemote remote, MuxPacket msg) { // Remote is MUX
 				//Log.debug(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 				if (msg.syn()) { // New SubChannel
@@ -1443,12 +1444,15 @@ public class SimpleBouncer {
 			}
 		}
 
-		class MuxServerMessageRouter {
-			MuxServerRemote getRemote(final int id) {
-				synchronized(mapRemotes) {
-					return mapRemotes.get(id);
-				}
+		MuxServerRemote getRemote(final int id) {
+			synchronized(mapRemotes) {
+				return mapRemotes.get(id);
 			}
+		}
+
+		// ============================================
+
+		class MuxServerMessageRouter {
 			void onReceiveFromLocal(MuxServerLocal local, MuxPacket msg) { // Local is MUX
 				//Log.debug(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
 				if (msg.syn()) { // This is SYN/ACK 
