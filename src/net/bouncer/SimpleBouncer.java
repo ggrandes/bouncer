@@ -84,7 +84,7 @@ import java.io.Reader;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
-	public static final String VERSION = "1.5beta8";
+	public static final String VERSION = "1.5beta9";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
 	private static final int IO_BUFFERS = 8;			// Default 8 buffers
@@ -1240,6 +1240,8 @@ public class SimpleBouncer {
 							if (!sock.isClosed() && !shutdown) {
 								Log.error(this.getClass().getSimpleName() + " " + e.toString());
 							}
+							break;
+							// TODO
 						} catch (Exception e) {
 							Log.error(this.getClass().getSimpleName() + " Generic exception", e);
 							break;
