@@ -66,6 +66,7 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.io.ByteArrayInputStream;
@@ -84,7 +85,7 @@ import java.io.Reader;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
-	public static final String VERSION = "1.5beta10";
+	public static final String VERSION = "1.5beta11";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
 	private static final int IO_BUFFERS = 8;			// Default 8 buffers
@@ -105,7 +106,7 @@ public class SimpleBouncer {
 	private Map<Integer, AuditableRunner> taskList = Collections.synchronizedMap(new HashMap<Integer, AuditableRunner>());
 	private AtomicInteger taskCounter = new AtomicInteger(0);
 
-	private ExecutorService threadPool = Executors.newCachedThreadPool(); 
+	private ExecutorService threadPool = Executors.newCachedThreadPool(new AuditableThreadFactory()); 
 
 	// ============================== Global code
 
@@ -176,7 +177,7 @@ public class SimpleBouncer {
 			public void run() {
 				setClientId(clientId);
 				setThread(Thread.currentThread());
-				thread.setName("task" + taskNum + ":th" + ThreadId.getId() + ":id" + SimpleHex.intAsHex(clientId) + ":" + traceName);
+				thread.setName("task" + taskNum + ":th" + Thread.currentThread().getId() + ":id" + SimpleHex.intAsHex(clientId) + ":" + traceName);
 				try {
 					taskList.put(taskNum, this);
 					Log.info("Task [" + taskNum + "] Start: " + task);
@@ -379,6 +380,16 @@ public class SimpleBouncer {
 
 	// ============================================ Helper Classes and Interfaces
 
+	static class AuditableThreadFactory implements ThreadFactory {
+		final ThreadFactory defThreadFactory = Executors.defaultThreadFactory(); 
+		@Override
+		public Thread newThread(final Runnable r) {
+			final Thread t = defThreadFactory.newThread(r);
+			Log.info("new thread created: " + t.getName());
+			return t;
+		}
+	}
+	
 	abstract class AuditableRunner implements Runnable {
 		Thread thread;
 		public void setThread(Thread thread) {
@@ -394,20 +405,6 @@ public class SimpleBouncer {
 			ClientId.setId(clientId);
 		}
 		//
-	}
-
-	static class ThreadId {
-		private static final AtomicInteger atomicId = new AtomicInteger(0);
-		//
-		private static final ThreadLocal<Integer> localId = new ThreadLocal<Integer>() {
-			@Override protected Integer initialValue() {
-				return atomicId.incrementAndGet();
-			}
-		};
-		//
-		public static int getId() {
-			return localId.get();
-		}
 	}
 
 	static class ClientId {
