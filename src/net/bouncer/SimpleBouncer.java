@@ -84,7 +84,7 @@ import java.io.Reader;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
-	public static final String VERSION = "1.5beta6";
+	public static final String VERSION = "1.5beta7";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
 	private static final int IO_BUFFERS = 8;			// Default 8 buffers
@@ -241,7 +241,7 @@ public class SimpleBouncer {
 				}
 			}
 			catch (Exception e) {
-				e.printStackTrace();
+				Log.error(this.getClass().getSimpleName() + " config reload (audit)", e);
 			}
 		}
 		//
@@ -283,7 +283,7 @@ public class SimpleBouncer {
 		BouncerAddress eleft = null, eright = null;
 		SSLFactory sslFactory = null;
 		if (opts.isOption(Options.MUX_SSL)) {
-			String[] sslConfig = new String[] { "NULL"};
+			String[] sslConfig = new String[] { "NULL" };
 			try {
 				sslConfig = opts.getString(Options.P_SSL).split(":");
 				sslFactory = new SSLFactory(sslConfig[0], sslConfig[1], sslConfig[2]);
@@ -328,22 +328,27 @@ public class SimpleBouncer {
 	}
 
 	static void closeSilent(final Reader ir) {
+		if (ir == null) return;
 		try { ir.close(); } catch (Exception ign) {}
 	}
 	static void closeSilent(final InputStream is) {
+		if (is == null) return;
 		try { is.close(); } catch (Exception ign) {}
 	}
 	static void closeSilent(final OutputStream os) {
+		if (os == null) return;
 		try { os.flush(); } catch (Exception ign) {}
 		try { os.close(); } catch (Exception ign) {}
 	}
 	void closeSilent(final Socket sock) {
+		if (sock == null) return;
 		try { sock.shutdownInput(); } catch (Exception ign) {}
 		try { sock.shutdownOutput(); } catch (Exception ign) {}
 		try { sock.close(); } catch (Exception ign) {}
 		cliSockets.remove(sock);
 	}
 	void closeSilent(final ServerSocket sock) {
+		if (sock == null) return;
 		try { sock.close(); } catch (Exception ign) {}
 		srvSockets.remove(sock);
 	}
@@ -528,7 +533,12 @@ public class SimpleBouncer {
 			return host + ":" + port;
 		}
 		void resolve() throws UnknownHostException {
-			addrs = InetAddress.getAllByName(host);
+			try {
+				addrs = InetAddress.getAllByName(host);
+			} catch (UnknownHostException e) {
+				Log.error(this.getClass().getSimpleName() + " Error resolving host=" + host);
+				throw e;
+			}
 			Log.info(this.getClass().getSimpleName() + " Resolved host=" + host + " [" + fromArrAddress(addrs) + "]");
 		}
 		Socket connect() {
@@ -593,12 +603,14 @@ public class SimpleBouncer {
 				if (sock instanceof SSLSocket) {
 					((SSLSocket) sock).startHandshake();
 				}
-			} catch (SocketTimeoutException e) {
+			} catch (IOException e) {
 				Log.error(this.getClass().getSimpleName() + " Error connecting to " + addr + ":" + port + (isSSL? " (SSL) ": " ") + e.toString());
-			} catch (ConnectException e) {
-				Log.error(this.getClass().getSimpleName() + " Error connecting to " + addr + ":" + port + (isSSL? " (SSL) ": " ") + e.toString());
+				closeSilent(sock);
+				sock = null;
 			} catch (Exception e) {
 				Log.error(this.getClass().getSimpleName() + " Error connecting to " + addr + ":" + port + (isSSL? " (SSL)": ""), e);
+				closeSilent(sock);
+				sock = null;
 			}
 			if ((sock != null) && sock.isConnected()) {
 				Log.info(this.getClass().getSimpleName() + " Connected to " + addr + ":" + port + (isSSL? " (SSL)": ""));
@@ -849,18 +861,20 @@ public class SimpleBouncer {
 							}
 							Log.info(this.getClass().getSimpleName() + " New client from=" + client);
 							doTask(new PlainConnector(client), "ForwardConnect["+inboundAddress + "|" + outboundAddress + "|" + socketRemoteToString(client)+"]", ClientId.newId());
-						} catch (Exception e) {
+						} catch (IOException e) {
 							if (!listen.isClosed()) {
-								Log.error(this.getClass().getSimpleName() + " Generic exception", e);
+								Log.error(this.getClass().getSimpleName() + " " + e.toString());
 							}
+						} catch (Exception e) {
+							Log.error(this.getClass().getSimpleName() + " Generic exception", e);
 						}
 					}
-				} catch (UnknownHostException e) {
-					Log.error(this.getClass().getSimpleName() + " " + e.toString());
-				} catch (Exception e) {
+				} catch (IOException e) {
 					if (!listen.isClosed()) {
-						Log.error(this.getClass().getSimpleName() + " Generic exception", e);
+						Log.error(this.getClass().getSimpleName() + " " + e.toString());
 					}
+				} catch (Exception e) {
+					Log.error(this.getClass().getSimpleName() + " Generic exception", e);
 				} finally {
 					Log.info(this.getClass().getSimpleName() + " await end");
 					awaitShutdown(this);
@@ -881,6 +895,10 @@ public class SimpleBouncer {
 			@Override
 			public void setShutdown() {
 				shutdown = true;
+				close();
+			}
+			public void close() {
+				closeSilent(client);
 				closeSilent(remote);
 			}
 			//
@@ -890,10 +908,8 @@ public class SimpleBouncer {
 				try {
 					outboundAddress.resolve();
 					remote = outboundAddress.connect();
-					if (remote == null) {
-						Log.info(this.getClass().getSimpleName() + " cannot connect: " + outboundAddress);
-						return;
-					}
+					if (remote == null)
+						throw new ConnectException("Unable to connect to " + outboundAddress);
 					Log.info(this.getClass().getSimpleName() + " Bouncer from " + client + " to " + remote);
 					final PlainSocketTransfer st1 = new PlainSocketTransfer(client, remote);
 					final PlainSocketTransfer st2 = new PlainSocketTransfer(remote, client);
@@ -901,10 +917,12 @@ public class SimpleBouncer {
 					st2.setBrother(st1);
 					doTask(st1, "ForwardTransfer-CliRem["+inboundAddress + "|" + socketRemoteToString(client)+"|"+socketRemoteToString(remote)+"]", ClientId.getId());
 					doTask(st2, "ForwardTransfer-RemCli["+inboundAddress + "|" + socketRemoteToString(remote)+"|"+socketRemoteToString(client)+"]", ClientId.getId());
-				} catch (UnknownHostException e) {
+				} catch (IOException e) {
 					Log.error(this.getClass().getSimpleName() + " " + e.toString());
+					close();
 				} catch (Exception e) {
 					Log.error(this.getClass().getSimpleName() + " Generic exception", e);
+					close();
 				} finally {
 					Log.info(this.getClass().getSimpleName() + " ended: " + outboundAddress);
 				}
@@ -959,10 +977,12 @@ public class SimpleBouncer {
 							}
 						}					
 					}
-				} catch (Exception e) {
+				} catch (IOException e) {
 					if (!sockin.isClosed() && !shutdown) {
 						Log.error(this.getClass().getSimpleName() + " " + e.toString() + " " + sockin);
 					}
+				} catch (Exception e) {
+					Log.error(this.getClass().getSimpleName() + " Generic exception", e);
 				} finally {
 					closeSilent(is);
 					closeSilent(os);
@@ -1061,7 +1081,8 @@ public class SimpleBouncer {
 					try {
 						Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 						openLocal(msg.getIdChannel());
-					} catch (ConnectException e) {
+					} catch (IOException e) {
+						Log.error(this.getClass().getSimpleName() + "::onReceiveFromRemote openLocal("+msg.getIdChannel()+") " + e.toString());
 						// Send FIN
 						closeLocal(msg.getIdChannel());
 					} catch (Exception e) {
@@ -1191,7 +1212,7 @@ public class SimpleBouncer {
 							outboundAddress.resolve();
 							sock = outboundAddress.connect();
 							if (sock == null)
-								throw new ConnectException();
+								throw new ConnectException("Unable to connect to " + outboundAddress);
 							try {
 								sock.setSoTimeout(MUX_TIMEOUT); // Timeout for MUX
 							} catch (Exception ign) {} 
@@ -1200,8 +1221,11 @@ public class SimpleBouncer {
 							Log.info(this.getClass().getSimpleName() + " Connected: " + sock + " SendBufferSize=" + sock.getSendBufferSize() + " ReceiveBufferSize=" + sock.getReceiveBufferSize());
 							break;
 						} catch (Exception e) {
-							if (sock != null)
+							if (e instanceof IOException) {
 								Log.error(this.getClass().getSimpleName() + " " + e.toString());
+							} else {
+								Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
+							}
 							close();
 							sock = null;
 							doSleep(5000);
@@ -1229,14 +1253,12 @@ public class SimpleBouncer {
 							continue;
 						} catch (EOFException e) {
 							break;
-						} catch (Exception e) {
+						} catch (IOException e) {
 							if (!sock.isClosed() && !shutdown) {
-								if (e.getMessage().equals("Connection reset")) {
-									Log.info(this.getClass().getSimpleName() + " " + e.toString());
-								} else {
-									Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
-								}
+								Log.error(this.getClass().getSimpleName() + " " + e.toString());
 							}
+						} catch (Exception e) {
+							Log.error(this.getClass().getSimpleName() + " Generic exception", e);
 							break;
 						}
 					}
@@ -1267,7 +1289,7 @@ public class SimpleBouncer {
 				outboundAddress.resolve();
 				sock = outboundAddress.connect();
 				if (sock == null)
-					throw new ConnectException();
+					throw new ConnectException("Unable to connect to " + outboundAddress);
 				is = sock.getInputStream();
 				os = sock.getOutputStream();
 			}
@@ -1301,8 +1323,12 @@ public class SimpleBouncer {
 								if (msg == null) continue;
 								msg.toWire(os);
 								sendACK(msg); // Send ACK
+							} catch (IOException e) {
+								if (!sock.isClosed() && !shutdown) {
+									Log.error(this.getClass().getName() + "::sendLocal " + e.toString());
+								}
 							} catch (Exception e) {
-								Log.error(this.getClass().getName() + "::sendLocal " + e.toString(), e);
+								Log.error(this.getClass().getName() + " Generic exception", e);
 							}
 						}
 					}
@@ -1332,14 +1358,13 @@ public class SimpleBouncer {
 						}
 					} catch (EOFException e) {
 						break;
-					} catch (Exception e) {
+					} catch (IOException e) {
 						if (!sock.isClosed() && !shutdown) {
-							if (e.getMessage().equals("Connection reset")) {
-								Log.info(this.getClass().getSimpleName() + " " + e.toString());
-							} else {
-								Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
-							}
+							Log.error(this.getClass().getSimpleName() + " " + e.toString());
 						}
+						break;
+					} catch (Exception e) {
+						Log.error(this.getClass().getSimpleName() + " Generic exception", e);
 						break;
 					}
 				}
@@ -1504,10 +1529,13 @@ public class SimpleBouncer {
 						}
 						Log.info(this.getClass().getSimpleName() + " new socket: " + socket + " SendBufferSize=" + socket.getSendBufferSize() + " ReceiveBufferSize=" + socket.getReceiveBufferSize());
 						attender(socket);
-					} catch (Exception e) {
+					} catch (IOException e) {
 						if (!shutdown)
 							Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
 						doSleep(500);
+					} catch (Exception e) {
+						Log.error(this.getClass().getSimpleName() + " Generic exception", e);
+						doSleep(1000);
 					}
 				}
 				close();
@@ -1646,14 +1674,13 @@ public class SimpleBouncer {
 						continue;
 					} catch (EOFException e) {
 						break;
-					} catch (Exception e) {
+					} catch (IOException e) {
 						if (!sock.isClosed() && !shutdown) {
-							if (e.getMessage().equals("Connection reset")) {
-								Log.info(this.getClass().getSimpleName() + " " + e.toString());
-							} else {
-								Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
-							}
+							Log.error(this.getClass().getSimpleName() + " " + e.toString());
 						}
+						break;
+					} catch (Exception e) {
+						Log.error(this.getClass().getSimpleName() + " Generic exception", e);
 						break;
 					}
 				}
@@ -1713,8 +1740,12 @@ public class SimpleBouncer {
 								if (msg == null) continue;
 								msg.toWire(os);
 								sendACK(msg); // Send ACK
+							} catch (IOException e) {
+								if (!sock.isClosed() && !shutdown) {
+									Log.error(this.getClass().getName() + "::sendRemote " + e.toString());
+								}
 							} catch (Exception e) {
-								Log.error(this.getClass().getName() + "::sendRemote " + e.toString(), e);
+								Log.error(this.getClass().getName() + " Generic exception", e);
 							}
 						}
 					}
@@ -1751,14 +1782,13 @@ public class SimpleBouncer {
 						}
 					} catch (EOFException e) {
 						break;
-					} catch (Exception e) {
+					} catch (IOException e) {
 						if (!sock.isClosed() && !shutdown) {
-							if (e.getMessage().equals("Connection reset")) {
-								Log.info(this.getClass().getSimpleName() + " " + e.toString());
-							} else {
-								Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
-							}
+							Log.error(this.getClass().getSimpleName() + " " + e.toString());
 						}
+						break;
+					} catch (Exception e) {
+						Log.error(this.getClass().getSimpleName() + " Generic exception", e);
 						break;
 					}
 				}
