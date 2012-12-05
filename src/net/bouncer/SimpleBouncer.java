@@ -1081,6 +1081,13 @@ public class SimpleBouncer {
 					try {
 						Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 						openLocal(msg.getIdChannel());
+						// Send SYN/ACK
+						try {
+							MuxPacket mux = new MuxPacket();
+							mux.syn(msg.getIdChannel());
+							remote.sendRemote(mux);
+						} catch (Exception ign) {
+						}
 					} catch (IOException e) {
 						Log.error(this.getClass().getSimpleName() + "::onReceiveFromRemote openLocal("+msg.getIdChannel()+") " + e.toString());
 						// Send FIN
@@ -1443,8 +1450,13 @@ public class SimpleBouncer {
 		class MuxServerMessageRouter {
 			void onReceiveFromLocal(MuxServerLocal local, MuxPacket msg) { // Local is MUX
 				//Log.debug(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
-				if (msg.syn()) { 
-					// What?
+				if (msg.syn()) { // This is SYN/ACK 
+					MuxServerRemote remote;
+					synchronized(mapRemotes) {
+						remote = mapRemotes.get(msg.getIdChannel());
+					}
+					if (remote != null)
+						remote.unlock(BUFFER_LEN * IO_BUFFERS);
 				}
 				else if (msg.fin()) { // End SubChannel
 					Log.info(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
@@ -1566,6 +1578,7 @@ public class SimpleBouncer {
 				}
 				else {
 					// Only one concurrent client, close the new connection
+					Log.error(this.getClass().getSimpleName() + " This listener already connected, closing socket: " + socket);
 					closeSilent(socket);
 				}
 			}
@@ -1702,7 +1715,7 @@ public class SimpleBouncer {
 
 		class MuxServerRemote extends MuxServerConnection { // Remote is RAW
 			int id;
-			final Semaphore isLocked = new Semaphore(BUFFER_LEN * IO_BUFFERS);
+			final Semaphore isLocked = new Semaphore(0); // Begin Locked
 			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(IO_BUFFERS<<1);
 			long keepalive = System.currentTimeMillis();
 			//
@@ -1757,6 +1770,10 @@ public class SimpleBouncer {
 					MuxPacket mux = new MuxPacket();
 					mux.syn(id);
 					local.sendLocal(mux);
+					while (!lock(1)) {
+						if (shutdown) break;
+					}
+					unlock(1);
 				} catch (Exception e) {
 					Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
 				}
