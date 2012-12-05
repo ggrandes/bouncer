@@ -84,7 +84,7 @@ import java.io.Reader;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
-	public static final String VERSION = "1.5beta9";
+	public static final String VERSION = "1.5beta10";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
 	private static final int IO_BUFFERS = 8;			// Default 8 buffers
@@ -1165,11 +1165,13 @@ public class SimpleBouncer {
 					// AES encryption
 					ByteArrayOutputStream baos = new ByteArrayOutputStream(BUFFER_LEN);
 					msg.toWire(baos);
-					byte[] encoded = seal.code(baos.toByteArray(), 0, baos.size());
-					byte[] iv = seal.getCoder().getIV();
-					baos.reset();
-					IOHelper.toWireWithHeader(baos, iv, iv.length);
-					IOHelper.toWireWithHeader(baos, encoded, encoded.length);
+					synchronized (seal) {
+						byte[] encoded = seal.code(baos.toByteArray(), 0, baos.size());
+						byte[] iv = seal.getCoder().getIV();
+						baos.reset();
+						IOHelper.toWireWithHeader(baos, iv, iv.length);
+						IOHelper.toWireWithHeader(baos, encoded, encoded.length);
+					}
 					synchronized (os) {
 						baos.writeTo(os);
 						os.flush();
@@ -1241,7 +1243,6 @@ public class SimpleBouncer {
 								Log.error(this.getClass().getSimpleName() + " " + e.toString());
 							}
 							break;
-							// TODO
 						} catch (Exception e) {
 							Log.error(this.getClass().getSimpleName() + " Generic exception", e);
 							break;
@@ -1294,7 +1295,6 @@ public class SimpleBouncer {
 			public void run() {
 				Log.info(this.getClass().getSimpleName() + "::run " + outboundAddress);
 				//
-				// TODO
 				try {
 					outboundAddress.resolve();
 					sock = outboundAddress.connect();
@@ -1635,11 +1635,13 @@ public class SimpleBouncer {
 					// AES encryption
 					ByteArrayOutputStream baos = new ByteArrayOutputStream(BUFFER_LEN);
 					msg.toWire(baos);
-					byte[] encoded = seal.code(baos.toByteArray(), 0, baos.size());
-					byte[] iv = seal.getCoder().getIV();
-					baos.reset();
-					IOHelper.toWireWithHeader(baos, iv, iv.length);
-					IOHelper.toWireWithHeader(baos, encoded, encoded.length);
+					synchronized (seal) {
+						byte[] encoded = seal.code(baos.toByteArray(), 0, baos.size());
+						byte[] iv = seal.getCoder().getIV();
+						baos.reset();
+						IOHelper.toWireWithHeader(baos, iv, iv.length);
+						IOHelper.toWireWithHeader(baos, encoded, encoded.length);
+					}
 					synchronized (os) {
 						baos.writeTo(os);
 						os.flush();
