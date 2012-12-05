@@ -389,7 +389,7 @@ public class SimpleBouncer {
 			return t;
 		}
 	}
-	
+
 	abstract class AuditableRunner implements Runnable {
 		Thread thread;
 		public void setThread(Thread thread) {
