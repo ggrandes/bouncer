@@ -457,7 +457,6 @@ public class SimpleBouncer {
 	 * Representation of listen address 
 	 */
 	class InboundAddress implements BouncerAddress {
-		//
 		Options opts = null;
 		SSLFactory sslFactory = null;
 		//
@@ -509,7 +508,6 @@ public class SimpleBouncer {
 	 * Representation of remote destination
 	 */
 	class OutboundAddress implements BouncerAddress {
-		//
 		int roundrobin = 0;
 		Options opts = null;
 		SSLFactory sslFactory = null;
@@ -1172,7 +1170,6 @@ public class SimpleBouncer {
 		}
 
 		class MuxClientRemote extends MuxClientConnection { // Remote is MUX
-			//
 			SealerAES seal = null;
 			//
 			public MuxClientRemote(OutboundAddress outboundAddress) throws IOException {
@@ -1621,7 +1618,6 @@ public class SimpleBouncer {
 		}
 
 		class MuxServerLocal extends MuxServerConnection { // Local is MUX
-			//
 			SealerAES seal = null;
 			//
 			public MuxServerLocal(Socket sock, InboundAddress inboundAddress) throws IOException {
