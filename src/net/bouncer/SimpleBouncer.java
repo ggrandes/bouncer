@@ -56,6 +56,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -72,11 +73,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.Reader;
 
 /**
@@ -85,7 +88,7 @@ import java.io.Reader;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
-	public static final String VERSION = "1.5.0";
+	public static final String VERSION = "1.5.1";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
 	private static final int IO_BUFFERS = 8;			// Default 8 buffers
@@ -95,6 +98,10 @@ public class SimpleBouncer {
 	private static final long RELOAD_CONFIG = 10000;	// Default 10seconds
 	private static final long RELOAD_TIMEOUT = 30000;	// Default 30seconds timeout
 	private static final String CONFIG_FILE = "/bouncer.conf";
+	// System properties (logs)
+	private static final String PROP_OUT_FILE = "log.stdOutFile";
+	private static final String PROP_ERR_FILE = "log.stdErrFile";
+	private static final String PROP_OUT_STDTOO = "log.stdToo";
 	// For graceful reload
 	private Set<Awaiter> reloadables = Collections.synchronizedSet(new HashSet<Awaiter>());
 	private Set<Shutdownable> orderedShutdown = Collections.synchronizedSet(new HashSet<Shutdownable>());
@@ -113,8 +120,23 @@ public class SimpleBouncer {
 	public static void main(final String[] args) throws IOException {
 		final SimpleBouncer bouncer = new SimpleBouncer();
 		//
-		if (Boolean.getBoolean("DEBUG"))
+		// Init Log System
+		if (Boolean.getBoolean("DEBUG")) {
 			Log.enableDebug(); // Enable debugging messages
+			Log.setMode(Log.LOG_ORIG_STDOUT);
+		} else {
+			// Redir STDOUT to File
+			if (System.getProperty(PROP_OUT_FILE) != null)
+				Log.redirStdOutLog(System.getProperty(PROP_OUT_FILE));
+			// Redir STDERR to File
+			if (System.getProperty(PROP_ERR_FILE) != null)
+				Log.redirStdErrLog(System.getProperty(PROP_ERR_FILE));
+			if (Boolean.getBoolean(PROP_OUT_STDTOO)) {
+				Log.setMode(Log.LOG_CURR_STDOUT|Log.LOG_ORIG_STDOUT);
+			} else {
+				Log.setMode(Log.LOG_CURR_STDOUT);
+			}
+		}
 		Log.info("Starting " + bouncer.getClass() + " version " + VERSION + (Log.isDebug() ? " debug-mode": ""));
 		// Read config
 		final URL urlConfig = bouncer.getClass().getResource(CONFIG_FILE);
@@ -2301,8 +2323,31 @@ public class SimpleBouncer {
 	 * Simple logging wrapper (you want log4j/logback/slfj? easy to do!)
 	 */
 	static class Log {
-		private final static SimpleDateFormat ISO8601DATEFORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+		public static final int LOG_NULL = 0x00;
+		public static final int LOG_CURR_STDOUT = 0x01;
+		public static final int LOG_ORIG_STDOUT = 0x02;
+		//
+		private static final SimpleDateFormat ISO8601DATEFORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
 		private static boolean isDebugEnabled = false;
+		private static int outMode = LOG_CURR_STDOUT;
+		private static PrintStream stdOut = System.out;
+		private static PrintStream stdErr = System.err;
+		//
+		static void setMode(final int newMode) {
+			outMode = newMode;
+		}
+		static void redirStdOutLog(final String stdFile) {
+			System.setOut(new PrintStream(new AutoRotateFileOutputStream(stdFile)));
+		}
+		static void restoreStdOutLog() {
+			System.setOut(stdOut);
+		}
+		static void redirStdErrLog(final String errFile) {
+			System.setErr(new PrintStream(new AutoRotateFileOutputStream(errFile)));
+		}
+		static void restoreStdErrLog() {
+			System.setErr(stdErr);
+		}
 		//
 		static void enableDebug() {
 			isDebugEnabled = true;
@@ -2317,21 +2362,138 @@ public class SimpleBouncer {
 		}
 		static void debug(final String str) {
 			if (isDebugEnabled) {
-				System.out.println(getTimeStamp() + " [DEBUG] " + "[" + Thread.currentThread().getName() + "] " + str);
+				final String msg = getTimeStamp() + " [DEBUG] " + "[" + Thread.currentThread().getName() + "] " + str;
+				if ((outMode & LOG_ORIG_STDOUT) != 0)
+					stdOut.println(msg);
+				if ((outMode & LOG_CURR_STDOUT) != 0)
+					System.out.println(msg);
 			}
 		}
 		static void info(final String str) {
-			System.out.println(getTimeStamp() + " [INFO] " + "[" + Thread.currentThread().getName() + "] " + str);
+			final String msg = getTimeStamp() + " [INFO] " + "[" + Thread.currentThread().getName() + "] " + str;
+			if ((outMode & LOG_ORIG_STDOUT) != 0)
+				stdOut.println(msg);
+			if ((outMode & LOG_CURR_STDOUT) != 0)
+				System.out.println(msg);
 		}
 		static void warn(final String str) {
-			System.out.println(getTimeStamp() + " [WARN] " + "[" + Thread.currentThread().getName() + "] " + str);
+			final String msg = getTimeStamp() + " [WARN] " + "[" + Thread.currentThread().getName() + "] " + str;
+			if ((outMode & LOG_ORIG_STDOUT) != 0)
+				stdOut.println(msg);
+			if ((outMode & LOG_CURR_STDOUT) != 0)
+				System.out.println(msg);
 		}
 		static void error(final String str) {
-			System.out.println(getTimeStamp() + " [ERROR] " + "[" + Thread.currentThread().getName() + "] " + str);
+			final String msg = getTimeStamp() + " [ERROR] " + "[" + Thread.currentThread().getName() + "] " + str;
+			if ((outMode & LOG_ORIG_STDOUT) != 0)
+				stdOut.println(msg);
+			if ((outMode & LOG_CURR_STDOUT) != 0)
+				System.out.println(msg);
 		}
 		static void error(final String str, final Throwable t) {
-			System.out.println(getTimeStamp() + " [ERROR] " + "[" + Thread.currentThread().getName() + "] " + str);
-			t.printStackTrace(System.out);
+			final String msg = getTimeStamp() + " [ERROR] " + "[" + Thread.currentThread().getName() + "] " + str;
+			if ((outMode & LOG_ORIG_STDOUT) != 0) {
+				stdOut.println(msg);
+				t.printStackTrace(stdOut);
+			} 
+			if ((outMode & LOG_CURR_STDOUT) != 0) {
+				System.out.println(msg);
+				t.printStackTrace(System.out);
+			}
+		}
+	}
+
+	static class AutoRotateFileOutputStream extends OutputStream {
+		private final String filename;
+		private final SimpleDateFormat sdf;
+		private final LinkedHashMap<Integer, String> cache = new LinkedHashMap<Integer, String>(8) {
+			private static final long serialVersionUID = 1L;
+			protected boolean removeEldestEntry(Map.Entry<Integer, String> eldest) {
+				return (size() > 3);
+			}
+		};
+		private String currentStamp = null;
+		private FileOutputStream os = null;
+		//
+
+		/**
+		 * Creates a file output stream with default daily pattern (yyyy-MM-dd) rotation
+		 * @param filename
+		 */
+		public AutoRotateFileOutputStream(final String filename) {
+			this(filename, "yyyy-MM-dd");
+		}
+
+		/**
+		 * Creates a file output stream with specified pattern rotation
+		 * @param filename
+		 * @param pattern like SimpleDateFormat: yyyy-MM-dd.HHmmss
+		 */
+		public AutoRotateFileOutputStream(final String filename, final String pattern) {
+			this.filename = filename;
+			this.sdf = new SimpleDateFormat(pattern);
+		}
+
+		private final String getTimeStamp() {
+			final Integer now = Integer.valueOf((int) (System.currentTimeMillis() / 1000));
+			String nowString = cache.get(now);
+			if (nowString == null) {
+				nowString = sdf.format(new Date(now.longValue()*1000));
+				cache.put(now, nowString);
+			}
+			return nowString;
+		}
+
+		private final void open() throws IOException {
+			final String newStamp = getTimeStamp();
+			if (newStamp != currentStamp) {
+				close();
+			}
+			if (os == null) {
+				final String out = filename + "." + newStamp;
+				os = new FileOutputStream(out, true);
+				currentStamp = newStamp;
+			}
+		}
+
+		@Override
+		public synchronized void close() throws IOException {
+			if (os != null) {
+				os.flush();
+				os.close();
+				os = null;
+			}
+		}
+
+		@Override
+		public synchronized void flush() throws IOException {
+			if (os != null)
+				os.flush();
+		}
+
+		@Override
+		public void write(byte[] b) throws IOException {
+			write(b, 0, b.length);
+		}
+
+		@Override
+		public final synchronized void write(byte[] b, int off, int len) throws IOException {
+			if ((os != null) && ((b[off] == '\n') || (b[off] == '\r'))) {
+				os.write(b, off, len);
+			} else {
+				open();
+				os.write(b, off, len);
+			}
+		}
+
+		@Override
+		public final synchronized void write(int b) throws IOException {
+			if ((os != null) && ((b == '\n') || (b == '\r'))) {
+				os.write(b);
+			} else {
+				open();
+				os.write(b);
+			}
 		}
 	}
 

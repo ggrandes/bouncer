@@ -41,6 +41,15 @@ SimpleBouncer is an open source (Apache License, Version 2.0) Java network proxy
 
 ---
 
+## Config (params)
+
+    # To redir stdout/stderr to (auto-daily-rotated) files you can use:
+    -Dlog.stdOutFile=/var/log/bouncer.out -Dlog.stdErrFile=/var/log/bouncer.err
+    # To log to stdout too:
+    -Dlog.stdToo=true 
+
+###### Filenames are a base-pattern, output files they will be: bouncer.xxx.YEAR-MONTH-DAY (bouncer.xxx.2012-12-31)
+
 ## Config (bouncer.conf)
 Config file must be in class-path, general format is:
 
@@ -152,6 +161,7 @@ Config file must be in class-path, general format is:
 * Key Generator for MUX-SSL/TLS (v1.5)
 * Audit threads / connections (v1.5)
 * Improved FlowControl in MUX (v1.5)
+* Allow redir stdout/stderr to File, with auto daily-rotate (v1.5.1)
 
 ## MISC
 Current harcoded values:
