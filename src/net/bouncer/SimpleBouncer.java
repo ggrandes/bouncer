@@ -270,31 +270,42 @@ public class SimpleBouncer {
 		//
 		final BufferedReader in = new BufferedReader(new InputStreamReader(isConfig));
 		String line = null;
+		int lineNum = 0;
 		try {
 			while ((line = in.readLine()) != null) {
-				// Skip comments
-				if (line.trim().startsWith("#")) continue; 
-				if (line.trim().equals("")) continue; 
-				// Expected format (style rinetd):
-				// <bind-addr> <bind-port> <remote-addr> <remote-port> [options]
-				final String[] toks = line.split("( |\t)+"); 
-				// Invalid number of params
-				if (toks.length < 4) { 
-					Log.error(this.getClass().getSimpleName() + " Invalid config line: " + line);
+				boolean started = false;
+				lineNum++;
+				try {
+					// Skip comments
+					if (line.trim().startsWith("#")) continue; 
+					if (line.trim().equals("")) continue; 
+					// Expected format (style rinetd):
+					// <bind-addr> <bind-port> <remote-addr> <remote-port> [options]
+					final String[] toks = line.split("( |\t)+"); 
+					// Invalid number of params
+					if (toks.length < 4) { 
+						Log.error(this.getClass().getSimpleName() + " Invalid config line[num="+lineNum+"]: " + line);
+						continue;
+					}
+					// Start bouncers
+					final String bindaddr = toks[0];
+					final int bindport = Integer.valueOf(toks[1]);
+					//
+					final String remoteaddr = toks[2];
+					final int remoteport = Integer.valueOf(toks[3]);
+					//
+					final String options = ((toks.length > 4) ? toks[4] : "");
+					final Options opts = new Options(options);
+					//
+					Log.info(this.getClass().getSimpleName() + " Readed bind-addr=" + bindaddr + " bind-port=" + bindport + " remote-addr=" + remoteaddr + " remote-port=" + remoteport + " options{" + opts + "}");
+					started = start(bindaddr, bindport, remoteaddr, remoteport, opts);
+				} catch (Exception e) {
+					Log.error(this.getClass().getSimpleName() + " Invalid config line[num="+lineNum+"]: " + line + " (" +e.toString() +")");
 					continue;
 				}
-				// Start bouncers
-				final String bindaddr = toks[0];
-				final int bindport = Integer.valueOf(toks[1]);
-				//
-				final String remoteaddr = toks[2];
-				final int remoteport = Integer.valueOf(toks[3]);
-				//
-				final String options = ((toks.length > 4) ? toks[4] : "");
-				final Options opts = new Options(options);
-				//
-				Log.info(this.getClass().getSimpleName() + " Readed bind-addr=" + bindaddr + " bind-port=" + bindport + " remote-addr=" + remoteaddr + " remote-port=" + remoteport + " options{" + opts + "}");
-				start(bindaddr, bindport, remoteaddr, remoteport, opts);
+				if (!started) {
+					Log.error(this.getClass().getSimpleName() + " Unable to start line[num="+lineNum+"]: " + line);
+				}
 			}
 		} finally {
 			closeSilent(in);
@@ -302,7 +313,7 @@ public class SimpleBouncer {
 		}
 	}
 
-	void start(final String leftaddr, final int leftport, final String rightaddr, final int rightport, final Options opts) {
+	boolean start(final String leftaddr, final int leftport, final String rightaddr, final int rightport, final Options opts) {
 		BouncerAddress eleft = null, eright = null;
 		SSLFactory sslFactory = null;
 		if (opts.isOption(Options.MUX_SSL)) {
@@ -312,7 +323,7 @@ public class SimpleBouncer {
 				sslFactory = new SSLFactory(sslConfig[0], sslConfig[1], sslConfig[2]);
 			} catch (Exception e) {
 				Log.error(this.getClass().getSimpleName() + " Error creating SSLFactory("+Arrays.asList(sslConfig)+")", e);
-				return;
+				return false;
 			}
 		}
 		try {
@@ -345,9 +356,11 @@ public class SimpleBouncer {
 				eright = right;
 				new PlainServer(left, right).listenLocal();
 			}
+			return true;
 		} catch (Exception e) {
 			Log.error(this.getClass().getSimpleName() + " Error trying to bounce from " + eleft + " to " + eright, e);
 		}
+		return false;
 	}
 
 	static void closeSilent(final Reader ir) {

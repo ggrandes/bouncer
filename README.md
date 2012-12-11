@@ -162,6 +162,7 @@ Config file must be in class-path, general format is:
 * Audit threads / connections (v1.5)
 * Improved FlowControl in MUX (v1.5)
 * Allow redir stdout/stderr to File, with auto daily-rotate (v1.5.1)
+* Improved trace error in config file with line number (v1.5.1)
 
 ## MISC
 Current harcoded values:
