@@ -1174,7 +1174,7 @@ public class SimpleBouncer {
 			@Override
 			public void setShutdown() {
 				shutdown = true;
-				close();
+				// Graceful Shutdown: don't call close()
 			}
 			public void close() {
 				closeSilent(is);
@@ -1348,14 +1348,15 @@ public class SimpleBouncer {
 						Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
 					}
 					setShutdown();
+					close();
 				}
 				//
 				if (!shutdown) {
 					doTask(new Runnable() {
 						@Override
 						public void run() {
-							while (!shutdown) {
-								try {						
+							while (!shutdown || !queue.isEmpty()) {
+								try {
 									RawPacket msg = queue.poll(1000, TimeUnit.MILLISECONDS);
 									if (msg == null) continue;
 									msg.toWire(os);
@@ -1368,6 +1369,7 @@ public class SimpleBouncer {
 									Log.error(this.getClass().getName() + " Generic exception", e);
 								}
 							}
+							close();
 						}
 					}, "MuxOutLeft-Send["+left+"|"+right+"|"+id+"]", ClientId.getId());
 				}
@@ -1644,7 +1646,7 @@ public class SimpleBouncer {
 			@Override
 			public void setShutdown() {
 				shutdown = true;
-				close();
+				// Graceful Shutdown: don't call close()
 			}
 			public void close() {
 				closeSilent(is);
@@ -1684,11 +1686,6 @@ public class SimpleBouncer {
 						msg.toWire(os);
 					}
 				}
-			}
-			@Override
-			public void setShutdown() {
-				shutdown = true;
-				// Graceful Shutdown: don't call close()
 			}
 			@Override
 			public void run() {
@@ -1778,7 +1775,10 @@ public class SimpleBouncer {
 					mux.syn(id);
 					local.sendLocal(mux);
 					while (!lock(1)) {
-						if (shutdown) break;
+						if (shutdown) {
+							close();
+							break;
+						}
 					}
 					unlock(1);
 				} catch (Exception e) {
@@ -1789,7 +1789,7 @@ public class SimpleBouncer {
 					doTask(new Runnable() {
 						@Override
 						public void run() {
-							while (!shutdown) {
+							while (!shutdown || !queue.isEmpty()) {
 								try {
 									RawPacket msg = queue.poll(1000, TimeUnit.MILLISECONDS);
 									if (msg == null) continue;
@@ -1803,6 +1803,7 @@ public class SimpleBouncer {
 									Log.error(this.getClass().getName() + " Generic exception", e);
 								}
 							}
+							close();
 						}
 					}, "MuxInRight-Send["+inboundAddress+"|"+socketRemoteToString(sock)+"|"+id+"]", ClientId.getId());
 				}

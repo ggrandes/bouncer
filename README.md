@@ -2,7 +2,7 @@
 
 SimpleBouncer is an open source (Apache License, Version 2.0) Java network proxy. Do not require any external lib.
 
-### Current Stable Version is [1.5.1](https://github.com/downloads/ggrandes/bouncer/bouncer-1.5.1.jar)
+### Current Stable Version is [1.5.2](https://github-ggrandes.s3.amazonaws.com/bouncer/bouncer-1.5.2.jar)
 
 ---
 
@@ -163,6 +163,7 @@ Config file must be in class-path, general format is:
 * Improved FlowControl in MUX (v1.5)
 * Allow redir stdout/stderr to File, with auto daily-rotate (v1.5.1)
 * Improved trace error in config file with line number (v1.5.1)
+* Improved graceful close of shot-and-run connections over MUX (v1.5.2)
 
 ## MISC
 Current harcoded values:
