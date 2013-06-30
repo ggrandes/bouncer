@@ -147,6 +147,7 @@ Config file must be in class-path, general format is:
 * Use Log4J
 * Limit number of connections
 * Limit absolute timeout/TTL of a connection
+* Allow different tunnels over same MUX(IN/OUT)
 
 ## DONEs
 
