@@ -146,21 +146,25 @@ public class SimpleBouncer {
 		}
 		long lastReloaded = 0;
 		while (true) {
+			InputStream isConfig = null;
 			try {
 				final URLConnection connConfig = urlConfig.openConnection();
 				connConfig.setUseCaches(false);
 				final long lastModified = connConfig.getLastModified();
 				Log.debug("lastReloaded=" + lastReloaded + " getLastModified()=" + connConfig.getLastModified() + " currentTimeMillis()=" + System.currentTimeMillis());
+				isConfig = connConfig.getInputStream();
 				if (lastModified > lastReloaded) {
 					if (lastReloaded > 0) {
 						Log.info("Reloading config");
 					}
 					lastReloaded = lastModified;
-					bouncer.reload(connConfig);
+					bouncer.reload(isConfig);
 					Log.info("Reloaded config");
 				}
 			} catch (Exception e) {
 				Log.error("Load config error", e);
+			} finally {
+				closeSilent(isConfig);
 			}
 			doSleep(RELOAD_CONFIG);
 		}
@@ -218,9 +222,7 @@ public class SimpleBouncer {
 		});
 	}
 
-	void reload(final URLConnection connConfig) throws IOException {
-		final InputStream isConfig = connConfig.getInputStream();
-		//
+	void reload(final InputStream isConfig) throws IOException {
 		if (!reloadables.isEmpty() || !orderedShutdown.isEmpty()) {
 			shutdownBarrier = new CyclicBarrier(reloadables.size()+1);
 			for (Shutdownable shut : orderedShutdown) {
@@ -309,7 +311,6 @@ public class SimpleBouncer {
 			}
 		} finally {
 			closeSilent(in);
-			closeSilent(isConfig);
 		}
 	}
 
