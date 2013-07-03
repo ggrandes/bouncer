@@ -2,7 +2,7 @@
 
 SimpleBouncer is an open source (Apache License, Version 2.0) Java network proxy. Do not require any external lib.
 
-### Current Stable Version is [1.5.2](https://github-ggrandes.s3.amazonaws.com/bouncer/bouncer-1.5.2.jar)
+### Current Stable Version is [1.5.3](https://github-ggrandes.s3.amazonaws.com/bouncer/bouncer-1.5.3.jar)
 
 ---
 
@@ -147,6 +147,7 @@ Config file must be in class-path, general format is:
 * Use Log4J
 * Limit number of connections
 * Limit absolute timeout/TTL of a connection
+* Configurable retry-sleeps
 * Allow different tunnels over same MUX(IN/OUT)
 
 ## DONEs
@@ -163,8 +164,6 @@ Config file must be in class-path, general format is:
 * Audit threads / connections (v1.5)
 * Improved FlowControl in MUX (v1.5)
 * Allow redir stdout/stderr to File, with auto daily-rotate (v1.5.1)
-* Improved trace error in config file with line number (v1.5.1)
-* Improved graceful close of shot-and-run connections over MUX (v1.5.2)
 
 ## MISC
 Current harcoded values:
@@ -175,6 +174,8 @@ Current harcoded values:
 * Connection timeout: 30seconds
 * Read timeout: 5minutes
 * MUX Read timeout / keep-alive: 30seconds
+* MUX-IN Error retry sleep: 0.5/1seconds
+* MUX-OUT Error retry sleep: 5seconds
 * Reload config check time interval: 10seconds
 * Reset Initialization Vector (IV) for MUX-AES: { Iterations: 64K, Data: 16MB }
 * For MUX-AES encryption/[transformation](http://docs.oracle.com/javase/6/docs/technotes/guides/security/SunProviders.html#SunJCEProvider) are AES/CBC/PKCS5Padding
