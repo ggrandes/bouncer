@@ -541,13 +541,13 @@ public class SimpleBouncer {
 	 * Representation of remote destination
 	 */
 	class OutboundAddress implements BouncerAddress {
-		int roundrobin = 0;
 		Options opts = null;
 		SSLFactory sslFactory = null;
 		//
 		final String host;
 		final int port;
 		InetAddress[] addrs = null;
+		int roundrobin = 0;
 		//
 		OutboundAddress(final String host, final int port, final Options opts) {
 			this.host = host;
@@ -565,6 +565,7 @@ public class SimpleBouncer {
 		}
 		void resolve() throws UnknownHostException {
 			try {
+				roundrobin = 0;
 				addrs = InetAddress.getAllByName(host);
 			} catch (UnknownHostException e) {
 				Log.error(this.getClass().getSimpleName() + " Error resolving host=" + host);
@@ -587,9 +588,11 @@ public class SimpleBouncer {
 				break;
 			case Options.LB_RR:
 				final int rrbegin = roundrobin;
+				int rr = rrbegin;
 				do {
-					remote = connect(addrs[roundrobin++]);
-					roundrobin %= addrs.length;
+					remote = connect(addrs[rr++]);
+					rr %= addrs.length;
+					roundrobin = rr;
 					if (remote != null) break;
 				} while (roundrobin != rrbegin);
 				break;
