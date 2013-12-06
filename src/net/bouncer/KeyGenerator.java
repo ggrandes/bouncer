@@ -49,7 +49,7 @@ import sun.security.x509.X509CertInfo;
 
 /**
  * Generate RSA keys and X.509 self-signed certificates for SSL/TLS
- *
+ * 
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class KeyGenerator {
@@ -85,18 +85,20 @@ public class KeyGenerator {
 
 	/**
 	 * Create a self-signed X.509 Certificate
+	 * 
 	 * @param dn the X.509 Distinguished Name, eg "CN=Test"
 	 * @param pair the KeyPair
 	 * @param days how many days from now the Certificate is valid for
 	 * @param algName algorithm name, eg SHA1withRSA
-	 */ 
-	static X509Certificate generateCertificate(String dn, KeyPair pair, int days, String algName) throws Exception {
+	 */
+	static X509Certificate generateCertificate(String dn, KeyPair pair, int days, String algName)
+			throws Exception {
 		PrivateKey privkey = pair.getPrivate();
 		X509CertInfo info = new X509CertInfo();
 		Date from = new Date();
 		Date to = new Date(from.getTime() + days * 86400000L);
 		CertificateValidity interval = new CertificateValidity(from, to);
-		int sn = (int)((System.currentTimeMillis()/1000) & 0xFFFFFFFF);
+		int sn = (int) ((System.currentTimeMillis() / 1000) & 0xFFFFFFFF);
 		X500Name owner = new X500Name(dn);
 
 		AlgorithmId algo = AlgorithmId.get(algName);
@@ -135,6 +137,7 @@ public class KeyGenerator {
 			out.write('\n');
 		}
 	}
+
 	static void writeCertificate(OutputStream out, X509Certificate crt) throws Exception {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		baos.write("-----BEGIN CERTIFICATE-----\r\n".getBytes());
@@ -145,6 +148,7 @@ public class KeyGenerator {
 		out.close();
 		System.out.println(baos.toString());
 	}
+
 	static void writeKey(OutputStream out, PrivateKey pk) throws Exception {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		baos.write("-----BEGIN RSA PRIVATE KEY-----\r\n".getBytes());
@@ -155,5 +159,4 @@ public class KeyGenerator {
 		out.close();
 		System.out.println(baos.toString());
 	}
-
 }
