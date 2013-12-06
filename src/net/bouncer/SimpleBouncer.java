@@ -88,7 +88,7 @@ import java.io.Reader;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
-	public static final String VERSION = "1.5.3";
+	public static final String VERSION = "1.5.4";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
 	private static final int IO_BUFFERS = 8;			// Default 8 buffers
@@ -2462,7 +2462,11 @@ public class SimpleBouncer {
 		private final void open() throws IOException {
 			final String newStamp = getTimeStamp();
 			if (newStamp != currentStamp) {
-				close();
+				if (newStamp.equals(currentStamp)) {
+					currentStamp = newStamp;
+				} else {
+					close();
+				}
 			}
 			if (os == null) {
 				final String out = filename + "." + newStamp;
