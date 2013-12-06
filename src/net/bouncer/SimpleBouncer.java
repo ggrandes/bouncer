@@ -84,19 +84,19 @@ import java.io.Reader;
 
 /**
  * Simple TCP Bouncer
- *
+ * 
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
 	public static final String VERSION = "1.5.4";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
-	private static final int IO_BUFFERS = 8;			// Default 8 buffers
-	private static final int CONNECT_TIMEOUT = 30000;	// Default 30seconds timeout
-	private static final int READ_TIMEOUT = 300000;		// Default 5min timeout
-	private static final int MUX_TIMEOUT = 30000;		// Default 30seconds timeout
-	private static final long RELOAD_CONFIG = 10000;	// Default 10seconds
-	private static final long RELOAD_TIMEOUT = 30000;	// Default 30seconds timeout
+	private static final int IO_BUFFERS = 8; 			// Default 8 buffers
+	private static final int CONNECT_TIMEOUT = 30000; 	// Default 30seconds timeout
+	private static final int READ_TIMEOUT = 300000; 	// Default 5min timeout
+	private static final int MUX_TIMEOUT = 30000; 		// Default 30seconds timeout
+	private static final long RELOAD_CONFIG = 10000; 	// Default 10seconds
+	private static final long RELOAD_TIMEOUT = 30000; 	// Default 30seconds timeout
 	private static final String CONFIG_FILE = "/bouncer.conf";
 	// System properties (logs)
 	private static final String PROP_OUT_FILE = "log.stdOutFile";
@@ -110,10 +110,11 @@ public class SimpleBouncer {
 	private Set<Socket> cliSockets = Collections.synchronizedSet(new HashSet<Socket>());
 	private Set<ServerSocket> srvSockets = Collections.synchronizedSet(new HashSet<ServerSocket>());
 	// Thread Auditing
-	private Map<Integer, AuditableRunner> taskList = Collections.synchronizedMap(new HashMap<Integer, AuditableRunner>());
+	private Map<Integer, AuditableRunner> taskList = Collections
+			.synchronizedMap(new HashMap<Integer, AuditableRunner>());
 	private AtomicInteger taskCounter = new AtomicInteger(0);
 
-	private ExecutorService threadPool = Executors.newCachedThreadPool(new AuditableThreadFactory()); 
+	private ExecutorService threadPool = Executors.newCachedThreadPool(new AuditableThreadFactory());
 
 	// ============================== Global code
 
@@ -132,12 +133,13 @@ public class SimpleBouncer {
 			if (System.getProperty(PROP_ERR_FILE) != null)
 				Log.redirStdErrLog(System.getProperty(PROP_ERR_FILE));
 			if (Boolean.getBoolean(PROP_OUT_STDTOO)) {
-				Log.setMode(Log.LOG_CURR_STDOUT|Log.LOG_ORIG_STDOUT);
+				Log.setMode(Log.LOG_CURR_STDOUT | Log.LOG_ORIG_STDOUT);
 			} else {
 				Log.setMode(Log.LOG_CURR_STDOUT);
 			}
 		}
-		Log.info("Starting " + bouncer.getClass() + " version " + VERSION + (Log.isDebug() ? " debug-mode": ""));
+		Log.info("Starting " + bouncer.getClass() + " version " + VERSION
+				+ (Log.isDebug() ? " debug-mode" : ""));
 		// Read config
 		final URL urlConfig = bouncer.getClass().getResource(CONFIG_FILE);
 		if (urlConfig == null) {
@@ -151,7 +153,8 @@ public class SimpleBouncer {
 				final URLConnection connConfig = urlConfig.openConnection();
 				connConfig.setUseCaches(false);
 				final long lastModified = connConfig.getLastModified();
-				Log.debug("lastReloaded=" + lastReloaded + " getLastModified()=" + connConfig.getLastModified() + " currentTimeMillis()=" + System.currentTimeMillis());
+				Log.debug("lastReloaded=" + lastReloaded + " getLastModified()="
+						+ connConfig.getLastModified() + " currentTimeMillis()=" + System.currentTimeMillis());
 				isConfig = connConfig.getInputStream();
 				if (lastModified > lastReloaded) {
 					if (lastReloaded > 0) {
@@ -176,7 +179,8 @@ public class SimpleBouncer {
 			try {
 				shutdownBarrier.await(RELOAD_TIMEOUT, TimeUnit.MILLISECONDS);
 				ret = true;
-			} catch (Exception ign) {}
+			} catch (Exception ign) {
+			}
 		}
 		if (caller != null)
 			reloadables.remove(caller);
@@ -188,7 +192,7 @@ public class SimpleBouncer {
 	}
 
 	static void doSleep(final long time) {
-		try { 
+		try {
 			Thread.sleep(time);
 		} catch (InterruptedException ie) {
 			Thread.currentThread().interrupt();
@@ -203,18 +207,19 @@ public class SimpleBouncer {
 			public void run() {
 				setClientId(clientId);
 				setThread(Thread.currentThread());
-				thread.setName("task" + taskNum + ":th" + Thread.currentThread().getId() + ":id" + SimpleHex.intAsHex(clientId) + ":" + traceName);
+				thread.setName("task" + taskNum + ":th" + Thread.currentThread().getId() + ":id"
+						+ SimpleHex.intAsHex(clientId) + ":" + traceName);
 				try {
 					taskList.put(taskNum, this);
 					Log.info("Task [" + taskNum + "] Start: " + task);
 					task.run();
-				}
-				finally {
+				} finally {
 					Log.info("Task [" + taskNum + "] End: " + task);
 					taskList.remove(taskNum);
 					setThread(null);
 				}
 			}
+
 			@Override
 			public String toString() {
 				return task.toString();
@@ -224,16 +229,19 @@ public class SimpleBouncer {
 
 	void reload(final InputStream isConfig) throws IOException {
 		if (!reloadables.isEmpty() || !orderedShutdown.isEmpty()) {
-			shutdownBarrier = new CyclicBarrier(reloadables.size()+1);
+			shutdownBarrier = new CyclicBarrier(reloadables.size() + 1);
 			for (Shutdownable shut : orderedShutdown) {
-				Log.info(this.getClass().getSimpleName() + " Shuting down: " + shut.getClass().getSimpleName());
+				Log.info(this.getClass().getSimpleName() + " Shuting down: "
+						+ shut.getClass().getSimpleName());
 				shut.setShutdown();
 			}
 			for (Shutdownable shut : reloadables) {
-				Log.info(this.getClass().getSimpleName() + " Shuting down: " + shut.getClass().getSimpleName());
+				Log.info(this.getClass().getSimpleName() + " Shuting down: "
+						+ shut.getClass().getSimpleName());
 				shut.setShutdown();
 			}
-			Log.info(this.getClass().getSimpleName() + " Waiting for " + reloadables.size() + " threads to shutdown");
+			Log.info(this.getClass().getSimpleName() + " Waiting for " + reloadables.size()
+					+ " threads to shutdown");
 			if (awaitShutdown(null)) {
 				Log.info(this.getClass().getSimpleName() + " Shutdown completed");
 			} else {
@@ -254,7 +262,8 @@ public class SimpleBouncer {
 				// Audit Task
 				if (Log.isDebug()) {
 					Log.warn(this.getClass().getSimpleName() + " Audit Socket End");
-					Map<Integer, AuditableRunner> localTaskList = new HashMap<Integer, AuditableRunner>(taskList);
+					Map<Integer, AuditableRunner> localTaskList = new HashMap<Integer, AuditableRunner>(
+							taskList);
 					Log.warn(this.getClass().getSimpleName() + " Audit Task Begin");
 					for (Entry<Integer, AuditableRunner> e : localTaskList.entrySet()) {
 						Log.debug("Audit Task: " + e.getKey() + " " + e.getValue());
@@ -264,8 +273,7 @@ public class SimpleBouncer {
 					}
 					Log.warn(this.getClass().getSimpleName() + " Audit Task End");
 				}
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				Log.error(this.getClass().getSimpleName() + " config reload (audit)", e);
 			}
 		}
@@ -279,14 +287,17 @@ public class SimpleBouncer {
 				lineNum++;
 				try {
 					// Skip comments
-					if (line.trim().startsWith("#")) continue; 
-					if (line.trim().equals("")) continue; 
+					if (line.trim().startsWith("#"))
+						continue;
+					if (line.trim().equals(""))
+						continue;
 					// Expected format (style rinetd):
 					// <bind-addr> <bind-port> <remote-addr> <remote-port> [options]
-					final String[] toks = line.split("( |\t)+"); 
+					final String[] toks = line.split("( |\t)+");
 					// Invalid number of params
-					if (toks.length < 4) { 
-						Log.error(this.getClass().getSimpleName() + " Invalid config line[num="+lineNum+"]: " + line);
+					if (toks.length < 4) {
+						Log.error(this.getClass().getSimpleName() + " Invalid config line[num=" + lineNum
+								+ "]: " + line);
 						continue;
 					}
 					// Start bouncers
@@ -299,14 +310,18 @@ public class SimpleBouncer {
 					final String options = ((toks.length > 4) ? toks[4] : "");
 					final Options opts = new Options(options);
 					//
-					Log.info(this.getClass().getSimpleName() + " Readed bind-addr=" + bindaddr + " bind-port=" + bindport + " remote-addr=" + remoteaddr + " remote-port=" + remoteport + " options{" + opts + "}");
+					Log.info(this.getClass().getSimpleName() + " Readed bind-addr=" + bindaddr
+							+ " bind-port=" + bindport + " remote-addr=" + remoteaddr + " remote-port="
+							+ remoteport + " options{" + opts + "}");
 					started = start(bindaddr, bindport, remoteaddr, remoteport, opts);
 				} catch (Exception e) {
-					Log.error(this.getClass().getSimpleName() + " Invalid config line[num="+lineNum+"]: " + line + " (" +e.toString() +")");
+					Log.error(this.getClass().getSimpleName() + " Invalid config line[num=" + lineNum + "]: "
+							+ line + " (" + e.toString() + ")");
 					continue;
 				}
 				if (!started) {
-					Log.error(this.getClass().getSimpleName() + " Unable to start line[num="+lineNum+"]: " + line);
+					Log.error(this.getClass().getSimpleName() + " Unable to start line[num=" + lineNum
+							+ "]: " + line);
 				}
 			}
 		} finally {
@@ -314,16 +329,21 @@ public class SimpleBouncer {
 		}
 	}
 
-	boolean start(final String leftaddr, final int leftport, final String rightaddr, final int rightport, final Options opts) {
+	boolean start(final String leftaddr, final int leftport, final String rightaddr, final int rightport,
+			final Options opts) {
 		BouncerAddress eleft = null, eright = null;
 		SSLFactory sslFactory = null;
 		if (opts.isOption(Options.MUX_SSL)) {
-			String[] sslConfig = new String[] { "NULL" };
+			String[] sslConfig = new String[] {
+				"NULL"
+			};
 			try {
 				sslConfig = opts.getString(Options.P_SSL).split(":");
 				sslFactory = new SSLFactory(sslConfig[0], sslConfig[1], sslConfig[2]);
 			} catch (Exception e) {
-				Log.error(this.getClass().getSimpleName() + " Error creating SSLFactory("+Arrays.asList(sslConfig)+")", e);
+				Log.error(
+						this.getClass().getSimpleName() + " Error creating SSLFactory("
+								+ Arrays.asList(sslConfig) + ")", e);
 				return false;
 			}
 		}
@@ -337,8 +357,7 @@ public class SimpleBouncer {
 				eleft = left;
 				eright = right;
 				new MuxServer(left, right).listenLocal();
-			}
-			else if (opts.isOption(Options.MUX_OUT)) {
+			} else if (opts.isOption(Options.MUX_OUT)) {
 				Options lopts = new Options(opts).unsetOptionsMUX();
 				Options ropts = new Options(opts).unsetOptionsPlain();
 				OutboundAddress left = new OutboundAddress(leftaddr, leftport, lopts); // PLAIN
@@ -347,8 +366,7 @@ public class SimpleBouncer {
 				eleft = left;
 				eright = right;
 				new MuxClient(left, right).openRemote();
-			}
-			else {
+			} else {
 				Options lopts = new Options(opts).unsetOptionsMUX();
 				Options ropts = new Options(opts).unsetOptionsMUX();
 				InboundAddress left = new InboundAddress(leftaddr, leftport, lopts); // PLAIN
@@ -359,56 +377,92 @@ public class SimpleBouncer {
 			}
 			return true;
 		} catch (Exception e) {
-			Log.error(this.getClass().getSimpleName() + " Error trying to bounce from " + eleft + " to " + eright, e);
+			Log.error(this.getClass().getSimpleName() + " Error trying to bounce from " + eleft + " to "
+					+ eright, e);
 		}
 		return false;
 	}
 
 	static void closeSilent(final Reader ir) {
-		if (ir == null) return;
-		try { ir.close(); } catch (Exception ign) {}
+		if (ir == null)
+			return;
+		try {
+			ir.close();
+		} catch (Exception ign) {
+		}
 	}
+
 	static void closeSilent(final InputStream is) {
-		if (is == null) return;
-		try { is.close(); } catch (Exception ign) {}
+		if (is == null)
+			return;
+		try {
+			is.close();
+		} catch (Exception ign) {
+		}
 	}
+
 	static void closeSilent(final OutputStream os) {
-		if (os == null) return;
-		try { os.flush(); } catch (Exception ign) {}
-		try { os.close(); } catch (Exception ign) {}
+		if (os == null)
+			return;
+		try {
+			os.flush();
+		} catch (Exception ign) {
+		}
+		try {
+			os.close();
+		} catch (Exception ign) {
+		}
 	}
+
 	void closeSilent(final Socket sock) {
-		if (sock == null) return;
-		try { sock.shutdownInput(); } catch (Exception ign) {}
-		try { sock.shutdownOutput(); } catch (Exception ign) {}
-		try { sock.close(); } catch (Exception ign) {}
+		if (sock == null)
+			return;
+		try {
+			sock.shutdownInput();
+		} catch (Exception ign) {
+		}
+		try {
+			sock.shutdownOutput();
+		} catch (Exception ign) {
+		}
+		try {
+			sock.close();
+		} catch (Exception ign) {
+		}
 		cliSockets.remove(sock);
 	}
+
 	void closeSilent(final ServerSocket sock) {
-		if (sock == null) return;
-		try { sock.close(); } catch (Exception ign) {}
+		if (sock == null)
+			return;
+		try {
+			sock.close();
+		} catch (Exception ign) {
+		}
 		srvSockets.remove(sock);
 	}
 
 	void setupSocket(final ServerSocket sock) throws SocketException {
 		srvSockets.add(sock);
 		sock.setReuseAddress(true);
-		sock.setReceiveBufferSize(Math.max(sock.getReceiveBufferSize(), BUFFER_LEN*IO_BUFFERS));
+		sock.setReceiveBufferSize(Math.max(sock.getReceiveBufferSize(), BUFFER_LEN * IO_BUFFERS));
 	}
+
 	void setupSocket(final Socket sock) throws SocketException {
 		cliSockets.add(sock);
 		sock.setKeepAlive(true);
 		sock.setReuseAddress(true);
 		sock.setSoTimeout(READ_TIMEOUT);
-		sock.setSendBufferSize(Math.max(sock.getSendBufferSize(), BUFFER_LEN*IO_BUFFERS));
-		sock.setReceiveBufferSize(Math.max(sock.getReceiveBufferSize(), BUFFER_LEN*IO_BUFFERS));
+		sock.setSendBufferSize(Math.max(sock.getSendBufferSize(), BUFFER_LEN * IO_BUFFERS));
+		sock.setReceiveBufferSize(Math.max(sock.getReceiveBufferSize(), BUFFER_LEN * IO_BUFFERS));
 	}
 
 	static String fromArrAddress(final InetAddress[] addrs) {
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < addrs.length; i++) {
 			InetAddress addr = addrs[i];
-			if (i > 0) sb.append(",");
+			if (i > 0)
+				sb.append(",");
 			sb.append(addr.getHostAddress());
 		}
 		return sb.toString();
@@ -417,7 +471,8 @@ public class SimpleBouncer {
 	// ============================================ Helper Classes and Interfaces
 
 	static class AuditableThreadFactory implements ThreadFactory {
-		final ThreadFactory defThreadFactory = Executors.defaultThreadFactory(); 
+		final ThreadFactory defThreadFactory = Executors.defaultThreadFactory();
+
 		@Override
 		public Thread newThread(final Runnable r) {
 			final Thread t = defThreadFactory.newThread(r);
@@ -428,15 +483,19 @@ public class SimpleBouncer {
 
 	abstract class AuditableRunner implements Runnable {
 		Thread thread;
+
 		public void setThread(Thread thread) {
 			this.thread = thread;
 		}
+
 		public Thread getThread() {
 			return thread;
 		}
+
 		public int getClientId() {
 			return ClientId.getId();
 		}
+
 		public void setClientId(int clientId) {
 			ClientId.setId(clientId);
 		}
@@ -445,19 +504,21 @@ public class SimpleBouncer {
 
 	static class ClientId {
 		private static final AtomicInteger atomicId = new AtomicInteger(0);
-		//
 		private static final ThreadLocal<Integer> localId = new ThreadLocal<Integer>() {
-			@Override protected Integer initialValue() {
+			@Override
+			protected Integer initialValue() {
 				return atomicId.incrementAndGet();
 			}
 		};
-		//
+
 		public static int newId() {
 			return atomicId.incrementAndGet();
 		}
+
 		public static int getId() {
 			return localId.get();
 		}
+
 		public static void setId(final Integer id) {
 			localId.set(id);
 		}
@@ -469,9 +530,9 @@ public class SimpleBouncer {
 
 		public static String intAsHex(final int input) {
 			final char[] sb = new char[8];
-			final int len = (sb.length-1);
+			final int len = (sb.length - 1);
 			for (int i = 0; i <= len; i++) { // MSB
-				sb[i] = HEX_CHARS[((int)(input >>> ((len - i)<<2))) & 0xF];
+				sb[i] = HEX_CHARS[((int) (input >>> ((len - i) << 2))) & 0xF];
 			}
 			return new String(sb);
 		}
@@ -480,41 +541,49 @@ public class SimpleBouncer {
 	interface Shutdownable {
 		public void setShutdown();
 	}
-	interface Awaiter extends Shutdownable {}
+
+	interface Awaiter extends Shutdownable {
+	}
 
 	interface BouncerAddress {
 		public String toString();
 	}
 
 	/**
-	 * Representation of listen address 
+	 * Representation of listen address
 	 */
 	class InboundAddress implements BouncerAddress {
 		Options opts = null;
 		SSLFactory sslFactory = null;
-		//
+
 		final String host;
 		final int port;
 		InetAddress[] addrs = null;
-		//
+
 		InboundAddress(final String host, final int port, final Options opts) {
 			this.host = host;
 			this.port = port;
 			this.opts = opts;
 		}
+
 		public void setSSLFactory(SSLFactory sslFactory) {
 			this.sslFactory = sslFactory;
 		}
+
 		Options getOpts() {
 			return opts;
 		}
+
 		public String toString() {
 			return host + ":" + port;
 		}
+
 		void resolve() throws UnknownHostException {
 			addrs = InetAddress.getAllByName(host);
-			Log.info(this.getClass().getSimpleName() + " Resolved host=" + host + " [" + fromArrAddress(addrs) + "]");
+			Log.info(this.getClass().getSimpleName() + " Resolved host=" + host + " ["
+					+ fromArrAddress(addrs) + "]");
 		}
+
 		InetSocketAddress[] getSocketAddress() {
 			InetSocketAddress[] socks = new InetSocketAddress[addrs.length];
 			for (int i = 0; i < socks.length; i++) {
@@ -522,12 +591,12 @@ public class SimpleBouncer {
 			}
 			return socks;
 		}
+
 		ServerSocket listen() throws IOException {
 			ServerSocket listen = null;
 			if (opts.isOption(Options.MUX_SSL)) {
 				listen = sslFactory.createSSLServerSocket();
-			}
-			else {
+			} else {
 				listen = new ServerSocket();
 			}
 			InetSocketAddress bind = new InetSocketAddress(addrs[0], port);
@@ -543,26 +612,30 @@ public class SimpleBouncer {
 	class OutboundAddress implements BouncerAddress {
 		Options opts = null;
 		SSLFactory sslFactory = null;
-		//
+
 		final String host;
 		final int port;
 		InetAddress[] addrs = null;
 		int roundrobin = 0;
-		//
+
 		OutboundAddress(final String host, final int port, final Options opts) {
 			this.host = host;
 			this.port = port;
 			this.opts = opts;
 		}
+
 		public void setSSLFactory(SSLFactory sslFactory) {
 			this.sslFactory = sslFactory;
 		}
+
 		Options getOpts() {
 			return opts;
 		}
+
 		public String toString() {
 			return host + ":" + port;
 		}
+
 		void resolve() throws UnknownHostException {
 			try {
 				roundrobin = 0;
@@ -571,8 +644,10 @@ public class SimpleBouncer {
 				Log.error(this.getClass().getSimpleName() + " Error resolving host=" + host);
 				throw e;
 			}
-			Log.info(this.getClass().getSimpleName() + " Resolved host=" + host + " [" + fromArrAddress(addrs) + "]");
+			Log.info(this.getClass().getSimpleName() + " Resolved host=" + host + " ["
+					+ fromArrAddress(addrs) + "]");
 		}
+
 		Socket connect() {
 			if (addrs == null) {
 				return null;
@@ -580,27 +655,29 @@ public class SimpleBouncer {
 			final int filterFlags = (Options.LB_ORDER | Options.LB_RR | Options.LB_RAND);
 			Socket remote = null;
 			switch (opts.getFlags(filterFlags)) {
-			case Options.LB_ORDER:
-				for (InetAddress addr : addrs) {
-					remote = connect(addr);
-					if (remote != null) break;
-				}
-				break;
-			case Options.LB_RR:
-				final int rrbegin = roundrobin;
-				// Use local var to avoid synchronized block
-				int rr = rrbegin;
-				do {
-					remote = connect(addrs[rr]);
-					rr = ((rr + 1) %  addrs.length);
-					roundrobin = rr;
-					if (remote != null) break;
-				} while (roundrobin != rrbegin);
-				break;
-			case Options.LB_RAND:
-				final Random r = new Random();
-				remote = connect(addrs[(r.nextInt(Integer.MAX_VALUE) % addrs.length)]);
-				break;
+				case Options.LB_ORDER:
+					for (InetAddress addr : addrs) {
+						remote = connect(addr);
+						if (remote != null)
+							break;
+					}
+					break;
+				case Options.LB_RR:
+					final int rrbegin = roundrobin;
+					// Use local var to avoid synchronized block
+					int rr = rrbegin;
+					do {
+						remote = connect(addrs[rr]);
+						rr = ((rr + 1) % addrs.length);
+						roundrobin = rr;
+						if (remote != null)
+							break;
+					} while (roundrobin != rrbegin);
+					break;
+				case Options.LB_RAND:
+					final Random r = new Random();
+					remote = connect(addrs[(r.nextInt(Integer.MAX_VALUE) % addrs.length)]);
+					break;
 			}
 			if (remote != null) {
 				try {
@@ -610,24 +687,25 @@ public class SimpleBouncer {
 						remote.setSoTimeout(pReadTimeout);
 					}
 				} catch (SocketException e) {
-					Log.error(this.getClass().getSimpleName() + " Error setting parameters to socket: " + remote);
+					Log.error(this.getClass().getSimpleName() + " Error setting parameters to socket: "
+							+ remote);
 				}
 			}
 			return remote;
 		}
+
 		Socket connect(final InetAddress addr) {
-			final boolean isSSL = opts.isOption(Options.TUN_SSL|Options.MUX_SSL);
+			final boolean isSSL = opts.isOption(Options.TUN_SSL | Options.MUX_SSL);
 			Socket sock = null;
 			try {
-				Log.info(this.getClass().getSimpleName() + " Connecting to " + addr + ":" + port + (isSSL? " (SSL)": ""));
+				Log.info(this.getClass().getSimpleName() + " Connecting to " + addr + ":" + port
+						+ (isSSL ? " (SSL)" : ""));
 				if (opts.isOption(Options.MUX_SSL)) {
 					sock = sslFactory.createSSLSocket();
-				}
-				else if (opts.isOption(Options.TUN_SSL)) {
+				} else if (opts.isOption(Options.TUN_SSL)) {
 					SocketFactory factory = SSLSocketFactory.getDefault();
 					sock = factory.createSocket();
-				}
-				else {
+				} else {
 					sock = new Socket();
 				}
 				Integer pConnectTimeout = opts.getInteger(Options.P_CONNECT_TIMEOUT);
@@ -639,16 +717,19 @@ public class SimpleBouncer {
 					((SSLSocket) sock).startHandshake();
 				}
 			} catch (IOException e) {
-				Log.error(this.getClass().getSimpleName() + " Error connecting to " + addr + ":" + port + (isSSL? " (SSL) ": " ") + e.toString());
+				Log.error(this.getClass().getSimpleName() + " Error connecting to " + addr + ":" + port
+						+ (isSSL ? " (SSL) " : " ") + e.toString());
 				closeSilent(sock);
 				sock = null;
 			} catch (Exception e) {
-				Log.error(this.getClass().getSimpleName() + " Error connecting to " + addr + ":" + port + (isSSL? " (SSL)": ""), e);
+				Log.error(this.getClass().getSimpleName() + " Error connecting to " + addr + ":" + port
+						+ (isSSL ? " (SSL)" : ""), e);
 				closeSilent(sock);
 				sock = null;
 			}
 			if ((sock != null) && sock.isConnected()) {
-				Log.info(this.getClass().getSimpleName() + " Connected to " + addr + ":" + port + (isSSL? " (SSL)": ""));
+				Log.info(this.getClass().getSimpleName() + " Connected to " + addr + ":" + port
+						+ (isSSL ? " (SSL)" : ""));
 				return sock;
 			}
 			return null;
@@ -656,57 +737,59 @@ public class SimpleBouncer {
 	}
 
 	static class Options {
-		public static final String S_NULL	= "";
-		public static final Integer I_NULL	= Integer.valueOf(0);
+		public static final String S_NULL = "";
+		public static final Integer I_NULL = Integer.valueOf(0);
 		// Load Balancing Policies
-		public static final int LB_ORDER 	= 0x00000000; 	// Original order, pick next only on error
-		public static final int LB_RR 		= 0x00000001;	// Round robin
-		public static final int LB_RAND 	= 0x00000002;	// Random pick
-		public static final int TUN_SSL		= 0x00000010;	// Client is Plain, Remote is SSL (like stunnel)
-		public static final int MUX_AES		= 0x00000020;	// Encryption of MUX with AES+PreSharedKey
-		public static final int MUX_SSL		= 0x00000040;	// Encryption of MUX with SSL/TLS
-		public static final int MUX_OUT		= 0x00000100;	// Multiplexor initiator (outbound)
-		public static final int MUX_IN		= 0x00000200;	// Multiplexor terminator (inbound)
+		public static final int LB_ORDER = 0x00000000; 	// Original order, pick next only on error
+		public static final int LB_RR    = 0x00000001; 	// Round robin
+		public static final int LB_RAND  = 0x00000002; 	// Random pick
+		public static final int TUN_SSL  = 0x00000010; 	// Client is Plain, Remote is SSL (like stunnel)
+		public static final int MUX_AES  = 0x00000020; 	// Encryption of MUX with AES+PreSharedKey
+		public static final int MUX_SSL  = 0x00000040; 	// Encryption of MUX with SSL/TLS
+		public static final int MUX_OUT  = 0x00000100; 	// Multiplexor initiator (outbound)
+		public static final int MUX_IN   = 0x00000200; 	// Multiplexor terminator (inbound)
 		//
-		public static final String P_AES				= "AES";
-		public static final String P_SSL				= "SSL";
-		public static final String P_CONNECT_TIMEOUT	= "CONNECT_TIMEOUT";
-		public static final String P_READ_TIMEOUT		= "READ_TIMEOUT";
-		//
+		public static final String P_AES = "AES";
+		public static final String P_SSL = "SSL";
+		public static final String P_CONNECT_TIMEOUT = "CONNECT_TIMEOUT";
+		public static final String P_READ_TIMEOUT = "READ_TIMEOUT";
 		//
 		@SuppressWarnings("serial")
-		private final static Map<String, Integer> MAP_FLAGS = Collections.unmodifiableMap(new HashMap<String, Integer>() {
-			{
-				put("LB=ORDER", LB_ORDER);
-				put("LB=RR", LB_RR);
-				put("LB=RAND", LB_RAND);
-				put("TUN=SSL", TUN_SSL);
-				put("MUX=OUT", MUX_OUT);
-				put("MUX=IN", MUX_IN);
-				put("MUX=AES", MUX_AES);
-				put("MUX=SSL", MUX_SSL);
-			}
-		});
+		private final static Map<String, Integer> MAP_FLAGS = Collections
+				.unmodifiableMap(new HashMap<String, Integer>() {
+					{
+						put("LB=ORDER", LB_ORDER);
+						put("LB=RR", LB_RR);
+						put("LB=RAND", LB_RAND);
+						put("TUN=SSL", TUN_SSL);
+						put("MUX=OUT", MUX_OUT);
+						put("MUX=IN", MUX_IN);
+						put("MUX=AES", MUX_AES);
+						put("MUX=SSL", MUX_SSL);
+					}
+				});
 		//
 		int flags;
 		@SuppressWarnings("serial")
 		final Map<String, String> strParams = Collections.synchronizedMap(new HashMap<String, String>() {
 			{
-				put(P_AES, S_NULL);		// AES=<key>
-				put(P_SSL, S_NULL);		// SSL=server.crt:server.key:client.crt (MUX-IN) || SSL=client.crt:client.key:server.crt (MUX-OUT)
+				put(P_AES, S_NULL); // AES=<key>
+				put(P_SSL, S_NULL); // SSL=server.crt:server.key:client.crt (MUX-IN) ||
+									// SSL=client.crt:client.key:server.crt (MUX-OUT)
 			}
 		});
 		@SuppressWarnings("serial")
 		final Map<String, Integer> intParams = Collections.synchronizedMap(new HashMap<String, Integer>() {
 			{
-				put(P_CONNECT_TIMEOUT, I_NULL);		// CONNECT_TIMEOUT=millis
-				put(P_READ_TIMEOUT, I_NULL);		// READ_TIMEOUT=millis
+				put(P_CONNECT_TIMEOUT, I_NULL); // CONNECT_TIMEOUT=millis
+				put(P_READ_TIMEOUT, I_NULL); 	// READ_TIMEOUT=millis
 			}
 		});
-		//
+
 		public Options(String strOpts) {
 			this.flags = parseOptions(strOpts);
 		}
+
 		// Clone Constructor
 		public Options(Options old) {
 			this.flags = old.flags;
@@ -717,13 +800,15 @@ public class SimpleBouncer {
 				intParams.put(e.getKey(), e.getValue());
 			}
 		}
-		//
+
 		public int getFlags(final int filterBits) {
 			return (flags & filterBits);
 		}
+
 		public void setFlags(final int bits) {
 			flags |= bits;
 		}
+
 		public void unsetFlags(final int bits) {
 			flags &= ~bits;
 		}
@@ -735,6 +820,7 @@ public class SimpleBouncer {
 			}
 			return value;
 		}
+
 		public void setString(final String name, String value) {
 			if (value == null) {
 				value = S_NULL;
@@ -749,6 +835,7 @@ public class SimpleBouncer {
 			}
 			return value;
 		}
+
 		public void setInteger(final String name, Integer value) {
 			if (value == null) {
 				value = I_NULL;
@@ -760,11 +847,12 @@ public class SimpleBouncer {
 		 * Helper (remove options that only apply to MUX)
 		 */
 		public Options unsetOptionsMUX() {
-			unsetFlags(MUX_OUT|MUX_IN|MUX_AES|MUX_SSL);
+			unsetFlags(MUX_OUT | MUX_IN | MUX_AES | MUX_SSL);
 			setString(P_AES, null);
 			setString(P_SSL, null);
 			return this;
 		}
+
 		/**
 		 * Helper (remove options that only apply to Plain Connections)
 		 */
@@ -775,6 +863,7 @@ public class SimpleBouncer {
 
 		/**
 		 * Check is specified flag is active
+		 * 
 		 * @param opt
 		 * @param FLAG
 		 * @return true or false
@@ -785,6 +874,7 @@ public class SimpleBouncer {
 
 		/**
 		 * Return options in numeric form (bitwise-flags)
+		 * 
 		 * @param string to parse
 		 * @return int with enabled flags
 		 */
@@ -815,6 +905,7 @@ public class SimpleBouncer {
 
 		/**
 		 * For humans, return options parsed/validated
+		 * 
 		 * @return human readable string
 		 */
 		public synchronized String toString() {
@@ -825,7 +916,8 @@ public class SimpleBouncer {
 				final String key = e.getKey();
 				final Integer value = e.getValue();
 				if ((flags & value) != 0) {
-					if (i > 0) sb.append(",");
+					if (i > 0)
+						sb.append(",");
 					sb.append(key);
 					i++;
 				}
@@ -835,7 +927,8 @@ public class SimpleBouncer {
 				final String key = e.getKey();
 				final String value = e.getValue();
 				if (value != S_NULL) {
-					if (i > 0) sb.append(",");
+					if (i > 0)
+						sb.append(",");
 					sb.append(key).append("=").append(value);
 					i++;
 				}
@@ -845,7 +938,8 @@ public class SimpleBouncer {
 				final String key = e.getKey();
 				final Integer value = e.getValue();
 				if (value != I_NULL) {
-					if (i > 0) sb.append(",");
+					if (i > 0)
+						sb.append(",");
 					sb.append(key).append("=").append(value);
 					i++;
 				}
@@ -859,27 +953,29 @@ public class SimpleBouncer {
 	class PlainServer {
 		final InboundAddress inboundAddress;
 		final OutboundAddress outboundAddress;
-		//
+
 		public PlainServer(InboundAddress inboundAddress, OutboundAddress outboundAddress) {
 			this.inboundAddress = inboundAddress;
 			this.outboundAddress = outboundAddress;
 		}
+
 		public void listenLocal() { // Entry Point
 			PlainListen acceptator = new PlainListen();
 			reloadables.add(acceptator);
-			doTask(acceptator, "ForwardListen["+inboundAddress+"|"+outboundAddress+"]", ClientId.newId());
+			doTask(acceptator, "ForwardListen[" + inboundAddress + "|" + outboundAddress + "]",
+					ClientId.newId());
 		}
-		//
+
 		class PlainListen implements Awaiter, Runnable {
 			ServerSocket listen;
 			volatile boolean shutdown = false;
-			//
+
 			@Override
 			public void setShutdown() {
 				shutdown = true;
 				closeSilent(listen);
 			}
-			//
+
 			@Override
 			public void run() {
 				try {
@@ -890,12 +986,15 @@ public class SimpleBouncer {
 						try {
 							Socket client = listen.accept();
 							setupSocket(client);
-							Integer pReadTimeout = inboundAddress.getOpts().getInteger(Options.P_READ_TIMEOUT);
+							Integer pReadTimeout = inboundAddress.getOpts()
+									.getInteger(Options.P_READ_TIMEOUT);
 							if (pReadTimeout != null) {
 								client.setSoTimeout(pReadTimeout);
 							}
 							Log.info(this.getClass().getSimpleName() + " New client from=" + client);
-							doTask(new PlainConnector(client), "ForwardConnect["+inboundAddress + "|" + outboundAddress + "|" + socketRemoteToString(client)+"]", ClientId.newId());
+							doTask(new PlainConnector(client), "ForwardConnect[" + inboundAddress + "|"
+									+ outboundAddress + "|" + socketRemoteToString(client) + "]",
+									ClientId.newId());
 						} catch (IOException e) {
 							if (!listen.isClosed()) {
 								Log.error(this.getClass().getSimpleName() + " " + e.toString());
@@ -922,21 +1021,22 @@ public class SimpleBouncer {
 			final Socket client;
 			Socket remote = null;
 			volatile boolean shutdown = false;
-			//
+
 			PlainConnector(Socket client) {
 				this.client = client;
 			}
-			//
+
 			@Override
 			public void setShutdown() {
 				shutdown = true;
 				close();
 			}
+
 			public void close() {
 				closeSilent(client);
 				closeSilent(remote);
 			}
-			//
+
 			@Override
 			public void run() {
 				Log.info(this.getClass().getSimpleName() + " started: " + outboundAddress);
@@ -950,8 +1050,12 @@ public class SimpleBouncer {
 					final PlainSocketTransfer st2 = new PlainSocketTransfer(remote, client);
 					st1.setBrother(st2);
 					st2.setBrother(st1);
-					doTask(st1, "ForwardTransfer-CliRem["+inboundAddress + "|" + socketRemoteToString(client)+"|"+socketRemoteToString(remote)+"]", ClientId.getId());
-					doTask(st2, "ForwardTransfer-RemCli["+inboundAddress + "|" + socketRemoteToString(remote)+"|"+socketRemoteToString(client)+"]", ClientId.getId());
+					doTask(st1, "ForwardTransfer-CliRem[" + inboundAddress + "|"
+							+ socketRemoteToString(client) + "|" + socketRemoteToString(remote) + "]",
+							ClientId.getId());
+					doTask(st2, "ForwardTransfer-RemCli[" + inboundAddress + "|"
+							+ socketRemoteToString(remote) + "|" + socketRemoteToString(client) + "]",
+							ClientId.getId());
 				} catch (IOException e) {
 					Log.error(this.getClass().getSimpleName() + " " + e.toString());
 					close();
@@ -974,23 +1078,26 @@ public class SimpleBouncer {
 			final InputStream is;
 			final OutputStream os;
 			volatile boolean shutdown = false;
-			//
+
 			long keepalive = System.currentTimeMillis();
 			PlainSocketTransfer brother = null;
-			//
+
 			PlainSocketTransfer(final Socket sockin, final Socket sockout) throws IOException {
 				this.sockin = sockin;
 				this.sockout = sockout;
 				this.is = sockin.getInputStream();
 				this.os = sockout.getOutputStream();
 			}
+
 			public void setBrother(final PlainSocketTransfer brother) {
 				this.brother = brother;
 			}
+
 			@Override
 			public void setShutdown() {
 				shutdown = true;
 			}
+
 			@Override
 			public void run() {
 				try {
@@ -1002,7 +1109,8 @@ public class SimpleBouncer {
 							}
 						} catch (SocketTimeoutException e) {
 							Log.info(this.getClass().getSimpleName() + " " + e.toString());
-							if (brother == null) break;
+							if (brother == null)
+								break;
 							try {
 								if ((System.currentTimeMillis() - brother.keepalive) > sockin.getSoTimeout()) {
 									break;
@@ -1010,7 +1118,7 @@ public class SimpleBouncer {
 							} catch (Exception brk) {
 								break;
 							}
-						}					
+						}
 					}
 				} catch (IOException e) {
 					if (!sockin.isClosed() && !shutdown) {
@@ -1025,6 +1133,7 @@ public class SimpleBouncer {
 					Log.info(this.getClass().getSimpleName() + " Connection closed " + sockin);
 				}
 			}
+
 			boolean transfer() throws IOException {
 				int len = is.read(buf, 0, buf.length);
 				if (len < 0) {
@@ -1040,7 +1149,7 @@ public class SimpleBouncer {
 
 	// ============================================ Mux Client
 
-	// MuxClient (MUX=OUT) Local=RAW, Remote=MUX 
+	// MuxClient (MUX=OUT) Local=RAW, Remote=MUX
 	class MuxClient {
 		MuxClientMessageRouter router = new MuxClientMessageRouter();
 		MuxClientRemote remote;
@@ -1059,7 +1168,7 @@ public class SimpleBouncer {
 			remote = new MuxClientRemote(right);
 			remote.setRouter(router);
 			orderedShutdown.add(remote);
-			doTask(remote, "MuxOutRight["+left+"|"+right+"]", ClientId.newId());
+			doTask(remote, "MuxOutRight[" + left + "|" + right + "]", ClientId.newId());
 		}
 
 		void openLocal(int id) {
@@ -1067,11 +1176,12 @@ public class SimpleBouncer {
 			MuxClientLocal local = new MuxClientLocal(left);
 			local.setId(id);
 			local.setRouter(router);
-			synchronized(mapLocals) {
+			synchronized (mapLocals) {
 				mapLocals.put(id, local);
 			}
-			doTask(local, "MuxOutLeft-Recv["+left+"|"+right+"|"+id+"]", ClientId.newId());
+			doTask(local, "MuxOutLeft-Recv[" + left + "|" + right + "|" + id + "]", ClientId.newId());
 		}
+
 		void closeLocal(int id) {
 			// Send FIN
 			try {
@@ -1080,14 +1190,14 @@ public class SimpleBouncer {
 				remote.sendRemote(mux);
 			} catch (Exception ign) {
 			}
-			//
-			synchronized(mapLocals) {
+			synchronized (mapLocals) {
 				MuxClientLocal local = mapLocals.remove(id);
 				if (local != null) {
 					local.setShutdown();
 				}
 			}
 		}
+
 		void sendACK(RawPacket msg) {
 			// Send ACK
 			try {
@@ -1097,6 +1207,7 @@ public class SimpleBouncer {
 			} catch (Exception ign) {
 			}
 		}
+
 		void sendNOP() {
 			// Send NOP
 			try {
@@ -1108,7 +1219,7 @@ public class SimpleBouncer {
 		}
 
 		MuxClientLocal getLocal(final int id) {
-			synchronized(mapLocals) {
+			synchronized (mapLocals) {
 				return mapLocals.get(id);
 			}
 		}
@@ -1120,23 +1231,19 @@ public class SimpleBouncer {
 				if (msg.syn()) { // New SubChannel
 					Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 					openLocal(msg.getIdChannel());
-				}
-				else if (msg.fin()) { // End SubChannel
+				} else if (msg.fin()) { // End SubChannel
 					Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 					MuxClientLocal local = getLocal(msg.getIdChannel());
 					if (local != null)
 						local.setShutdown();
-				}
-				else if (msg.ack()) { // Flow-Control ACK
+				} else if (msg.ack()) { // Flow-Control ACK
 					Log.debug(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 					MuxClientLocal local = getLocal(msg.getIdChannel());
 					if (local != null)
 						local.unlock(msg.ackSize());
-				}
-				else if (msg.nop()) { // NOP
+				} else if (msg.nop()) { // NOP
 					Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
-				}
-				else { // Data
+				} else { // Data
 					Log.debug(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 					try {
 						MuxClientLocal local = getLocal(msg.getIdChannel());
@@ -1146,10 +1253,12 @@ public class SimpleBouncer {
 						raw.put(msg.getIdChannel(), msg.getBufferLen(), msg.getBuffer());
 						local.sendLocal(raw);
 					} catch (Exception e) {
-						Log.error(this.getClass().getSimpleName() + "::onReceiveFromRemote " + e.toString(), e);
+						Log.error(this.getClass().getSimpleName() + "::onReceiveFromRemote " + e.toString(),
+								e);
 					}
 				}
 			}
+
 			void onReceiveFromLocal(MuxClientLocal local, RawPacket msg) { // Local is RAW
 				Log.debug(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
 				try {
@@ -1169,18 +1278,21 @@ public class SimpleBouncer {
 			OutputStream os;
 			MuxClientMessageRouter router;
 			boolean shutdown = false;
-			//
+
 			public MuxClientConnection(OutboundAddress outboundAddress) {
 				this.outboundAddress = outboundAddress;
 			}
+
 			public void setRouter(MuxClientMessageRouter router) {
 				this.router = router;
 			}
+
 			@Override
 			public void setShutdown() {
 				shutdown = true;
 				// Graceful Shutdown: don't call close()
 			}
+
 			public void close() {
 				closeSilent(is);
 				closeSilent(os);
@@ -1190,6 +1302,7 @@ public class SimpleBouncer {
 
 		class MuxClientRemote extends MuxClientConnection { // Remote is MUX
 			SealerAES seal = null;
+
 			//
 			public MuxClientRemote(OutboundAddress outboundAddress) throws IOException {
 				super(outboundAddress);
@@ -1197,6 +1310,7 @@ public class SimpleBouncer {
 					seal = new SealerAES(outboundAddress.getOpts().getString(Options.P_AES));
 				}
 			}
+
 			public void sendRemote(MuxPacket msg) throws IOException, GeneralSecurityException {
 				if (seal != null) {
 					// AES encryption
@@ -1213,18 +1327,19 @@ public class SimpleBouncer {
 						baos.writeTo(os);
 						os.flush();
 					}
-				}
-				else {
+				} else {
 					synchronized (os) {
 						msg.toWire(os);
 					}
 				}
 			}
+
 			@Override
 			public void setShutdown() {
 				shutdown = true;
 				// Graceful Shutdown: don't call close()
 			}
+
 			@Override
 			public void run() {
 				while (!shutdown) {
@@ -1237,10 +1352,13 @@ public class SimpleBouncer {
 								throw new ConnectException("Unable to connect to " + outboundAddress);
 							try {
 								sock.setSoTimeout(MUX_TIMEOUT); // Timeout for MUX
-							} catch (Exception ign) {} 
+							} catch (Exception ign) {
+							}
 							is = sock.getInputStream();
 							os = sock.getOutputStream();
-							Log.info(this.getClass().getSimpleName() + " Connected: " + sock + " SendBufferSize=" + sock.getSendBufferSize() + " ReceiveBufferSize=" + sock.getReceiveBufferSize());
+							Log.info(this.getClass().getSimpleName() + " Connected: " + sock
+									+ " SendBufferSize=" + sock.getSendBufferSize() + " ReceiveBufferSize="
+									+ sock.getReceiveBufferSize());
 							break;
 						} catch (Exception e) {
 							if (e instanceof IOException) {
@@ -1254,7 +1372,6 @@ public class SimpleBouncer {
 						}
 					}
 					while (!shutdown || !mapLocals.isEmpty()) {
-						//
 						MuxPacket msg = new MuxPacket();
 						try {
 							if (seal != null) {
@@ -1264,8 +1381,7 @@ public class SimpleBouncer {
 								byte[] decoded = seal.decode(iv, encoded, 0, encoded.length);
 								ByteArrayInputStream bais = new ByteArrayInputStream(decoded);
 								msg.fromWire(bais);
-							}
-							else {
+							} else {
 								msg.fromWire(is);
 							}
 							router.onReceiveFromRemote(this, msg);
@@ -1287,7 +1403,7 @@ public class SimpleBouncer {
 					}
 					// Close all
 					close();
-					synchronized(mapLocals) { // Locals are RAW
+					synchronized (mapLocals) { // Locals are RAW
 						for (MuxClientLocal l : mapLocals.values()) {
 							l.setShutdown();
 						}
@@ -1303,31 +1419,37 @@ public class SimpleBouncer {
 		class MuxClientLocal extends MuxClientConnection { // Local is RAW
 			int id;
 			final Semaphore isLocked = new Semaphore(BUFFER_LEN * IO_BUFFERS);
-			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(IO_BUFFERS<<1);
+			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(IO_BUFFERS << 1);
 			long keepalive = System.currentTimeMillis();
-			//
-			public MuxClientLocal(OutboundAddress outboundAddress)  {
+
+			public MuxClientLocal(OutboundAddress outboundAddress) {
 				super(outboundAddress);
 			}
+
 			public void unlock(int size) {
 				isLocked.release(size);
 			}
+
 			public boolean lock(int size) throws InterruptedException {
 				return isLocked.tryAcquire(size, 3000, TimeUnit.MILLISECONDS);
 			}
+
 			public void setId(int id) {
 				this.id = id;
 			}
+
 			public void sendLocal(final RawPacket msg) throws IOException {
 				try {
 					while (!queue.offer(msg, 1000, TimeUnit.MILLISECONDS)) {
-						if (shutdown) break;
+						if (shutdown)
+							break;
 					}
 					keepalive = System.currentTimeMillis();
 				} catch (InterruptedException e) {
 					Log.error(this.getClass().getSimpleName() + "::sendLocal " + e.toString(), e);
 				}
 			}
+
 			@Override
 			public void run() {
 				Log.info(this.getClass().getSimpleName() + "::run " + outboundAddress);
@@ -1363,7 +1485,8 @@ public class SimpleBouncer {
 							while (!shutdown || !queue.isEmpty()) {
 								try {
 									RawPacket msg = queue.poll(1000, TimeUnit.MILLISECONDS);
-									if (msg == null) continue;
+									if (msg == null)
+										continue;
 									msg.toWire(os);
 									sendACK(msg); // Send ACK
 								} catch (IOException e) {
@@ -1376,20 +1499,21 @@ public class SimpleBouncer {
 							}
 							close();
 						}
-					}, "MuxOutLeft-Send["+left+"|"+right+"|"+id+"]", ClientId.getId());
+					}, "MuxOutLeft-Send[" + left + "|" + right + "|" + id + "]", ClientId.getId());
 				}
 				//
 				OUTTER: while (!shutdown) {
 					try {
-						//Log.info(this.getClass().getSimpleName() + "::run fromWire: " + sock);
+						// Log.info(this.getClass().getSimpleName() + "::run fromWire: " + sock);
 						RawPacket msg = new RawPacket();
 						msg.fromWire(is);
 						msg.setIdChannel(id);
 						while (!lock(msg.getBufferLen())) {
-							if (shutdown) break OUTTER;
+							if (shutdown)
+								break OUTTER;
 							Log.info(this.getClass().getSimpleName() + " Timeout Locking: " + sock);
 						}
-						//Log.info(this.getClass().getSimpleName() + "::run onReceiveFromLocal: " + sock);
+						// Log.info(this.getClass().getSimpleName() + "::run onReceiveFromLocal: " + sock);
 						router.onReceiveFromLocal(this, msg);
 					} catch (SocketTimeoutException e) {
 						Log.info(this.getClass().getSimpleName() + " " + e.toString());
@@ -1429,26 +1553,27 @@ public class SimpleBouncer {
 		MuxServerListenRemote remoteListen;
 		MuxServerLocal local = null;
 		HashMap<Integer, MuxServerRemote> mapRemotes = new HashMap<Integer, MuxServerRemote>();
-		//
+
 		final InboundAddress left;
 		final InboundAddress right;
-		//
+
 		MuxServer(InboundAddress left, InboundAddress right) {
 			this.left = left;
 			this.right = right;
 		}
-		//
+
 		void listenLocal() throws IOException { // Entry Point
 			localListen = new MuxServerListenLocal(left); // Local is MUX
 			reloadables.add(localListen);
-			doTask(localListen, "MuxInListenLeft["+left+"|"+right+"]", ClientId.newId());
+			doTask(localListen, "MuxInListenLeft[" + left + "|" + right + "]", ClientId.newId());
 		}
 
 		void listenRemote() throws IOException {
 			remoteListen = new MuxServerListenRemote(right); // Remote is RAW
 			reloadables.add(remoteListen);
-			doTask(remoteListen, "MuxInListenRight["+left+"|"+right+"]", ClientId.newId());
+			doTask(remoteListen, "MuxInListenRight[" + left + "|" + right + "]", ClientId.newId());
 		}
+
 		void closeRemote(int id) {
 			// Send FIN
 			try {
@@ -1458,13 +1583,14 @@ public class SimpleBouncer {
 			} catch (Exception ign) {
 			}
 			//
-			synchronized(mapRemotes) {
+			synchronized (mapRemotes) {
 				MuxServerRemote remote = mapRemotes.remove(id);
 				if (remote != null) {
 					remote.setShutdown();
 				}
 			}
 		}
+
 		void sendACK(RawPacket msg) {
 			// Send ACK
 			try {
@@ -1474,6 +1600,7 @@ public class SimpleBouncer {
 			} catch (Exception ign) {
 			}
 		}
+
 		void sendNOP() {
 			// Send NOP
 			try {
@@ -1485,7 +1612,7 @@ public class SimpleBouncer {
 		}
 
 		MuxServerRemote getRemote(final int id) {
-			synchronized(mapRemotes) {
+			synchronized (mapRemotes) {
 				return mapRemotes.get(id);
 			}
 		}
@@ -1494,28 +1621,24 @@ public class SimpleBouncer {
 
 		class MuxServerMessageRouter {
 			void onReceiveFromLocal(MuxServerLocal local, MuxPacket msg) { // Local is MUX
-				//Log.debug(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
-				if (msg.syn()) { // This is SYN/ACK 
+				// Log.debug(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
+				if (msg.syn()) { // This is SYN/ACK
 					MuxServerRemote remote = getRemote(msg.getIdChannel());
 					if (remote != null)
 						remote.unlock(BUFFER_LEN * IO_BUFFERS);
-				}
-				else if (msg.fin()) { // End SubChannel
+				} else if (msg.fin()) { // End SubChannel
 					Log.info(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
 					MuxServerRemote remote = getRemote(msg.getIdChannel());
 					if (remote != null)
 						remote.setShutdown();
-				}
-				else if (msg.ack()) { // Flow-Control ACK
+				} else if (msg.ack()) { // Flow-Control ACK
 					Log.debug(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
 					MuxServerRemote remote = getRemote(msg.getIdChannel());
 					if (remote != null)
 						remote.unlock(msg.ackSize());
-				}
-				else if (msg.nop()) { // NOP
+				} else if (msg.nop()) { // NOP
 					Log.info(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
-				}
-				else { // Data
+				} else { // Data
 					Log.debug(this.getClass().getSimpleName() + "::onReceiveFromLocal " + msg);
 					try {
 						MuxServerRemote remote = getRemote(msg.getIdChannel());
@@ -1529,6 +1652,7 @@ public class SimpleBouncer {
 					}
 				}
 			}
+
 			void onReceiveFromRemote(MuxServerRemote remote, RawPacket msg) { // Remote is RAW
 				Log.debug(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 				try {
@@ -1545,19 +1669,23 @@ public class SimpleBouncer {
 			ServerSocket listen;
 			boolean shutdown = false;
 			InboundAddress inboundAddress;
+
 			public MuxServerListen(InboundAddress inboundAddress) throws IOException {
 				this.inboundAddress = inboundAddress;
 				inboundAddress.resolve();
 				listen = inboundAddress.listen();
 			}
+
 			@Override
 			public void setShutdown() {
 				shutdown = true;
 				close();
 			}
+
 			public void close() {
 				closeSilent(listen);
 			}
+
 			@Override
 			public void run() {
 				Log.info(this.getClass().getSimpleName() + "::run listen: " + listen);
@@ -1572,7 +1700,9 @@ public class SimpleBouncer {
 						if (socket instanceof SSLSocket) {
 							((SSLSocket) socket).startHandshake();
 						}
-						Log.info(this.getClass().getSimpleName() + " new socket: " + socket + " SendBufferSize=" + socket.getSendBufferSize() + " ReceiveBufferSize=" + socket.getReceiveBufferSize());
+						Log.info(this.getClass().getSimpleName() + " new socket: " + socket
+								+ " SendBufferSize=" + socket.getSendBufferSize() + " ReceiveBufferSize="
+								+ socket.getReceiveBufferSize());
 						attender(socket);
 					} catch (IOException e) {
 						if (!shutdown)
@@ -1588,6 +1718,7 @@ public class SimpleBouncer {
 				awaitShutdown(this);
 				Log.info(this.getClass().getSimpleName() + " end");
 			}
+
 			//
 			protected abstract void attender(Socket socket) throws IOException;
 		}
@@ -1596,22 +1727,25 @@ public class SimpleBouncer {
 			public MuxServerListenLocal(InboundAddress inboundAddress) throws IOException {
 				super(inboundAddress);
 			}
+
 			@Override
 			protected synchronized void attender(Socket socket) throws IOException {
 				Log.info(this.getClass().getSimpleName() + " attending socket: " + socket);
 				if (local == null) {
 					try {
 						socket.setSoTimeout(MUX_TIMEOUT); // Timeout for MUX
-					} catch (Exception ign) {} 
+					} catch (Exception ign) {
+					}
 					local = new MuxServerLocal(socket, inboundAddress);
 					local.setRouter(router);
 					orderedShutdown.add(local);
-					listenRemote(); 
-					doTask(local, "MuxInLeft["+left+"|"+right+"|"+socketRemoteToString(socket)+"]", ClientId.newId());
-				}
-				else {
+					listenRemote();
+					doTask(local, "MuxInLeft[" + left + "|" + right + "|" + socketRemoteToString(socket)
+							+ "]", ClientId.newId());
+				} else {
 					// Only one concurrent client, close the new connection
-					Log.error(this.getClass().getSimpleName() + " This listener already connected, closing socket: " + socket);
+					Log.error(this.getClass().getSimpleName()
+							+ " This listener already connected, closing socket: " + socket);
 					closeSilent(socket);
 				}
 			}
@@ -1621,13 +1755,15 @@ public class SimpleBouncer {
 			public MuxServerListenRemote(InboundAddress inboundAddress) throws IOException {
 				super(inboundAddress);
 			}
+
 			@Override
 			protected synchronized void attender(Socket socket) throws IOException {
 				Log.info(this.getClass().getSimpleName() + " attending socket: " + socket);
 				MuxServerRemote remote = new MuxServerRemote(socket, inboundAddress);
 				remote.setRouter(router);
 				mapRemotes.put(remote.getId(), remote);
-				doTask(remote, "MuxInRight-Recv["+left+"|"+right+"|"+socketRemoteToString(socket)+"|"+socket.getPort()+"]", ClientId.newId());
+				doTask(remote, "MuxInRight-Recv[" + left + "|" + right + "|" + socketRemoteToString(socket)
+						+ "|" + socket.getPort() + "]", ClientId.newId());
 			}
 		}
 
@@ -1638,6 +1774,7 @@ public class SimpleBouncer {
 			OutputStream os;
 			MuxServerMessageRouter router;
 			boolean shutdown = false;
+
 			//
 			public MuxServerConnection(Socket sock, InboundAddress inboundAddress) throws IOException {
 				this.sock = sock;
@@ -1645,14 +1782,17 @@ public class SimpleBouncer {
 				is = sock.getInputStream();
 				os = sock.getOutputStream();
 			}
+
 			public void setRouter(MuxServerMessageRouter router) {
 				this.router = router;
 			}
+
 			@Override
 			public void setShutdown() {
 				shutdown = true;
 				// Graceful Shutdown: don't call close()
 			}
+
 			public void close() {
 				closeSilent(is);
 				closeSilent(os);
@@ -1662,6 +1802,7 @@ public class SimpleBouncer {
 
 		class MuxServerLocal extends MuxServerConnection { // Local is MUX
 			SealerAES seal = null;
+
 			//
 			public MuxServerLocal(Socket sock, InboundAddress inboundAddress) throws IOException {
 				super(sock, inboundAddress);
@@ -1669,6 +1810,7 @@ public class SimpleBouncer {
 					seal = new SealerAES(inboundAddress.getOpts().getString(Options.P_AES));
 				}
 			}
+
 			public void sendLocal(MuxPacket msg) throws IOException, GeneralSecurityException {
 				if (seal != null) {
 					// AES encryption
@@ -1685,13 +1827,13 @@ public class SimpleBouncer {
 						baos.writeTo(os);
 						os.flush();
 					}
-				}
-				else {
+				} else {
 					synchronized (os) {
 						msg.toWire(os);
 					}
 				}
 			}
+
 			@Override
 			public void run() {
 				Log.info(this.getClass().getSimpleName() + "::run socket: " + sock);
@@ -1705,8 +1847,7 @@ public class SimpleBouncer {
 							byte[] decoded = seal.decode(iv, encoded, 0, encoded.length);
 							ByteArrayInputStream bais = new ByteArrayInputStream(decoded);
 							msg.fromWire(bais);
-						}
-						else {
+						} else {
 							msg.fromWire(is);
 						}
 						router.onReceiveFromLocal(this, msg);
@@ -1729,7 +1870,7 @@ public class SimpleBouncer {
 				// Close all
 				close();
 				remoteListen.setShutdown();
-				synchronized(mapRemotes) { // Remotes are RAW
+				synchronized (mapRemotes) { // Remotes are RAW
 					for (MuxServerRemote r : mapRemotes.values()) {
 						r.setShutdown();
 					}
@@ -1745,32 +1886,38 @@ public class SimpleBouncer {
 		class MuxServerRemote extends MuxServerConnection { // Remote is RAW
 			int id;
 			final Semaphore isLocked = new Semaphore(0); // Begin Locked
-			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(IO_BUFFERS<<1);
+			final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(IO_BUFFERS << 1);
 			long keepalive = System.currentTimeMillis();
-			//
+
 			public MuxServerRemote(Socket sock, InboundAddress inboundAddress) throws IOException {
 				super(sock, inboundAddress);
 				id = sock.getPort();
 			}
+
 			public void unlock(int size) {
 				isLocked.release(size);
 			}
+
 			public boolean lock(int size) throws InterruptedException {
 				return isLocked.tryAcquire(size, 3000, TimeUnit.MILLISECONDS);
 			}
+
 			public int getId() {
 				return id;
 			}
+
 			public void sendRemote(final RawPacket msg) throws IOException {
 				try {
 					while (!queue.offer(msg, 1000, TimeUnit.MILLISECONDS)) {
-						if (shutdown) break;
+						if (shutdown)
+							break;
 					}
 					keepalive = System.currentTimeMillis();
 				} catch (InterruptedException e) {
 					Log.error(this.getClass().getSimpleName() + "::sendRemote " + e.toString(), e);
 				}
 			}
+
 			@Override
 			public void run() {
 				Log.info(this.getClass().getSimpleName() + "::run socket: " + sock);
@@ -1797,7 +1944,8 @@ public class SimpleBouncer {
 							while (!shutdown || !queue.isEmpty()) {
 								try {
 									RawPacket msg = queue.poll(1000, TimeUnit.MILLISECONDS);
-									if (msg == null) continue;
+									if (msg == null)
+										continue;
 									msg.toWire(os);
 									sendACK(msg); // Send ACK
 								} catch (IOException e) {
@@ -1810,7 +1958,8 @@ public class SimpleBouncer {
 							}
 							close();
 						}
-					}, "MuxInRight-Send["+inboundAddress+"|"+socketRemoteToString(sock)+"|"+id+"]", ClientId.getId());
+					}, "MuxInRight-Send[" + inboundAddress + "|" + socketRemoteToString(sock) + "|" + id
+							+ "]", ClientId.getId());
 				}
 				//
 				OUTTER: while (!shutdown) {
@@ -1819,11 +1968,12 @@ public class SimpleBouncer {
 						msg.fromWire(is);
 						msg.setIdChannel(id);
 						while (!lock(msg.getBufferLen())) {
-							if (shutdown) break OUTTER;
+							if (shutdown)
+								break OUTTER;
 							Log.info(this.getClass().getSimpleName() + " Timeout Locking: " + sock);
 						}
 						router.onReceiveFromRemote(this, msg);
-					} catch (SocketTimeoutException e) { 
+					} catch (SocketTimeoutException e) {
 						Log.info(this.getClass().getSimpleName() + " " + e.toString());
 						try {
 							if ((System.currentTimeMillis() - keepalive) > sock.getSoTimeout()) {
@@ -1856,12 +2006,17 @@ public class SimpleBouncer {
 
 	interface Message {
 		public int getIdChannel();
+
 		public int getBufferLen();
+
 		public byte[] getBuffer();
-		//
+
 		public void put(int idChannel, int bufferLen, byte[] buffer);
+
 		public void clear();
+
 		public void fromWire(InputStream is) throws IOException;
+
 		public void toWire(OutputStream os) throws IOException;
 	}
 
@@ -1869,23 +2024,27 @@ public class SimpleBouncer {
 		private int idChannel;
 		private int payLoadLength = 0;
 		private byte[] payload = new byte[BUFFER_LEN];
+
 		//
 		public void setIdChannel(final int idChannel) {
 			this.idChannel = (idChannel & 0x00FFFFFF);
 		}
+
 		@Override
 		public int getIdChannel() {
 			return (idChannel & 0x00FFFFFF);
 		}
+
 		@Override
 		public int getBufferLen() {
 			return (payLoadLength & 0xFFFF);
 		}
+
 		@Override
 		public byte[] getBuffer() {
 			return payload;
 		}
-		//
+
 		@Override
 		public void put(final int idChannel, final int payloadLength, final byte[] payload) {
 			this.idChannel = (idChannel & 0x00FFFFFF);
@@ -1894,17 +2053,19 @@ public class SimpleBouncer {
 				System.arraycopy(payload, 0, this.payload, 0, this.payLoadLength);
 			}
 		}
+
 		@Override
 		public void clear() {
 			payLoadLength = 0;
-			Arrays.fill(payload, (byte)0);
+			Arrays.fill(payload, (byte) 0);
 		}
-		//
+
 		@Override
 		public void toWire(final OutputStream os) throws IOException {
 			os.write(payload, 0, payLoadLength);
 			os.flush();
 		}
+
 		@Override
 		public void fromWire(final InputStream is) throws IOException {
 			try {
@@ -1917,33 +2078,32 @@ public class SimpleBouncer {
 				throw e;
 			}
 		}
+
 		@Override
 		public String toString() {
 			StringBuffer sb = new StringBuffer();
-			sb
-			.append("RawPacket[")
-			.append("id=").append(getIdChannel()).append(" ")
-			.append("len=").append(getBufferLen())
-			.append("]");
-			//if (payLoadLength > 0) sb.append(new String(payload, 0, payLoadLength));
+			sb.append("RawPacket[").append("id=").append(getIdChannel()).append(" ").append("len=")
+					.append(getBufferLen()).append("]");
+			// if (payLoadLength > 0) sb.append(new String(payload, 0, payLoadLength));
 			return sb.toString();
 		}
 	}
 
 	static class MuxPacket implements Message {
 		private static final int payLoadLengthMAGIC = 0x69420000;
-		private static final int MUX_SYN = 0x80000000;
+		private static final int MUX_SYN = 0x80000000; // XXX
 		private static final int MUX_FIN = 0x40000000;
 		private static final int MUX_ACK = 0x20000000;
 		private static final int MUX_NOP = 0x10000000;
 		private byte[] header = new byte[8];
-		private int idChannel = 0; 			// 4 bytes (SYN/FIN/ACK/NOP flags in hi-nibble)
-		private int payLoadLength = 0;		// 4 bytes (magic in hi-nibble)
+		private int idChannel = 0; 		// 4 bytes (SYN/FIN/ACK/NOP flags in hi-nibble)
+		private int payLoadLength = 0; 	// 4 bytes (magic in hi-nibble)
 		private byte[] payload = new byte[BUFFER_LEN];
-		//
+
 		public MuxPacket() {
 			// Nothing
 		}
+
 		public MuxPacket(final int idChannel, final int payloadLength, final byte[] payload) {
 			this.idChannel = idChannel & 0x00FFFFFF;
 			this.payLoadLength = (payloadLength & 0xFFFF); // Limit to 64KB
@@ -1951,55 +2111,65 @@ public class SimpleBouncer {
 				System.arraycopy(payload, 0, this.payload, 0, payloadLength);
 			}
 		}
-		//
+
 		@Override
 		public int getIdChannel() {
 			return (idChannel & 0x00FFFFFF);
 		}
+
 		@Override
 		public int getBufferLen() {
 			return (payLoadLength & 0xFFFF);
 		}
+
 		@Override
 		public byte[] getBuffer() {
 			return payload;
 		}
-		//
+
 		public void syn(final int idChannel) {
 			this.idChannel = ((idChannel & 0x00FFFFFF) | MUX_SYN);
 			this.payLoadLength = 0;
 		}
+
 		public void fin(final int idChannel) {
 			this.idChannel = ((idChannel & 0x00FFFFFF) | MUX_FIN);
 			this.payLoadLength = 0;
 		}
+
 		public void ack(final int idChannel, final int size) {
 			this.idChannel = ((idChannel & 0x00FFFFFF) | MUX_ACK);
 			this.payLoadLength = size;
 		}
+
 		public void nop(final int idChannel) {
 			this.idChannel = ((idChannel & 0x00FFFFFF) | MUX_NOP);
 			this.payLoadLength = 0;
 		}
+
 		public boolean syn() {
 			return ((idChannel & MUX_SYN) != 0);
 		}
+
 		public boolean fin() {
 			return ((idChannel & MUX_FIN) != 0);
 		}
+
 		public boolean ack() {
 			return ((idChannel & MUX_ACK) != 0);
 		}
+
 		public int ackSize() {
 			if (((idChannel & MUX_ACK) != 0)) {
 				return (payLoadLength & 0xFFFF);
 			}
 			return 0;
 		}
+
 		public boolean nop() {
 			return ((idChannel & MUX_NOP) != 0);
 		}
-		//
+
 		@Override
 		public void put(final int idChannel, final int payloadLength, final byte[] payload) {
 			this.idChannel = (idChannel & 0x00FFFFFF);
@@ -2008,14 +2178,15 @@ public class SimpleBouncer {
 				System.arraycopy(payload, 0, this.payload, 0, this.payLoadLength);
 			}
 		}
+
 		@Override
 		public void clear() {
 			idChannel = 0;
 			payLoadLength = 0;
-			Arrays.fill(header, (byte)0);
-			Arrays.fill(payload, (byte)0);
+			Arrays.fill(header, (byte) 0);
+			Arrays.fill(payload, (byte) 0);
 		}
-		//
+
 		@Override
 		public void toWire(final OutputStream os) throws IOException {
 			IOHelper.intToByteArray(idChannel, header, 0);
@@ -2027,6 +2198,7 @@ public class SimpleBouncer {
 				os.write(payload, 0, payLoadLength);
 			os.flush();
 		}
+
 		@Override
 		public void fromWire(final InputStream is) throws IOException {
 			int len;
@@ -2045,13 +2217,15 @@ public class SimpleBouncer {
 			payLoadLength = IOHelper.intFromByteArray(header, 4);
 			// Check payLoadLength
 			if ((payLoadLength & 0xFFFF) > BUFFER_LEN) {
-				final String err = "Invalid PayLoadLength (max expected: " + BUFFER_LEN + " readed: " + (payLoadLength & 0xFFFF) + ")";
+				final String err = "Invalid PayLoadLength (max expected: " + BUFFER_LEN + " readed: "
+						+ (payLoadLength & 0xFFFF) + ")";
 				clear();
 				throw new IOException(err);
 			}
 			// Check MAGIC
 			if ((payLoadLength & 0xFFFF0000) != (payLoadLengthMAGIC & 0xFFFF0000)) {
-				final String err = "Invalid MAGIC (expected: " + (payLoadLengthMAGIC & 0xFFFF0000) + " readed: " + (payLoadLength & 0xFFFF0000) + ")";
+				final String err = "Invalid MAGIC (expected: " + (payLoadLengthMAGIC & 0xFFFF0000)
+						+ " readed: " + (payLoadLength & 0xFFFF0000) + ")";
 				clear();
 				throw new IOException(err);
 			}
@@ -2060,20 +2234,19 @@ public class SimpleBouncer {
 			if (!ack() && (payLoadLength > 0)) {
 				len = IOHelper.fullRead(is, payload, payLoadLength);
 				if (len != payLoadLength) {
-					final String err = "Invalid PAYLOAD (expected: " + payLoadLength + " readed: " + len + ")";
+					final String err = "Invalid PAYLOAD (expected: " + payLoadLength + " readed: " + len
+							+ ")";
 					clear();
 					throw new IOException(err);
 				}
 			}
 		}
+
 		@Override
 		public String toString() {
 			StringBuffer sb = new StringBuffer();
-			sb
-			.append("MuxPacket[")
-			.append("id=").append(getIdChannel()).append(" ")
-			.append("len=").append(getBufferLen())
-			.append("]");
+			sb.append("MuxPacket[").append("id=").append(getIdChannel()).append(' ').append("len=")
+					.append(getBufferLen()).append("]");
 			if (syn()) {
 				sb.append("[SYN]");
 			} else if (fin()) {
@@ -2083,7 +2256,7 @@ public class SimpleBouncer {
 			} else if (nop()) {
 				sb.append("[NOP]");
 			} else {
-				//if (!ack() && (payLoadLength > 0)) sb.append(new String(payload, 0, payLoadLength));
+				// if (!ack() && (payLoadLength > 0)) sb.append(new String(payload, 0, payLoadLength));
 			}
 			return sb.toString();
 		}
@@ -2091,13 +2264,15 @@ public class SimpleBouncer {
 
 	static class IOHelper {
 		private static final int LENGTH_MAGIC = 0xA42C0000;
+
 		//
-		public static final int fullRead(final InputStream is, final byte[] buf, final int len) throws IOException {
+		public static final int fullRead(final InputStream is, final byte[] buf, final int len)
+				throws IOException {
 			int readed;
 			if (len > 0) {
 				int total = 0;
 				while (total < len) {
-					readed = is.read(buf, total, len-total);
+					readed = is.read(buf, total, len - total);
 					if (readed < 0)
 						break;
 					total += readed;
@@ -2106,21 +2281,23 @@ public class SimpleBouncer {
 			}
 			return 0;
 		}
-		//
+
 		public static final void intToByteArray(int v, byte[] buf, int offset) {
-			buf[offset+0] = (byte)((v >> 24) & 0xFF);
-			buf[offset+1] = (byte)((v >> 16) & 0xFF);
-			buf[offset+2] = (byte)((v >> 8) & 0xFF);
-			buf[offset+3] = (byte)((v >> 0) & 0xFF);
+			buf[offset + 0] = (byte) ((v >> 24) & 0xFF);
+			buf[offset + 1] = (byte) ((v >> 16) & 0xFF);
+			buf[offset + 2] = (byte) ((v >> 8) & 0xFF);
+			buf[offset + 3] = (byte) ((v >> 0) & 0xFF);
 		}
+
 		public static final int intFromByteArray(byte[] buf, int offset) {
 			int v = 0;
-			v |= ((((int)buf[offset+0]) & 0xFF) << 24);
-			v |= ((((int)buf[offset+1]) & 0xFF) << 16);
-			v |= ((((int)buf[offset+2]) & 0xFF) << 8);
-			v |= ((((int)buf[offset+3]) & 0xFF) << 0);
+			v |= ((((int) buf[offset + 0]) & 0xFF) << 24);
+			v |= ((((int) buf[offset + 1]) & 0xFF) << 16);
+			v |= ((((int) buf[offset + 2]) & 0xFF) << 8);
+			v |= ((((int) buf[offset + 3]) & 0xFF) << 0);
 			return v;
 		}
+
 		public static final void toWireWithHeader(OutputStream os, byte[] buf, int len) throws IOException {
 			final byte[] header = new byte[4]; // Integer
 			if (len > 0xFFFF) { // Limit to 64KB
@@ -2131,6 +2308,7 @@ public class SimpleBouncer {
 			os.write(buf, 0, len);
 			os.flush();
 		}
+
 		public static final byte[] fromWireWithHeader(InputStream is) throws IOException {
 			final byte[] header = new byte[4]; // Integer
 			int readed = -1;
@@ -2146,7 +2324,7 @@ public class SimpleBouncer {
 				throw new IOException("Invalid MAGIC");
 			}
 			len &= 0xFFFF; // Limit to 64KB
-			if (len > (BUFFER_LEN<<1)) {
+			if (len > (BUFFER_LEN << 1)) {
 				throw new IOException("Packet length overflow (" + len + ")");
 			}
 			final byte[] buf = new byte[len];
@@ -2170,45 +2348,53 @@ public class SimpleBouncer {
 		byte[] ivEncoder = null;
 		int resetCounter = 0;
 		int resetLength = 0;
-		//
+
 		public SealerAES(final String key) {
 			this.key = key;
 		}
-		//
-		private final Cipher init(final int cipherMode, final byte[] iv) throws IOException, GeneralSecurityException {
+
+		private final Cipher init(final int cipherMode, final byte[] iv) throws IOException,
+				GeneralSecurityException {
 			final byte[] keyBuf = md128(key);
 			final Cipher cip = Cipher.getInstance("AES/CBC/PKCS5Padding"); // Blowfish, CTR, ISO10126PADDING
 			cip.init(cipherMode, new SecretKeySpec(keyBuf, "AES"), new IvParameterSpec(iv));
 			return cip;
 		}
+
 		private final byte[] md128(final String value) throws IOException, GeneralSecurityException {
 			final MessageDigest md = MessageDigest.getInstance("SHA1");
 			final byte data[] = md.digest(value.getBytes("UTF-8"));
 			// For AES-128 we need 128bits of 160bits from SHA1
-			final byte ret[] = new byte[128>>3];
+			final byte ret[] = new byte[128 >> 3];
 			System.arraycopy(data, 0, ret, 0, ret.length);
 			return ret;
 		}
+
 		private final Cipher getCoder() throws IOException, GeneralSecurityException {
 			if (enc == null) {
 				if (ivEncoder == null) {
 					final SecureRandom rnd = new SecureRandom();
 					long ts = System.currentTimeMillis();
-					ivEncoder = rnd.generateSeed(128>>3);
-					Log.info(this.getClass().getSimpleName() + ":" + this.hashCode() + " SecureRandom Seed Generated ts=" + (System.currentTimeMillis() - ts));
+					ivEncoder = rnd.generateSeed(128 >> 3);
+					Log.info(this.getClass().getSimpleName() + ":" + this.hashCode()
+							+ " SecureRandom Seed Generated ts=" + (System.currentTimeMillis() - ts));
 				}
 				enc = init(Cipher.ENCRYPT_MODE, ivEncoder);
 			}
-			return enc; 
+			return enc;
 		}
+
 		private final Cipher getDecoder(final byte[] iv) throws IOException, GeneralSecurityException {
 			dec = init(Cipher.DECRYPT_MODE, iv);
 			return dec;
 		}
-		public byte[] code(final byte[] buf, final int off, final int len) throws IOException, GeneralSecurityException {
+
+		public byte[] code(final byte[] buf, final int off, final int len) throws IOException,
+				GeneralSecurityException {
 			// Full Reset IV in XX iterations or ZZ bytes
-			if ((resetCounter++ > RESET_COUNTER) || ((resetLength+=len) > RESET_BYTES)) {
-				Log.info(this.getClass().getSimpleName() + ":" + this.hashCode() + " FULL RESET IV resetCounter=" + resetCounter + " resetLength=" + resetLength);
+			if ((resetCounter++ > RESET_COUNTER) || ((resetLength += len) > RESET_BYTES)) {
+				Log.info(this.getClass().getSimpleName() + ":" + this.hashCode()
+						+ " FULL RESET IV resetCounter=" + resetCounter + " resetLength=" + resetLength);
 				resetCounter = 0;
 				resetLength = 0;
 				ivEncoder = null;
@@ -2221,26 +2407,31 @@ public class SimpleBouncer {
 			}
 			return encoded;
 		}
-		public byte[] decode(final byte[] iv, final byte[] buf, final int off, final int len) throws IOException, GeneralSecurityException {
+
+		public byte[] decode(final byte[] iv, final byte[] buf, final int off, final int len)
+				throws IOException, GeneralSecurityException {
 			return getDecoder(iv).doFinal(buf, off, len);
 		}
+
 		public String toString() {
-			return this.getClass().getSimpleName() + "("+key.hashCode()+") [coder=" + enc + ":decoder=" + dec + "]";
+			return this.getClass().getSimpleName() + "(" + key.hashCode() + ") [coder=" + enc + ":decoder="
+					+ dec + "]";
 		}
 	}
 
 	static class SSLFactory {
 		private final static char[] DEFAULT_PWD = "changeit".toCharArray();
-		//
 		private final KeyStore ks;
 		private final SSLContext ctx;
 		private final SSLParameters sslParams;
-		//
-		public SSLFactory(String priCert, String priKey, String pubCert) throws IOException, GeneralSecurityException {
+
+		public SSLFactory(String priCert, String priKey, String pubCert) throws IOException,
+				GeneralSecurityException {
 			ks = initKeyStore(loadX509(priCert), loadPriKey(priKey), loadX509(pubCert));
 			ctx = initSSLContext(ks);
 			sslParams = setupSSLParams(ctx);
 		}
+
 		public SSLServerSocket createSSLServerSocket() throws IOException {
 			SSLServerSocketFactory factory = ctx.getServerSocketFactory();
 			SSLServerSocket listen = (SSLServerSocket) factory.createServerSocket();
@@ -2249,6 +2440,7 @@ public class SimpleBouncer {
 			listen.setNeedClientAuth(true); // Force Request Client Certificate
 			return listen;
 		}
+
 		public SSLSocket createSSLSocket() throws IOException {
 			SSLSocketFactory factory = ctx.getSocketFactory();
 			SSLSocket sock = (SSLSocket) factory.createSocket();
@@ -2256,7 +2448,7 @@ public class SimpleBouncer {
 			sock.setEnabledProtocols(sslParams.getProtocols());
 			return sock;
 		}
-		//
+
 		static SSLParameters setupSSLParams(SSLContext ctx) {
 			List<String> protos = new ArrayList<String>();
 			protos.add("TLSv1");
@@ -2273,6 +2465,7 @@ public class SimpleBouncer {
 			sslParams.setCipherSuites(suites.toArray(new String[0]));
 			return sslParams;
 		}
+
 		static PrivateKey loadPriKey(String fileName) throws IOException, GeneralSecurityException {
 			PrivateKey key = null;
 			InputStream is = null;
@@ -2287,8 +2480,7 @@ public class SimpleBouncer {
 							inKey = true;
 						}
 						continue;
-					}
-					else {
+					} else {
 						if (line.startsWith("-----END ") && line.endsWith(" PRIVATE KEY-----")) {
 							inKey = false;
 							break;
@@ -2296,7 +2488,6 @@ public class SimpleBouncer {
 						builder.append(line);
 					}
 				}
-				//
 				byte[] encoded = DatatypeConverter.parseBase64Binary(builder.toString());
 				PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(encoded);
 				KeyFactory kf = KeyFactory.getInstance("RSA");
@@ -2306,30 +2497,37 @@ public class SimpleBouncer {
 			}
 			return key;
 		}
+
 		static X509Certificate loadX509(String fileName) throws GeneralSecurityException {
 			InputStream is = null;
 			X509Certificate crt = null;
 			try {
 				is = fileName.getClass().getResourceAsStream("/" + fileName);
 				CertificateFactory cf = CertificateFactory.getInstance("X.509");
-				crt = (X509Certificate)cf.generateCertificate(is);
+				crt = (X509Certificate) cf.generateCertificate(is);
 			} finally {
 				closeSilent(is);
 			}
 			return crt;
 		}
-		static KeyStore initKeyStore(X509Certificate priCert, PrivateKey priKey, X509Certificate pubCert) throws IOException, GeneralSecurityException {
+
+		static KeyStore initKeyStore(X509Certificate priCert, PrivateKey priKey, X509Certificate pubCert)
+				throws IOException, GeneralSecurityException {
 			KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
 			ks.load(null);
 			ks.setCertificateEntry(pubCert.getSubjectX500Principal().getName(), pubCert);
-			ks.setKeyEntry("private", priKey, DEFAULT_PWD, new Certificate[] { priCert });
+			ks.setKeyEntry("private", priKey, DEFAULT_PWD, new Certificate[] {
+				priCert
+			});
 			return ks;
 		}
+
 		static SSLContext initSSLContext(KeyStore ks) throws GeneralSecurityException {
 			SSLContext ctx = SSLContext.getInstance("TLS");
 			KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
 			kmf.init(ks, DEFAULT_PWD);
-			TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+			TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory
+					.getDefaultAlgorithm());
 			tmf.init(ks);
 			ctx.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
 			return ctx;
@@ -2345,76 +2543,92 @@ public class SimpleBouncer {
 		public static final int LOG_NULL = 0x00;
 		public static final int LOG_CURR_STDOUT = 0x01;
 		public static final int LOG_ORIG_STDOUT = 0x02;
-		//
-		private static final SimpleDateFormat ISO8601DATEFORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+		private static final SimpleDateFormat ISO8601DATEFORMAT = new SimpleDateFormat(
+				"yyyy-MM-dd'T'HH:mm:ss");
 		private static boolean isDebugEnabled = false;
 		private static int outMode = LOG_CURR_STDOUT;
 		private static PrintStream stdOut = System.out;
 		private static PrintStream stdErr = System.err;
-		//
+
 		static void setMode(final int newMode) {
 			outMode = newMode;
 		}
+
 		static void redirStdOutLog(final String stdFile) {
 			System.setOut(new PrintStream(new AutoRotateFileOutputStream(stdFile)));
 		}
+
 		static void restoreStdOutLog() {
 			System.setOut(stdOut);
 		}
+
 		static void redirStdErrLog(final String errFile) {
 			System.setErr(new PrintStream(new AutoRotateFileOutputStream(errFile)));
 		}
+
 		static void restoreStdErrLog() {
 			System.setErr(stdErr);
 		}
-		//
+
 		static void enableDebug() {
 			isDebugEnabled = true;
 		}
+
 		static boolean isDebug() {
 			return isDebugEnabled;
 		}
+
 		static String getTimeStamp() {
-			synchronized(ISO8601DATEFORMAT) {
+			synchronized (ISO8601DATEFORMAT) {
 				return ISO8601DATEFORMAT.format(new Date());
 			}
 		}
+
 		static void debug(final String str) {
 			if (isDebugEnabled) {
-				final String msg = getTimeStamp() + " [DEBUG] " + "[" + Thread.currentThread().getName() + "] " + str;
+				final String msg = getTimeStamp() + " [DEBUG] " + "[" + Thread.currentThread().getName()
+						+ "] " + str;
 				if ((outMode & LOG_ORIG_STDOUT) != 0)
 					stdOut.println(msg);
 				if ((outMode & LOG_CURR_STDOUT) != 0)
 					System.out.println(msg);
 			}
 		}
+
 		static void info(final String str) {
-			final String msg = getTimeStamp() + " [INFO] " + "[" + Thread.currentThread().getName() + "] " + str;
+			final String msg = getTimeStamp() + " [INFO] " + "[" + Thread.currentThread().getName() + "] "
+					+ str;
 			if ((outMode & LOG_ORIG_STDOUT) != 0)
 				stdOut.println(msg);
 			if ((outMode & LOG_CURR_STDOUT) != 0)
 				System.out.println(msg);
 		}
+
 		static void warn(final String str) {
-			final String msg = getTimeStamp() + " [WARN] " + "[" + Thread.currentThread().getName() + "] " + str;
+			final String msg = getTimeStamp() + " [WARN] " + "[" + Thread.currentThread().getName() + "] "
+					+ str;
 			if ((outMode & LOG_ORIG_STDOUT) != 0)
 				stdOut.println(msg);
 			if ((outMode & LOG_CURR_STDOUT) != 0)
 				System.out.println(msg);
 		}
+
 		static void error(final String str) {
-			final String msg = getTimeStamp() + " [ERROR] " + "[" + Thread.currentThread().getName() + "] " + str;
+			final String msg = getTimeStamp() + " [ERROR] " + "[" + Thread.currentThread().getName() + "] "
+					+ str;
 			if ((outMode & LOG_ORIG_STDOUT) != 0)
 				stdOut.println(msg);
 			if ((outMode & LOG_CURR_STDOUT) != 0)
 				System.out.println(msg);
 		}
+
 		static void error(final String str, final Throwable t) {
-			final String msg = getTimeStamp() + " [ERROR] " + "[" + Thread.currentThread().getName() + "] " + str;
+			final String msg = getTimeStamp() + " [ERROR] " + "[" + Thread.currentThread().getName() + "] "
+					+ str;
 			if ((outMode & LOG_ORIG_STDOUT) != 0) {
 				stdOut.println(msg);
 				t.printStackTrace(stdOut);
-			} 
+			}
 			if ((outMode & LOG_CURR_STDOUT) != 0) {
 				System.out.println(msg);
 				t.printStackTrace(System.out);
@@ -2427,16 +2641,17 @@ public class SimpleBouncer {
 		private final SimpleDateFormat sdf;
 		private final LinkedHashMap<Integer, String> cache = new LinkedHashMap<Integer, String>(8) {
 			private static final long serialVersionUID = 1L;
+
 			protected boolean removeEldestEntry(Map.Entry<Integer, String> eldest) {
 				return (size() > 3);
 			}
 		};
 		private String currentStamp = null;
 		private FileOutputStream os = null;
-		//
 
 		/**
 		 * Creates a file output stream with default daily pattern (yyyy-MM-dd) rotation
+		 * 
 		 * @param filename
 		 */
 		public AutoRotateFileOutputStream(final String filename) {
@@ -2445,8 +2660,10 @@ public class SimpleBouncer {
 
 		/**
 		 * Creates a file output stream with specified pattern rotation
+		 * 
 		 * @param filename
-		 * @param pattern like SimpleDateFormat: yyyy-MM-dd.HHmmss
+		 * @param pattern
+		 *            like SimpleDateFormat: yyyy-MM-dd.HHmmss
 		 */
 		public AutoRotateFileOutputStream(final String filename, final String pattern) {
 			this.filename = filename;
@@ -2457,7 +2674,7 @@ public class SimpleBouncer {
 			final Integer now = Integer.valueOf((int) (System.currentTimeMillis() / 1000));
 			String nowString = cache.get(now);
 			if (nowString == null) {
-				nowString = sdf.format(new Date(now.longValue()*1000));
+				nowString = sdf.format(new Date(now.longValue() * 1000));
 				cache.put(now, nowString);
 			}
 			return nowString;
@@ -2519,5 +2736,4 @@ public class SimpleBouncer {
 			}
 		}
 	}
-
 }
