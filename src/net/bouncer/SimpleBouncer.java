@@ -588,10 +588,11 @@ public class SimpleBouncer {
 				break;
 			case Options.LB_RR:
 				final int rrbegin = roundrobin;
+				// Use local var to avoid synchronized block
 				int rr = rrbegin;
 				do {
-					remote = connect(addrs[rr++]);
-					rr %= addrs.length;
+					remote = connect(addrs[rr]);
+					rr = ((rr + 1) %  addrs.length);
 					roundrobin = rr;
 					if (remote != null) break;
 				} while (roundrobin != rrbegin);
