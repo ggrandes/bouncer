@@ -57,30 +57,6 @@
 					</execution>
 				</executions>
 			</plugin>
-			<!-- Package JavaDocs to JAR to upload to repo -->
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-javadoc-plugin</artifactId>
-				<version>2.3</version>
-				<executions>
-					<execution>
-						<id>attach-javadocs</id>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-					</execution>
-				</executions>
-				<configuration>
-					<tags>
-						<tag>
-							<name>threadSafe</name>
-							<placement>a</placement>
-							<head>ThreadSafe:</head>
-						</tag>
-					</tags>
-					<excludePackageNames>*.sandbox.*</excludePackageNames>
-				</configuration>
-			</plugin>
 		</plugins>
 		<!-- Deployment Maven-S3 -->
 		<extensions>
