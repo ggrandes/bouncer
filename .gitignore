@@ -1,3 +1,5 @@
 bin
 .metadata
-bouncer.conf
+.settings
+target
+bouncer.properties

@@ -1,0 +1,108 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>net.bouncer</groupId>
+	<artifactId>bouncer</artifactId>
+	<version>1.5.5</version>
+	<description>SimpleBouncer is a Java network tcp proxy, like rinetd (forward proxy) with extra features like Reverse tunneling, SSL tunneling, connection Failover and LoadBalancing.</description>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.3.2</version>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+				</configuration>
+			</plugin>
+			<!-- Package Classes to JAR to upload to repo -->
+			<plugin>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>2.3.1</version>
+				<configuration>
+					<finalName>${project.artifactId}-${project.version}</finalName>
+					<forceCreation>true</forceCreation>
+					<archive>
+						<manifestEntries>
+							<Built-By>maven</Built-By>
+						</manifestEntries>
+					</archive>
+					<excludes>
+						<exclude>**/pom.properties</exclude>
+						<exclude>**/log4j.properties</exclude>
+						<exclude>**/bouncer.properties</exclude>
+						<exclude>**/sandbox/*</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+			<!-- Package source to JAR to upload to repo -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>2.2.1</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+						<configuration>
+							<excludeResources>true</excludeResources>
+							<excludes>
+								<exclude>**/sandbox/*</exclude>
+							</excludes>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- Package JavaDocs to JAR to upload to repo -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.3</version>
+				<executions>
+					<execution>
+						<id>attach-javadocs</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<tags>
+						<tag>
+							<name>threadSafe</name>
+							<placement>a</placement>
+							<head>ThreadSafe:</head>
+						</tag>
+					</tags>
+					<excludePackageNames>*.sandbox.*</excludePackageNames>
+				</configuration>
+			</plugin>
+		</plugins>
+		<!-- Deployment Maven-S3 -->
+		<extensions>
+			<extension>
+				<groupId>org.springframework.build</groupId>
+				<artifactId>aws-maven</artifactId>
+				<version>4.4.0.RELEASE</version>
+			</extension>
+		</extensions>
+	</build>
+
+	<!-- Deployment -->
+	<distributionManagement>
+		<repository>
+			<name>S3 Release Repository</name>
+			<id>maven-s3-release-repo</id>
+			<url>s3://maven-release/release</url>
+		</repository>
+		<snapshotRepository>
+			<name>S3 Snapshot Repository</name>
+			<id>maven-s3-snapshot-repo</id>
+			<url>s3://maven-snapshot/snapshot</url>
+		</snapshotRepository>
+	</distributionManagement>
+</project>
