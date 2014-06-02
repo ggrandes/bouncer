@@ -49,6 +49,11 @@
 							<goal>jar</goal>
 						</goals>
 						<configuration>
+							<archive>
+								<manifestEntries>
+									<Built-By>maven</Built-By>
+								</manifestEntries>
+							</archive>
 							<excludeResources>true</excludeResources>
 							<excludes>
 								<exclude>**/sandbox/*</exclude>
