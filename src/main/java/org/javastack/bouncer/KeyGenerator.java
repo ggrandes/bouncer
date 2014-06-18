@@ -12,7 +12,7 @@
  *  limitations under the License.
  *
  */
-package net.bouncer;
+package org.javastack.bouncer;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;

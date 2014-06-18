@@ -2,7 +2,7 @@
 
 SimpleBouncer is an open source (Apache License, Version 2.0) Java network proxy. Do not require any external lib.
 
-### Current Stable Version is [1.5.5](https://maven-release.s3.amazonaws.com/release/net/bouncer/bouncer/1.5.5/bouncer-1.5.5.jar)
+### Current Stable Version is [1.5.6](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/1.5.6/bouncer-1.5.6.jar)
 
 ---
 
@@ -121,7 +121,7 @@ Config file must be in class-path, general format is:
 
 ## RSA Key / X.509 Certificate Generation for MUX-SSL (optional)
 
-    java -cp .:bouncer-x.y.z.jar net.bouncer.KeyGenerator <bits> <days> <CommonName> <filename-without-extension>
+    java -cp .:bouncer-x.y.z.jar org.javastack.bouncer.KeyGenerator <bits> <days> <CommonName> <filename-without-extension>
 
 ## Running (Linux)
 
@@ -131,6 +131,7 @@ Config file must be in class-path, general format is:
 
 ## TODOs
 
+* Zip Packaging (Maven Assembly)
 * NIO?
 * JMX?
 * Multiple remote-addr (not only multi DNS A-record)?

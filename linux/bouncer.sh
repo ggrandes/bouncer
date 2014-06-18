@@ -14,7 +14,7 @@ do_start () {
     -cp ${BOUNCER_HOME}/conf/:${BOUNCER_HOME}/lib/${BOUNCER_JAR} \
     -Dlog.stdOutFile=${BOUNCER_HOME}/log/bouncer.out \
     -Dlog.stdErrFile=${BOUNCER_HOME}/log/bouncer.err \
-    net.bouncer.SimpleBouncer 1>${BOUNCER_HOME}/log/bouncer.bootstrap 2>&1 &
+    org.javastack.bouncer.SimpleBouncer 1>${BOUNCER_HOME}/log/bouncer.bootstrap 2>&1 &
   PID="$!"
   echo "Bouncer: STARTED [${PID}]"
 }
