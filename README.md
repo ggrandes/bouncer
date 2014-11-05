@@ -2,7 +2,7 @@
 
 SimpleBouncer is an open source (Apache License, Version 2.0) Java network proxy. Do not require any external lib.
 
-### Current Stable Version is [1.5.6](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/1.5.6/bouncer-1.5.6.jar)
+### Current Stable Version is [1.5.7](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/1.5.7/bouncer-1.5.7.jar)
 
 ---
 
