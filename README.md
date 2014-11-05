@@ -173,7 +173,7 @@ Current harcoded values:
 * For MUX-SSL supported Asymmetric Keys are RSA
 * For MUX-SSL enabled [Protocols](http://docs.oracle.com/javase/6/docs/technotes/guides/security/SunProviders.html#SunJSSEProvider) are:
     * `TLSv1`
-    * `SSLv3`
+    * `SSLv3` DISABLED [POODLE CVE-2014-3566](http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2014-3566)
 * For MUX-SSL enabled [CipherSuites](http://docs.oracle.com/javase/6/docs/technotes/guides/security/SunProviders.html#SunJSSEProvider) are:
     * `TLS_RSA_WITH_AES_256_CBC_SHA`
         * For AES-256 you need [JCE Unlimited Strength](http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html) 

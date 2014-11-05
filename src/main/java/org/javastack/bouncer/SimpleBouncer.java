@@ -88,7 +88,7 @@ import java.io.Reader;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
-	public static final String VERSION = "1.5.5";
+	public static final String VERSION = "1.5.7";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
 	private static final int IO_BUFFERS = 8; 			// Default 8 buffers
@@ -2452,7 +2452,6 @@ public class SimpleBouncer {
 		static SSLParameters setupSSLParams(SSLContext ctx) {
 			List<String> protos = new ArrayList<String>();
 			protos.add("TLSv1");
-			protos.add("SSLv3");
 			List<String> suites = new ArrayList<String>();
 			suites.add("TLS_RSA_WITH_AES_256_CBC_SHA");
 			suites.add("TLS_RSA_WITH_AES_128_CBC_SHA");
