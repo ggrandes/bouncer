@@ -2455,17 +2455,28 @@ public class SimpleBouncer {
 			protos.add("TLSv1.1");
 			protos.add("TLSv1");
 			List<String> suites = new ArrayList<String>();
+			// Elliptic Curve Diffie-Hellman Ephemeral
+			suites.add("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384");
+			suites.add("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256");
+			suites.add("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384");
+			suites.add("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256");
+			suites.add("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA");
+			suites.add("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA");
+			suites.add("TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA");
+			suites.add("TLS_ECDHE_RSA_WITH_RC4_128_SHA");
+			// Non Diffie-Hellman
 			suites.add("TLS_RSA_WITH_AES_256_CBC_SHA256");
 			suites.add("TLS_RSA_WITH_AES_128_CBC_SHA256");
 			suites.add("TLS_RSA_WITH_AES_256_CBC_SHA");
 			suites.add("TLS_RSA_WITH_AES_128_CBC_SHA");
 			suites.add("SSL_RSA_WITH_3DES_EDE_CBC_SHA");
 			suites.add("SSL_RSA_WITH_RC4_128_SHA");
+			// NOTE: *_DHE_* are not enabled (JRE-BUG: keys are limited to 768bits)
 			SSLParameters sslParams = ctx.getSupportedSSLParameters();
 			protos.retainAll(Arrays.asList(sslParams.getProtocols()));
 			suites.retainAll(Arrays.asList(sslParams.getCipherSuites()));
-			sslParams.setProtocols(protos.toArray(new String[0]));
-			sslParams.setCipherSuites(suites.toArray(new String[0]));
+			sslParams.setProtocols(protos.toArray(new String[protos.size()]));
+			sslParams.setCipherSuites(suites.toArray(new String[protos.size()]));
 			return sslParams;
 		}
 
