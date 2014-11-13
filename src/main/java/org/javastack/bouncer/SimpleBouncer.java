@@ -706,6 +706,12 @@ public class SimpleBouncer {
 				} else if (opts.isOption(Options.TUN_SSL)) {
 					SocketFactory factory = SSLSocketFactory.getDefault();
 					sock = factory.createSocket();
+					// Disable SSLv3 - POODLE [issue #5]
+					if (sock instanceof SSLSocket) {
+						((SSLSocket) sock).setEnabledProtocols(new String[] {
+								"TLSv1.2", "TLSv1.1", "TLSv1"
+						});
+					}
 				} else {
 					sock = new Socket();
 				}
@@ -2460,6 +2466,7 @@ public class SimpleBouncer {
 		}
 
 		static SSLParameters setupSSLParams(SSLContext ctx) {
+			// Disable SSLv3 - POODLE [issue #5]
 			List<String> protos = new ArrayList<String>();
 			protos.add("TLSv1.2");
 			protos.add("TLSv1.1");
