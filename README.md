@@ -2,7 +2,7 @@
 
 SimpleBouncer is an open source (Apache License, Version 2.0) Java network proxy. Do not require any external lib.
 
-### Current Stable Version is [1.5.8](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/1.5.8/bouncer-1.5.8.jar)
+### Current Stable Version is [1.5.9](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/1.5.9/bouncer-1.5.9.jar)
 
 ---
 
@@ -155,6 +155,7 @@ Config file must be in class-path, general format is:
 * Audit threads / connections (v1.5)
 * Improved FlowControl in MUX (v1.5)
 * Allow redir stdout/stderr to File, with auto daily-rotate (v1.5.1)
+* Added Elliptic Curve Diffie-Hellman Ephemeral Cipher Suites (v.1.5.9)
 
 ## MISC
 Current harcoded values:
@@ -175,8 +176,16 @@ Current harcoded values:
     * `TLSv1`
     * `SSLv3` DISABLED [POODLE CVE-2014-3566](http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2014-3566)
 * For MUX-SSL enabled [CipherSuites](http://docs.oracle.com/javase/6/docs/technotes/guides/security/SunProviders.html#SunJSSEProvider) are:
-    * `TLS_RSA_WITH_AES_256_CBC_SHA256`
+    * `TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`
         * For AES-256 you need [JCE Unlimited Strength](http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html) 
+    * `TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256`
+    * `TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384`
+    * `TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256`
+    * `TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA`
+    * `TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA`
+    * `TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA`
+    * `TLS_ECDHE_RSA_WITH_RC4_128_SHA`
+    * `TLS_RSA_WITH_AES_256_CBC_SHA256`
     * `TLS_RSA_WITH_AES_128_CBC_SHA256`
     * `TLS_RSA_WITH_AES_256_CBC_SHA`
     * `TLS_RSA_WITH_AES_128_CBC_SHA`

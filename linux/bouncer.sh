@@ -1,6 +1,6 @@
 #!/bin/bash
 JAVA_HOME=/opt/java/java-current
-BOUNCER_VER=1.5.8
+BOUNCER_VER=1.5.9
 BOUNCER_HOME=/opt/bouncer
 BOUNCER_CONF=bouncer.properties
 BOUNCER_JAR=bouncer-${BOUNCER_VER}.jar
