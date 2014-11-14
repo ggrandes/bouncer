@@ -756,6 +756,7 @@ public class SimpleBouncer {
 		public static final String S_NULL = "";
 		public static final Integer I_NULL = Integer.valueOf(0);
 		// Load Balancing Policies
+		// @formatter:off
 		public static final int LB_ORDER = 0x00000000; 	// Original order, pick next only on error
 		public static final int LB_RR    = 0x00000001; 	// Round robin
 		public static final int LB_RAND  = 0x00000002; 	// Random pick
@@ -764,6 +765,7 @@ public class SimpleBouncer {
 		public static final int MUX_SSL  = 0x00000040; 	// Encryption of MUX with SSL/TLS
 		public static final int MUX_OUT  = 0x00000100; 	// Multiplexor initiator (outbound)
 		public static final int MUX_IN   = 0x00000200; 	// Multiplexor terminator (inbound)
+		// @formatter:on
 		//
 		public static final String P_AES = "AES";
 		public static final String P_SSL = "SSL";
@@ -2107,10 +2109,10 @@ public class SimpleBouncer {
 
 	static class MuxPacket implements Message {
 		private static final int payLoadLengthMAGIC = 0x69420000;
-		private static final int MUX_SYN = 0x80000000; // XXX
-		private static final int MUX_FIN = 0x40000000;
-		private static final int MUX_ACK = 0x20000000;
-		private static final int MUX_NOP = 0x10000000;
+		private static final int MUX_SYN = 0x80 << 24;
+		private static final int MUX_FIN = 0x40 << 24;
+		private static final int MUX_ACK = 0x20 << 24;
+		private static final int MUX_NOP = 0x10 << 24;
 		private byte[] header = new byte[8];
 		private int idChannel = 0; 		// 4 bytes (SYN/FIN/ACK/NOP flags in hi-nibble)
 		private int payLoadLength = 0; 	// 4 bytes (magic in hi-nibble)
