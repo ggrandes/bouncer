@@ -139,6 +139,7 @@ Config file must be in class-path, general format is:
 * Limit number of connections
 * Limit absolute timeout/TTL of a connection
 * Configurable retry-sleeps
+* Configurable cipher-suites for SSL/TLS
 * Allow different tunnels over same MUX(IN/OUT)
 
 ## DONEs
@@ -155,6 +156,7 @@ Config file must be in class-path, general format is:
 * Audit threads / connections (v1.5)
 * Improved FlowControl in MUX (v1.5)
 * Allow redir stdout/stderr to File, with auto daily-rotate (v1.5.1)
+* Enable TLSv1.2 ciphers (v.1.5.8)
 * Added Elliptic Curve Diffie-Hellman Ephemeral Cipher Suites (v.1.5.9)
 
 ## MISC
