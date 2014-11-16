@@ -2,4 +2,4 @@ bin
 .metadata
 .settings
 target
-bouncer.properties
+src/main/resources/*.properties
