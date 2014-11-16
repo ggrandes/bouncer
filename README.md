@@ -51,7 +51,7 @@ SimpleBouncer is an open source (Apache License, Version 2.0) Java network proxy
 ###### Filenames are a base-pattern, output files they will be: bouncer.xxx.YEAR-MONTH-DAY (bouncer.xxx.2012-12-31)
 
 ## Config (bouncer.properties)
-Config file must be in class-path, general format is:
+Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
 
     # <left-addr> <left-port> <right-addr> <right-port> [options]
 
@@ -81,7 +81,7 @@ Config file must be in class-path, general format is:
     * Keys/Certificates are pairs, must be configured in the two ends (MUX-IN & MUX-OUT)
     * files.crt are X.509 public certificates
     * files.key are RSA Keys in PKCS#8 format (no encrypted)
-    * files.crt/.key must be in class-path like "bouncer.properties"
+    * files.crt/.key must be in class-path `${BOUNCER_HOME}/keys/`
     * be careful about permissions of "files.key" (unix permission 600 may be good)
 * If use MUX=AES, you need to protect the "bouncer.properties" from indiscrete eyes (unix permission 600 may be good)
 
