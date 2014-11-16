@@ -52,6 +52,7 @@ import sun.security.x509.X509CertInfo;
  * 
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
+@SuppressWarnings("restriction")
 public class KeyGenerator {
 	public static void main(String[] args) throws Exception {
 		String iam = KeyGenerator.class.getName();
