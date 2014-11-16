@@ -1,17 +1,32 @@
 #!/bin/bash
-JAVA_HOME=/opt/java/java-current
-BOUNCER_VER=1.5.9
-BOUNCER_HOME=/opt/bouncer
-BOUNCER_CONF=bouncer.properties
-BOUNCER_JAR=bouncer-${BOUNCER_VER}.jar
+JAVA_HOME=${JAVA_HOME:-/opt/java/java-current}
+BOUNCER_HOME=${BOUNCER_HOME:-/opt/bouncer}
+BOUNCER_CONF=${BOUNCER_CONF:-bouncer.properties}
+BOUNCER_CLASSPATH=$(echo $BOUNCER_HOME/lib/*.jar | tr ' ' ':')
 #
 do_reload () {
   touch ${BOUNCER_HOME}/conf/${BOUNCER_CONF}
 }
+do_keygen () {
+  # org.javastack.bouncer.KeyGenerator <bits> <days> <CommonName> <filename-without-extension>
+  local bits="${1}" days="${2}" cn="${3}" filebase="${4}"
+  if [ "$filebase" = "" ]; then
+    echo "$0 keygen <bits> <days> <CommonName> <filename-without-extension>"
+    echo "Sample:"
+    echo "$0 keygen 2048 365 host1.acme.com host1"
+    exit 1;
+  fi
+  cd "${BOUNCER_HOME}/keys/"
+  ${JAVA_HOME}/bin/java \
+    -cp "${BOUNCER_CLASSPATH}" \
+    org.javastack.bouncer.KeyGenerator $bits $days $cn $filebase
+  #chmod go-rwx "${filebase}.key"
+  ls -al "${BOUNCER_HOME}/keys/${filebase}."*
+}
 do_start () {
   cd ${BOUNCER_HOME}
   nohup ${JAVA_HOME}/bin/java -Dprogram.name=bouncer -Xmx64m \
-    -cp ${BOUNCER_HOME}/conf/:${BOUNCER_HOME}/lib/${BOUNCER_JAR} \
+    -cp "${BOUNCER_HOME}/conf/:${BOUNCER_HOME}/keys/:${BOUNCER_CLASSPATH}" \
     -Dlog.stdOutFile=${BOUNCER_HOME}/log/bouncer.out \
     -Dlog.stdErrFile=${BOUNCER_HOME}/log/bouncer.err \
     org.javastack.bouncer.SimpleBouncer 1>${BOUNCER_HOME}/log/bouncer.bootstrap 2>&1 &
@@ -59,7 +74,10 @@ case "$1" in
   status)
     do_status
   ;;
+  keygen)
+    do_keygen $2 $3 $4 $5
+  ;;
   *)
-    echo "$0 <start|stop|restart|reload|status>"
+    echo "$0 <start|stop|restart|reload|status|keygen>"
   ;;
 esac
