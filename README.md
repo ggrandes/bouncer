@@ -2,7 +2,7 @@
 
 SimpleBouncer is an open source (Apache License, Version 2.0) Java network proxy. Do not require any external lib.
 
-### Current Stable Version is [1.5.9](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/1.5.9/bouncer-1.5.9-bin.zip)
+### Current Stable Version is [1.6.0](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/1.6.0/bouncer-1.6.0-bin.zip)
 
 ---
 
@@ -142,7 +142,6 @@ You can improve security, simply download **bcprov-jdk15on-`XXX`.jar** from [Bou
 * Limit number of connections
 * Limit absolute timeout/TTL of a connection
 * Configurable retry-sleeps
-* Configurable cipher-suites for SSL/TLS
 * Allow different tunnels over same MUX(IN/OUT)
 
 ## DONEs
@@ -159,10 +158,12 @@ You can improve security, simply download **bcprov-jdk15on-`XXX`.jar** from [Bou
 * Audit threads / connections (v1.5)
 * Improved FlowControl in MUX (v1.5)
 * Allow redir stdout/stderr to File, with auto daily-rotate (v1.5.1)
-* Enable TLSv1.2 ciphers (v.1.5.8)
-* Added Elliptic Curve Diffie-Hellman Ephemeral Cipher Suites (v.1.5.9)
+* Enable TLSv1.2 ciphers (v1.5.8)
+* Added Elliptic Curve Diffie-Hellman Ephemeral Cipher Suites (v1.5.9)
 * Zip Packaging (Maven Assembly) (v1.5.9)
-* Allow AutoRegister JCE BouncyCastleProvider
+* Allow AutoRegister JCE BouncyCastleProvider (v1.5.9)
+* Configurable [CipherSuites](https://docs.oracle.com/javase/7/docs/technotes/guides/security/SunProviders.html#SunJSSEProvider) for SSL/TLS (v1.6.0)
+    * For AES-256 you need [JCE Unlimited Strength](http://www.oracle.com/technetwork/es/java/javase/downloads/jce-7-download-432124.html) 
 
 ## MISC
 Current harcoded values:
@@ -177,29 +178,13 @@ Current harcoded values:
 * MUX-OUT Error retry sleep: 5seconds
 * Reload config check time interval: 10seconds
 * Reset Initialization Vector (IV) for MUX-AES: { Iterations: 64K, Data: 16MB }
-* For MUX-AES encryption/[transformation](http://docs.oracle.com/javase/6/docs/technotes/guides/security/SunProviders.html#SunJCEProvider) are AES/CBC/PKCS5Padding
+* For MUX-AES encryption/[transformation](https://docs.oracle.com/javase/7/docs/technotes/guides/security/SunProviders.html#SunJCEProvider) are AES/CBC/PKCS5Padding
 * For MUX-SSL supported Asymmetric Keys are RSA
-* For MUX-SSL enabled [Protocols](http://docs.oracle.com/javase/6/docs/technotes/guides/security/SunProviders.html#SunJSSEProvider) are:
+* For MUX-SSL enabled [Protocols](https://docs.oracle.com/javase/7/docs/technotes/guides/security/SunProviders.html#SunJSSEProvider) are:
     * `TLSv1.2`
     * `TLSv1.1`
     * `TLSv1`
     * `SSLv3` DISABLED [POODLE CVE-2014-3566](http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2014-3566)
-* For MUX-SSL enabled [CipherSuites](http://docs.oracle.com/javase/6/docs/technotes/guides/security/SunProviders.html#SunJSSEProvider) are:
-    * `TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`
-        * For AES-256 you need [JCE Unlimited Strength](http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html) 
-    * `TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256`
-    * `TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384`
-    * `TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256`
-    * `TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA`
-    * `TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA`
-    * `TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA`
-    * `TLS_ECDHE_RSA_WITH_RC4_128_SHA`
-    * `TLS_RSA_WITH_AES_256_CBC_SHA256`
-    * `TLS_RSA_WITH_AES_128_CBC_SHA256`
-    * `TLS_RSA_WITH_AES_256_CBC_SHA`
-    * `TLS_RSA_WITH_AES_128_CBC_SHA`
-    * `SSL_RSA_WITH_3DES_EDE_CBC_SHA`
-    * `SSL_RSA_WITH_RC4_128_SHA`
 * Shutdown/Reload timeout: 30seconds
 
 ---

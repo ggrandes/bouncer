@@ -4,7 +4,7 @@
 
 	<groupId>org.javastack</groupId>
 	<artifactId>bouncer</artifactId>
-	<version>1.5.9</version>
+	<version>1.6.0</version>
 	<description>SimpleBouncer is a Java network tcp proxy, like rinetd (forward proxy) with extra features like Reverse tunneling, SSL tunneling, connection Failover and LoadBalancing.</description>
 
 	<build>
