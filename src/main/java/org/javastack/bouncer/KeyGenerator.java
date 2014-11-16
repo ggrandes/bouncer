@@ -59,7 +59,7 @@ public class KeyGenerator {
 			System.out.println("java " + iam + " <bits> <days> <CommonName> <filename-without-extension>");
 			System.out.println("");
 			System.out.println("Example:");
-			System.out.println("  java " + iam + " 1024 365 TestServer test");
+			System.out.println("  java " + iam + " 2048 365 TestServer test");
 			System.out.println("");
 			System.out.println("* Output files are named <filename>.crt & <filename>.key");
 			return;
