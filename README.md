@@ -2,7 +2,7 @@
 
 SimpleBouncer is an open source (Apache License, Version 2.0) Java network proxy. Do not require any external lib.
 
-### Current Stable Version is [1.5.9](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/1.5.9/bouncer-1.5.9.jar)
+### Current Stable Version is [1.5.9](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/1.5.9/bouncer-1.5.9-bin.zip)
 
 ---
 
@@ -125,13 +125,12 @@ Config file must be in class-path, general format is:
 
 ## Running (Linux)
 
-    ./linux/bouncer.sh <start|stop|restart|reload|status>
+    ./bin/bouncer.sh <start|stop|restart|reload|status>
 
 ---
 
 ## TODOs
 
-* Zip Packaging (Maven Assembly)
 * NIO?
 * JMX?
 * Multiple remote-addr (not only multi DNS A-record)?
@@ -158,6 +157,7 @@ Config file must be in class-path, general format is:
 * Allow redir stdout/stderr to File, with auto daily-rotate (v1.5.1)
 * Enable TLSv1.2 ciphers (v.1.5.8)
 * Added Elliptic Curve Diffie-Hellman Ephemeral Cipher Suites (v.1.5.9)
+* Zip Packaging (Maven Assembly) (v1.5.9)
 
 ## MISC
 Current harcoded values:
