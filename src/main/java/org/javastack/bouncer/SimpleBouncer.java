@@ -45,7 +45,9 @@ import java.security.KeyFactory;
 import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
+import java.security.Provider;
 import java.security.SecureRandom;
+import java.security.Security;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -141,6 +143,13 @@ public class SimpleBouncer {
 		}
 		Log.info("Starting " + bouncer.getClass() + " version " + VERSION
 				+ (Log.isDebug() ? " debug-mode" : ""));
+		// Register BouncyCastleProvider if possible
+		try {
+			final String bcName = "org.bouncycastle.jce.provider.BouncyCastleProvider";
+			Security.addProvider((Provider) Class.forName(bcName).newInstance());
+		} catch (Throwable t) {
+			Log.warn("Unable to register BouncyCastleProvider: " + t.toString());
+		}
 		// Read config
 		final URL urlConfig = bouncer.getClass().getResource(CONFIG_FILE);
 		if (urlConfig == null) {

@@ -127,6 +127,10 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
 
     ./bin/bouncer.sh keygen <bits> <days> <CommonName> <filename-without-extension>
 
+## Enabling Strong Ciphers with BouncyCastleProvider
+
+You can improve security, simply download **bcprov-jdk15on-`XXX`.jar** from [BouncyCastle](http://www.bouncycastle.org/latest_releases.html) and copy jar file to `${BOUNCER_HOME}/lib/` 
+
 ---
 
 ## TODOs
@@ -158,6 +162,7 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
 * Enable TLSv1.2 ciphers (v.1.5.8)
 * Added Elliptic Curve Diffie-Hellman Ephemeral Cipher Suites (v.1.5.9)
 * Zip Packaging (Maven Assembly) (v1.5.9)
+* Allow AutoRegister JCE BouncyCastleProvider
 
 ## MISC
 Current harcoded values:
