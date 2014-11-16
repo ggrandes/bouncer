@@ -76,9 +76,15 @@ public class KeyGenerator {
 		KeyPair kp = kgAsym.genKeyPair();
 		File keyFile = new File(file + ".key");
 		writeKey(new FileOutputStream(keyFile), kp.getPrivate());
+		// Clear permissions
+		keyFile.setExecutable(false, false);
+		keyFile.setReadable(false, false);
+		keyFile.setReadable(true);
+		keyFile.setWritable(false, false);
+		keyFile.setWritable(true);
 		//
 		// Generate & SelfSign X.509
-		X509Certificate crt = generateCertificate("CN=" + cn, kp, days, "SHA1withRSA");
+		X509Certificate crt = generateCertificate("CN=" + cn, kp, days, "SHA256withRSA");
 		File crtFile = new File(file + ".crt");
 		writeCertificate(new FileOutputStream(crtFile), crt);
 	}
@@ -89,7 +95,7 @@ public class KeyGenerator {
 	 * @param dn the X.509 Distinguished Name, eg "CN=Test"
 	 * @param pair the KeyPair
 	 * @param days how many days from now the Certificate is valid for
-	 * @param algName algorithm name, eg SHA1withRSA
+	 * @param algName algorithm name, eg SHA256withRSA
 	 */
 	static X509Certificate generateCertificate(String dn, KeyPair pair, int days, String algName)
 			throws Exception {
