@@ -63,7 +63,7 @@ Config file must be in class-path, general format is:
         * **LB=RR**: active LoadBalancing in DNS order (round-robin)
         * **LB=RAND**: activate LoadBalancing in DNS random order
 * Options for Simple Forward (rinetd)
-    * **TUN=SSL**: activate SSL tunneling (origin is plain, destination is SSL)
+    * **TUN=SSL**: activate SSL/TLS tunneling (origin is plain, destination is SSL/TLS)
 * Options for Reverse Tunneling (MUX)
     * Select operation of MUX (only one option can be used)
         * **MUX=IN**: activate input-terminator multiplexor
@@ -71,9 +71,9 @@ Config file must be in class-path, general format is:
     * Options for encryption (optional -AES or SSL or NONE-):
         * **MUX=AES**: activate AES encryption in multiplexor (see AES=key)
             * **AES=key**: specify the key for AES (no white spaces, no comma sign, no equals sign)
-        * **MUX=SSL**: activate SSL encryption in multiplexor (see SSL=xxx)
-            * **SSL=server.crt:server.key:client.crt**: specify files for SSL config (server/mux-in)
-            * **SSL=client.crt:client.key:server.crt**: specify files for SSL config (client/mux-out)
+        * **MUX=SSL**: activate SSL/TLS encryption in multiplexor (see SSL=xxx)
+            * **SSL=server.crt:server.key:client.crt**: specify files for SSL/TLS config (server/mux-in)
+            * **SSL=client.crt:client.key:server.crt**: specify files for SSL/TLS config (client/mux-out)
 
 ###### Notes about security:
 
@@ -103,7 +103,7 @@ Config file must be in class-path, general format is:
     # <listen-tun-addr> <listen-tun-port> <listen-addr> <listen-port> MUX-IN
     192.168.2.1 5555 127.0.0.1 8080 MUX=IN
  
-##### Same example config of Reverse tunnels but SSL
+##### Same example config of Reverse tunnels but SSL/TLS
 
 ###### Machine-A (MUX-OUT):
 
@@ -115,17 +115,17 @@ Config file must be in class-path, general format is:
     # <listen-tun-addr> <listen-tun-port> <listen-addr> <listen-port> MUX-IN
     192.168.2.1 5555 127.0.0.1 8080 MUX=IN,MUX=SSL,SSL=peerB.crt:peerB.key:peerA.crt
  
-###### For Encryption Tunnels with AES (no SSL) you can use `MUX=AES,AES=password` in both sides 
+###### For Encryption Tunnels with AES (no SSL/TLS) you can use `MUX=AES,AES=password` in both sides 
 
 ---
-
-## RSA Key / X.509 Certificate Generation for MUX-SSL (optional)
-
-    java -cp .:bouncer-x.y.z.jar org.javastack.bouncer.KeyGenerator <bits> <days> <CommonName> <filename-without-extension>
 
 ## Running (Linux)
 
     ./bin/bouncer.sh <start|stop|restart|reload|status>
+
+## RSA Key / X.509 Certificate Generation for MUX-SSL (optional)
+
+    ./bin/bouncer.sh keygen <bits> <days> <CommonName> <filename-without-extension>
 
 ---
 
