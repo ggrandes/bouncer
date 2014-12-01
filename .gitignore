@@ -3,3 +3,4 @@ bin
 .settings
 target
 src/main/resources/*.properties
+src/main/resources/bouncer.conf

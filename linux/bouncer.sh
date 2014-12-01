@@ -1,7 +1,7 @@
 #!/bin/bash
 JAVA_HOME=${JAVA_HOME:-/opt/java/java-current}
 BOUNCER_HOME=${BOUNCER_HOME:-/opt/bouncer}
-BOUNCER_CONF=${BOUNCER_CONF:-bouncer.properties}
+BOUNCER_CONF=${BOUNCER_CONF:-bouncer.conf}
 BOUNCER_CLASSPATH=$(echo $BOUNCER_HOME/lib/*.jar | tr ' ' ':')
 #
 do_reload () {

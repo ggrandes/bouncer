@@ -22,7 +22,7 @@
 			<directory>${project.basedir}/sampleconf/</directory>
 			<outputDirectory>/sampleconf/</outputDirectory>
 			<includes>
-				<include>bouncer.properties</include>
+				<include>bouncer.conf</include>
 			</includes>
 		</fileSet>
 		<fileSet>

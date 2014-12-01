@@ -88,7 +88,7 @@ import javax.xml.bind.DatatypeConverter;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class SimpleBouncer {
-	public static final String VERSION = "1.6.0";
+	public static final String VERSION = "1.6.1";
 	//
 	private static final int BUFFER_LEN = 4096; 		// Default 4k page
 	private static final int IO_BUFFERS = 8; 			// Default 8 buffers
@@ -97,7 +97,7 @@ public class SimpleBouncer {
 	private static final int MUX_TIMEOUT = 30000; 		// Default 30seconds timeout
 	private static final long RELOAD_CONFIG = 10000; 	// Default 10seconds
 	private static final long RELOAD_TIMEOUT = 30000; 	// Default 30seconds timeout
-	private static final String CONFIG_FILE = "/bouncer.properties";
+	private static final String CONFIG_FILE = "/bouncer.conf";
 	// System properties (logs)
 	private static final String PROP_OUT_FILE = "log.stdOutFile";
 	private static final String PROP_ERR_FILE = "log.stdErrFile";
