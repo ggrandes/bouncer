@@ -102,7 +102,7 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     192.168.1.1 80 192.168.2.1 5555 MUX=OUT
     
     # Alternative syntax with support for multi-port:
-    # <mux-connect|tun-connect> <mux-name> <address> <port> [opts]
+    # <mux-connect|tun-connect> <mux-name> <remote-addr> <remote-port> [opts]
     mux-connect mux1 127.0.0.1 5555
     tun-connect mux1 192.168.2.1 80 TUN_ID=1
     tun-connect mux1 192.168.2.1 22 TUN_ID=2
@@ -114,7 +114,7 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     192.168.2.1 5555 127.0.0.1 8080 MUX=IN
 
     # Alternative syntax with support for multi-port:
-    # <mux-listen|tun-listen> <mux-name> <address> <port> [opts]
+    # <mux-listen|tun-listen> <mux-name> <listen-addr> <listen-port> [opts]
     mux-listen mux1 192.168.2.1 5555
     tun-listen mux1 127.0.0.1 8080 TUN_ID=1
     tun-listen mux1 127.0.0.1 2222 TUN_ID=2
@@ -128,7 +128,7 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     192.168.1.1 80 192.168.2.1 5555 MUX=OUT,MUX=SSL,SSL=peerA.crt:peerA.key:peerB.crt
     
     # Alternative syntax with support for multi-port:
-    # <mux-connect|tun-connect> <mux-name> <address> <port> [opts]
+    # <mux-connect|tun-connect> <mux-name> <remote-addr> <remote-port> [opts]
     mux-connect mux1 127.0.0.1 5555 MUX=SSL,SSL=peerA.crt:peerA.key:peerB.crt
     tun-connect mux1 192.168.2.1 80 TUN_ID=1
     tun-connect mux1 192.168.2.1 22 TUN_ID=2
@@ -140,7 +140,7 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     192.168.2.1 5555 127.0.0.1 8080 MUX=IN,MUX=SSL,SSL=peerB.crt:peerB.key:peerA.crt
 
     # Alternative syntax with support for multi-port:
-    # <mux-listen|tun-listen> <mux-name> <address> <port> [opts]
+    # <mux-listen|tun-listen> <mux-name> <listen-addr> <listen-port> [opts]
     mux-listen mux1 192.168.2.1 5555 MUX=SSL,SSL=peerB.crt:peerB.key:peerA.crt
     tun-listen mux1 127.0.0.1 8080 TUN_ID=1
     tun-listen mux1 127.0.0.1 2222 TUN_ID=2
