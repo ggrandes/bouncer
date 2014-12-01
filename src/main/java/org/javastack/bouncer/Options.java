@@ -240,6 +240,6 @@ public class Options {
 	}
 
 	public Integer getTunID() {
-		return getInteger(P_TUN_ID);
+		return getInteger(P_TUN_ID, Integer.valueOf(0));
 	}
 }
