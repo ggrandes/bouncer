@@ -13,11 +13,7 @@ import java.util.List;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 
-import org.javastack.bouncer.SimpleBouncer.Log;
-
 public class CipherSuites {
-	public static final String SUITES_FILE = "/ciphersuites.conf";
-
 	private String[] protos = null;
 	private String[] clientSuites = null;
 	private String[] serverSuites = null;
@@ -29,7 +25,8 @@ public class CipherSuites {
 	private void load(final List<String> clientSuites, final List<String> serverSuites) throws IOException {
 		BufferedReader in = null;
 		try {
-			in = new BufferedReader(new InputStreamReader(this.getClass().getResourceAsStream(SUITES_FILE)));
+			in = new BufferedReader(new InputStreamReader(this.getClass().getResourceAsStream(
+					Constants.SUITES_FILE)));
 			String line = null;
 			while ((line = in.readLine()) != null) {
 				line = line.trim();

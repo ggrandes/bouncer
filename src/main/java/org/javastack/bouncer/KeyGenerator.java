@@ -54,8 +54,11 @@ import sun.security.x509.X509CertInfo;
  */
 @SuppressWarnings("restriction")
 public class KeyGenerator {
+	private static final String KEYPAIR_ALG = "RSA";
+	private static final String SIGNATURE_ALG = "SHA256withRSA";
+
 	public static void main(String[] args) throws Exception {
-		String iam = KeyGenerator.class.getName();
+		final String iam = KeyGenerator.class.getName();
 		if (args.length < 4) {
 			System.out.println("java " + iam + " <bits> <days> <CommonName> <filename-without-extension>");
 			System.out.println("");
@@ -66,15 +69,15 @@ public class KeyGenerator {
 			return;
 		}
 		int i = 0;
-		int bits = Integer.parseInt(args[i++]);
-		int days = Integer.parseInt(args[i++]);
-		String cn = args[i++];
-		String file = args[i++];
+		final int bits = Integer.parseInt(args[i++]);
+		final int days = Integer.parseInt(args[i++]);
+		final String cn = args[i++];
+		final String file = args[i++];
 		//
 		// Generate RSA Key
-		KeyPairGenerator kgAsym = KeyPairGenerator.getInstance("RSA");
+		final KeyPairGenerator kgAsym = KeyPairGenerator.getInstance(KEYPAIR_ALG);
 		kgAsym.initialize(bits);
-		KeyPair kp = kgAsym.genKeyPair();
+		final KeyPair kp = kgAsym.genKeyPair();
 		File keyFile = new File(file + ".key");
 		writeKey(new FileOutputStream(keyFile), kp.getPrivate());
 		// Clear permissions
@@ -85,8 +88,8 @@ public class KeyGenerator {
 		keyFile.setWritable(true);
 		//
 		// Generate & SelfSign X.509
-		X509Certificate crt = generateCertificate("CN=" + cn, kp, days, "SHA256withRSA");
-		File crtFile = new File(file + ".crt");
+		final X509Certificate crt = generateCertificate("CN=" + cn, kp, days, SIGNATURE_ALG);
+		final File crtFile = new File(file + ".crt");
 		writeCertificate(new FileOutputStream(crtFile), crt);
 	}
 
@@ -100,15 +103,15 @@ public class KeyGenerator {
 	 */
 	static X509Certificate generateCertificate(String dn, KeyPair pair, int days, String algName)
 			throws Exception {
-		PrivateKey privkey = pair.getPrivate();
-		X509CertInfo info = new X509CertInfo();
-		Date from = new Date();
-		Date to = new Date(from.getTime() + days * 86400000L);
-		CertificateValidity interval = new CertificateValidity(from, to);
-		int sn = (int) ((System.currentTimeMillis() / 1000) & 0xFFFFFFFF);
-		X500Name owner = new X500Name(dn);
+		final PrivateKey privkey = pair.getPrivate();
+		final X509CertInfo info = new X509CertInfo();
+		final Date from = new Date();
+		final Date to = new Date(from.getTime() + days * 86400000L);
+		final CertificateValidity interval = new CertificateValidity(from, to);
+		final int sn = (int) ((System.currentTimeMillis() / 1000) & 0xFFFFFFFF);
+		final X500Name owner = new X500Name(dn);
 
-		AlgorithmId algo = AlgorithmId.get(algName);
+		final AlgorithmId algo = AlgorithmId.get(algName);
 		info.set(X509CertInfo.VALIDITY, interval);
 		info.set(X509CertInfo.SERIAL_NUMBER, new CertificateSerialNumber(sn));
 		info.set(X509CertInfo.SUBJECT, new CertificateSubjectName(owner));
@@ -118,25 +121,31 @@ public class KeyGenerator {
 		info.set(X509CertInfo.ALGORITHM_ID, new CertificateAlgorithmId(algo));
 
 		// Extensions
-		CertificateExtensions ext = new CertificateExtensions();
+		final CertificateExtensions ext = new CertificateExtensions();
 		ext.set(BasicConstraintsExtension.NAME, new BasicConstraintsExtension(Boolean.TRUE, true, 0)); // Critical|isCA|pathLen
-		ext.set(SubjectKeyIdentifierExtension.NAME, new SubjectKeyIdentifierExtension(new KeyIdentifier(pair.getPublic()).getIdentifier()));
-		ext.set(AuthorityKeyIdentifierExtension.NAME, new AuthorityKeyIdentifierExtension(new KeyIdentifier(pair.getPublic()), null, null));
+		ext.set(SubjectKeyIdentifierExtension.NAME,
+				new SubjectKeyIdentifierExtension(new KeyIdentifier(pair.getPublic()).getIdentifier()));
+		ext.set(AuthorityKeyIdentifierExtension.NAME, new AuthorityKeyIdentifierExtension(new KeyIdentifier(
+				pair.getPublic()), null, null));
 		// Extended Key Usage Extension
-		Vector<ObjectIdentifier> ekue = new Vector<ObjectIdentifier>();
-		ekue.add(new ObjectIdentifier(new int[] { 1, 3, 6, 1, 5, 5, 7, 3, 1 })); // Server
-		ekue.add(new ObjectIdentifier(new int[] { 1, 3, 6, 1, 5, 5, 7, 3, 2 })); // Client
+		final Vector<ObjectIdentifier> ekue = new Vector<ObjectIdentifier>();
+		ekue.add(new ObjectIdentifier(new int[] {
+				1, 3, 6, 1, 5, 5, 7, 3, 1
+		})); // Server
+		ekue.add(new ObjectIdentifier(new int[] {
+				1, 3, 6, 1, 5, 5, 7, 3, 2
+		})); // Client
 		ext.set(ExtendedKeyUsageExtension.NAME, new ExtendedKeyUsageExtension(Boolean.FALSE, ekue));
 		info.set(X509CertInfo.EXTENSIONS, ext);
 
 		// Sign the X.509
-		X509CertImpl cert = new X509CertImpl(info);
+		final X509CertImpl cert = new X509CertImpl(info);
 		cert.sign(privkey, algo.getName());
 		return cert;
 	}
 
 	static void writeBufferBase64(OutputStream out, byte[] bufIn) throws IOException {
-		byte[] buf = DatatypeConverter.printBase64Binary(bufIn).getBytes();
+		final byte[] buf = DatatypeConverter.printBase64Binary(bufIn).getBytes();
 		final int BLOCK_SIZE = 64;
 		for (int i = 0; i < buf.length; i += BLOCK_SIZE) {
 			out.write(buf, i, Math.min(BLOCK_SIZE, buf.length - i));
@@ -146,7 +155,7 @@ public class KeyGenerator {
 	}
 
 	static void writeCertificate(OutputStream out, X509Certificate crt) throws Exception {
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		baos.write("-----BEGIN CERTIFICATE-----\r\n".getBytes());
 		writeBufferBase64(baos, crt.getEncoded());
 		baos.write("-----END CERTIFICATE-----\r\n".getBytes());
@@ -157,7 +166,7 @@ public class KeyGenerator {
 	}
 
 	static void writeKey(OutputStream out, PrivateKey pk) throws Exception {
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		baos.write("-----BEGIN RSA PRIVATE KEY-----\r\n".getBytes());
 		writeBufferBase64(baos, pk.getEncoded());
 		baos.write("-----END RSA PRIVATE KEY-----\r\n".getBytes());

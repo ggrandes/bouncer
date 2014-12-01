@@ -1,8 +1,8 @@
-# Simple Bouncer (TCP)
+# Bouncer (TCP)
 
-SimpleBouncer is an open source (Apache License, Version 2.0) Java network proxy. Do not require any external lib.
+Bouncer is an open source (Apache License, Version 2.0) Java network proxy. Do not require any external lib.
 
-### Current Stable Version is [1.6.1](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/1.6.1/bouncer-1.6.1-bin.zip)
+### Current Stable Version is [2.0.1](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/2.0.1/bouncer-2.0.1-bin.zip)
 
 ---
 
@@ -48,7 +48,7 @@ SimpleBouncer is an open source (Apache License, Version 2.0) Java network proxy
     # To log to stdout too:
     -Dlog.stdToo=true 
 
-###### Filenames are a base-pattern, output files they will be: bouncer.xxx.YEAR-MONTH-DAY (bouncer.xxx.2012-12-31)
+###### Filenames are a base-pattern, output files they will be: bouncer.xxx.YEAR-MONTH-DAY (bouncer.xxx.2014-12-01)
 
 ## Config (bouncer.conf)
 Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
@@ -63,14 +63,16 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
         * **LB=RR**: active LoadBalancing in DNS order (round-robin)
         * **LB=RAND**: activate LoadBalancing in DNS random order
 * Options for Simple Forward (rinetd)
-    * **TUN=SSL**: activate SSL/TLS tunneling (origin is plain, destination is SSL/TLS)
+    * **TUN=SSL**: activate SSL/TLS tunneling (origin is plain, destination is SSL/TLS, like stunnel)
 * Options for Reverse Tunneling (MUX)
     * Select operation of MUX (only one option can be used)
-        * **MUX=IN**: activate input-terminator multiplexor
-        * **MUX=OUT**: activate output-initiator multiplexor
+        * **MUX=IN**: activate input-terminator multiplexor (alternative syntax: `mux-listen, tun-listen`)
+        * **MUX=OUT**: activate output-initiator multiplexor (alternative syntax: `mux-connect, tun-connect`)
     * Options for encryption (optional -AES or SSL or NONE-):
-        * **MUX=AES**: activate AES encryption in multiplexor (see AES=key)
-            * **AES=key**: specify the key for AES (no white spaces, no comma sign, no equals sign)
+        * **MUX=AES**: activate AES encryption in multiplexor (see AES=sharedsecret)
+            * **AES=sharedsecret**: specify the password for AES (no white spaces, no comma sign, no equals sign)
+            * **AESBITS=bits** (optional): specify the keysize for AES (default: `128`)
+            * **AESALG=algorithm** (optional): specify the transformation for AES (default: `AES/CTR/NoPadding`)
         * **MUX=SSL**: activate SSL/TLS encryption in multiplexor (see SSL=xxx)
             * **SSL=server.crt:server.key:client.crt**: specify files for SSL/TLS config (server/mux-in)
             * **SSL=client.crt:client.key:server.crt**: specify files for SSL/TLS config (client/mux-out)
@@ -85,7 +87,7 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     * be careful about permissions of "files.key" (unix permission 600 may be good)
 * If use MUX=AES, you need to protect the "bouncer.conf" from indiscrete eyes (unix permission 600 may be good)
 
-##### Example config of simple forward:
+##### Example config of simple forward (rinetd style):
 
     # <listen-addr> <listen-port> <remote-addr> <remote-port> [options]
     0.0.0.0 1234 127.1.2.3 9876
@@ -95,27 +97,55 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
 
 ###### Machine-A (MUX-OUT):
 
+    # Bouncer pre-2.0 syntax (rinetd style):
     # <remote-addr> <remote-port> <remote-tun-addr> <remote-tun-port> MUX-OUT
     192.168.1.1 80 192.168.2.1 5555 MUX=OUT
+    
+    # Alternative syntax with support for multi-port:
+    # <mux-connect|tun-connect> <mux-name> <address> <port> [opts]
+    mux-connect mux1 127.0.0.1 5555
+    tun-connect mux1 192.168.2.1 80 TUN_ID=1
+    tun-connect mux1 192.168.2.1 22 TUN_ID=2
 
 ###### Machine-B (MUX-IN):
  
+    # Bouncer pre-2.0 syntax (rinetd style):
     # <listen-tun-addr> <listen-tun-port> <listen-addr> <listen-port> MUX-IN
     192.168.2.1 5555 127.0.0.1 8080 MUX=IN
+
+    # Alternative syntax with support for multi-port:
+    # <mux-listen|tun-listen> <mux-name> <address> <port> [opts]
+    mux-listen mux1 192.168.2.1 5555
+    tun-listen mux1 127.0.0.1 8080 TUN_ID=1
+    tun-listen mux1 127.0.0.1 2222 TUN_ID=2
  
 ##### Same example config of Reverse tunnels but SSL/TLS
 
 ###### Machine-A (MUX-OUT):
 
+    # Bouncer pre-2.0 syntax (rinetd style):
     # <remote-addr> <remote-port> <remote-tun-addr> <remote-tun-port> MUX-OUT
     192.168.1.1 80 192.168.2.1 5555 MUX=OUT,MUX=SSL,SSL=peerA.crt:peerA.key:peerB.crt
+    
+    # Alternative syntax with support for multi-port:
+    # <mux-connect|tun-connect> <mux-name> <address> <port> [opts]
+    mux-connect mux1 127.0.0.1 5555 MUX=SSL,SSL=peerA.crt:peerA.key:peerB.crt
+    tun-connect mux1 192.168.2.1 80 TUN_ID=1
+    tun-connect mux1 192.168.2.1 22 TUN_ID=2
 
 ###### Machine-B (MUX-IN):
  
+    # Bouncer pre-2.0 syntax (rinetd style):
     # <listen-tun-addr> <listen-tun-port> <listen-addr> <listen-port> MUX-IN
     192.168.2.1 5555 127.0.0.1 8080 MUX=IN,MUX=SSL,SSL=peerB.crt:peerB.key:peerA.crt
- 
-###### For Encryption Tunnels with AES (no SSL/TLS) you can use `MUX=AES,AES=password` in both sides 
+
+    # Alternative syntax with support for multi-port:
+    # <mux-listen|tun-listen> <mux-name> <address> <port> [opts]
+    mux-listen mux1 192.168.2.1 5555 MUX=SSL,SSL=peerB.crt:peerB.key:peerA.crt
+    tun-listen mux1 127.0.0.1 8080 TUN_ID=1
+    tun-listen mux1 127.0.0.1 2222 TUN_ID=2
+
+###### For Encryption Tunnels with AES (no SSL/TLS) you can use `MUX=AES,AES=sharedsecret` in both sides 
 
 ---
 
@@ -142,7 +172,6 @@ You can improve security, simply download **bcprov-jdk15on-`XXX`.jar** from [Bou
 * Limit number of connections
 * Limit absolute timeout/TTL of a connection
 * Configurable retry-sleeps
-* Allow different tunnels over same MUX(IN/OUT)
 
 ## DONEs
 
@@ -152,7 +181,6 @@ You can improve security, simply download **bcprov-jdk15on-`XXX`.jar** from [Bou
 * FlowControl in MUX (v1.3)
 * Custom timeout by binding (v1.4)
 * Encryption MUX/Tunnel (AES+PreSharedSecret) (v1.4)
-* Manage better the read timeouts (full-duplex) (v1.4)
 * Encryption MUX/Tunnel (SSL/TLS) (v1.5)
 * Key Generator for MUX-SSL/TLS (v1.5)
 * Audit threads / connections (v1.5)
@@ -164,21 +192,29 @@ You can improve security, simply download **bcprov-jdk15on-`XXX`.jar** from [Bou
 * Allow AutoRegister JCE BouncyCastleProvider (v1.5.9)
 * Configurable [CipherSuites](https://docs.oracle.com/javase/7/docs/technotes/guides/security/SunProviders.html#SunJSSEProvider) for SSL/TLS (v1.6.0)
     * For AES-256 you need [JCE Unlimited Strength](http://www.oracle.com/technetwork/es/java/javase/downloads/jce-7-download-432124.html) 
+* Allow different tunnels over same MUX(IN/OUT) (v2.0.1)
+* BufferPool for reduce GC pressure (v2.0.1)
 
 ## MISC
 Current harcoded values:
 
+* Buffer Pool size: 4 (per thread)
 * Buffer length for I/O: 4096bytes
 * IO-Buffers: 8
 * TCP `SO_SNDBUF`/`SO_RCVBUF`: BufferLength * IO-Buffers 
 * Connection timeout: 30seconds
 * Read timeout: 5minutes
-* MUX Read timeout / keep-alive: 30seconds
+* MUX Keep-Alive: 30seconds
 * MUX-IN Error retry sleep: 0.5/1seconds
 * MUX-OUT Error retry sleep: 5seconds
 * Reload config check time interval: 10seconds
-* Reset Initialization Vector (IV) for MUX-AES: { Iterations: 64K, Data: 16MB }
-* For MUX-AES encryption/[transformation](https://docs.oracle.com/javase/7/docs/technotes/guides/security/SunProviders.html#SunJCEProvider) are AES/CBC/PKCS5Padding
+* For MUX-AES [Password-Based Key Derivation Function](https://docs.oracle.com/javase/7/docs/technotes/guides/security/SunProviders.html#SunJCEProvider) for 4 keys (2 for Cipher, 2 for Mac) is PBKDF2WithHmacSHA1
+* For MUX-AES default [Cipher](https://docs.oracle.com/javase/7/docs/technotes/guides/security/SunProviders.html#SunJCEProvider) is AES/CTR/NoPadding (128 bits)
+* For MUX-AES [Mac](https://docs.oracle.com/javase/7/docs/technotes/guides/security/SunProviders.html#SunJCEProvider) for Authenticated encryption (Encrypt-then-MAC) is HmacSHA256
+* For MUX-AES Randomized IV per-message is used. 
+* For MUX-AES Rekey is done every 32768 messages (2^15).
+* For MUX-AES Anti-replay window for messages (time): 5minutes
+* For MUX-AES Anti-replay sequence for messages: 31bits
 * For MUX-SSL supported Asymmetric Keys are RSA
 * For MUX-SSL enabled [Protocols](https://docs.oracle.com/javase/7/docs/technotes/guides/security/SunProviders.html#SunJSSEProvider) are:
     * `TLSv1.2`
