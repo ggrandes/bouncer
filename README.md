@@ -8,9 +8,9 @@ Bouncer is an open source (Apache License, Version 2.0) Java network proxy. Do n
 
 ## DOC
 
-#### Schema about Forward port (you need ONE bouncer):
+#### Schema about Forward / Port Redirector (you need ONE bouncer):
     
-![Forward port](https://raw.github.com/ggrandes/bouncer/master/doc/forward_port.png "Forward port")
+![Forward / Port Redirector](https://raw.github.com/ggrandes/bouncer/master/doc/forward_port.png "Forward / Port Redirector")
 
 1. Machine-A (Client) init connection to Machine-B (Bouncer)
 2. Machine-B init connection to Machine-C (Server)
@@ -53,7 +53,12 @@ Bouncer is an open source (Apache License, Version 2.0) Java network proxy. Do n
 ## Config (bouncer.conf)
 Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
 
-    # <left-addr> <left-port> <right-addr> <right-port> [options]
+    # Forward / Port Redirector
+    # <listen-addr> <listen-port> <remote-addr> <remote-port> [opts]
+    
+    # Reverse Tunneling (Bouncer 2.x syntax)
+    # <mux-listen|tun-listen> <mux-name> <listen-addr> <listen-port> [opts]
+    # <mux-connect|tun-connect> <mux-name> <remote-addr> <remote-port> [opts]
 
 ###### Options are comma separated:
 
@@ -62,12 +67,12 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
         * **LB=ORDER**: active failover-only in DNS order
         * **LB=RR**: active LoadBalancing in DNS order (round-robin)
         * **LB=RAND**: activate LoadBalancing in DNS random order
-* Options for Simple Forward (rinetd)
+* Options for Forward / Port Redirector (rinetd)
     * **TUN=SSL**: activate SSL/TLS tunneling (origin is plain, destination is SSL/TLS, like stunnel)
 * Options for Reverse Tunneling (MUX)
-    * Select operation of MUX (only one option can be used)
-        * **MUX=IN**: activate input-terminator multiplexor (alternative syntax: `mux-listen, tun-listen`)
-        * **MUX=OUT**: activate output-initiator multiplexor (alternative syntax: `mux-connect, tun-connect`)
+    * Select operation of MUX (only one option can be used) in Bouncer 1.x config
+        * **MUX=IN**: activate input-terminator multiplexor (Bouncer 2.x syntax: `mux-listen, tun-listen`)
+        * **MUX=OUT**: activate output-initiator multiplexor (Bouncer 2.x syntax: `mux-connect, tun-connect`)
     * Options for encryption (optional -AES or SSL or NONE-):
         * **MUX=AES**: activate AES encryption in multiplexor (see AES=sharedsecret)
             * **AES=sharedsecret**: specify the password for AES (no white spaces, no comma sign, no equals sign)
@@ -87,21 +92,21 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     * be careful about permissions of "files.key" (unix permission 600 may be good)
 * If use MUX=AES, you need to protect the "bouncer.conf" from indiscrete eyes (unix permission 600 may be good)
 
-##### Example config of simple forward (rinetd style):
+##### Example config of Forward / Port Redirector (rinetd style):
 
-    # <listen-addr> <listen-port> <remote-addr> <remote-port> [options]
+    # <listen-addr> <listen-port> <remote-addr> <remote-port> [opts]
     0.0.0.0 1234 127.1.2.3 9876
     127.0.0.1 5678 encrypted.google.com 443 LB=RR,TUN=SSL
     
-##### Example config of Reverse tunnels (equivalent ssh -p 5555 192.168.2.1 -R 127.0.0.1:8080:192.168.1.1:80)
+##### Example config of Reverse Tunnels (equivalent ssh -p 5555 192.168.2.1 -R 127.0.0.1:8080:192.168.1.1:80)
 
 ###### Machine-A (MUX-OUT):
 
-    # Bouncer pre-2.0 syntax (rinetd style):
+    ### Bouncer 1.x legacy syntax ###
     # <remote-addr> <remote-port> <remote-tun-addr> <remote-tun-port> MUX-OUT
     192.168.1.1 80 192.168.2.1 5555 MUX=OUT
     
-    # Alternative syntax with support for multi-port:
+    ### Bouncer 2.x syntax, with support for multi-port ###
     # <mux-connect|tun-connect> <mux-name> <remote-addr> <remote-port> [opts]
     mux-connect mux1 127.0.0.1 5555
     tun-connect mux1 192.168.2.1 80 TUN_ID=1
@@ -109,11 +114,11 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
 
 ###### Machine-B (MUX-IN):
  
-    # Bouncer pre-2.0 syntax (rinetd style):
+    ### Bouncer 1.x legacy syntax ###
     # <listen-tun-addr> <listen-tun-port> <listen-addr> <listen-port> MUX-IN
     192.168.2.1 5555 127.0.0.1 8080 MUX=IN
 
-    # Alternative syntax with support for multi-port:
+    ### Bouncer 2.x syntax, with support for multi-port ###
     # <mux-listen|tun-listen> <mux-name> <listen-addr> <listen-port> [opts]
     mux-listen mux1 192.168.2.1 5555
     tun-listen mux1 127.0.0.1 8080 TUN_ID=1
@@ -123,11 +128,11 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
 
 ###### Machine-A (MUX-OUT):
 
-    # Bouncer pre-2.0 syntax (rinetd style):
+    ### Bouncer 1.x legacy syntax ###
     # <remote-addr> <remote-port> <remote-tun-addr> <remote-tun-port> MUX-OUT
     192.168.1.1 80 192.168.2.1 5555 MUX=OUT,MUX=SSL,SSL=peerA.crt:peerA.key:peerB.crt
     
-    # Alternative syntax with support for multi-port:
+    ### Bouncer 2.x syntax, with support for multi-port ###
     # <mux-connect|tun-connect> <mux-name> <remote-addr> <remote-port> [opts]
     mux-connect mux1 127.0.0.1 5555 MUX=SSL,SSL=peerA.crt:peerA.key:peerB.crt
     tun-connect mux1 192.168.2.1 80 TUN_ID=1
@@ -135,11 +140,11 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
 
 ###### Machine-B (MUX-IN):
  
-    # Bouncer pre-2.0 syntax (rinetd style):
+    ### Bouncer 1.x legacy syntax ###
     # <listen-tun-addr> <listen-tun-port> <listen-addr> <listen-port> MUX-IN
     192.168.2.1 5555 127.0.0.1 8080 MUX=IN,MUX=SSL,SSL=peerB.crt:peerB.key:peerA.crt
 
-    # Alternative syntax with support for multi-port:
+    ### Bouncer 2.x syntax, with support for multi-port ###
     # <mux-listen|tun-listen> <mux-name> <listen-addr> <listen-port> [opts]
     mux-listen mux1 192.168.2.1 5555 MUX=SSL,SSL=peerB.crt:peerB.key:peerA.crt
     tun-listen mux1 127.0.0.1 8080 TUN_ID=1
