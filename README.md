@@ -70,6 +70,7 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
 * Options for Forward / Port Redirector (rinetd)
     * **TUN=SSL**: activate SSL/TLS tunneling (origin is plain, destination is SSL/TLS, like stunnel)
 * Options for Reverse Tunneling (MUX)
+    * **TUN_ID=`<number>`**: When use Bouncer 2.x syntax you can create multiple Tunnels over same mux, use this ID for associate both ends.
     * Select operation of MUX (only one option can be used) in Bouncer 1.x config
         * **MUX=IN**: activate input-terminator multiplexor (Bouncer 2.x syntax: `mux-listen, tun-listen`)
         * **MUX=OUT**: activate output-initiator multiplexor (Bouncer 2.x syntax: `mux-connect, tun-connect`)
