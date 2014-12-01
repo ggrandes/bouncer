@@ -251,7 +251,8 @@ class MuxClient {
 						Log.info(this.getClass().getSimpleName() + " Connected: " + sock + " SendBufferSize="
 								+ sock.getSendBufferSize() + " ReceiveBufferSize="
 								+ sock.getReceiveBufferSize());
-						seal.reset();
+						if (seal != null)
+							seal.reset();
 						sendNOP();
 						break;
 					} catch (Exception e) {
