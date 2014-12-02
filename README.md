@@ -256,7 +256,7 @@ Current harcoded values:
     <td>1016.577</td>
     <td>1351.255</td>
     <td>51036.387</td>
-    <td>21771.17</td>
+    <td>21771.170</td>
   </tr>
   <tr align="right">
     <th>avg</th>
