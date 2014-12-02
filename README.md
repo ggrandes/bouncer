@@ -244,27 +244,27 @@ Current harcoded values:
   </tr>
   <tr align="right">
     <th>min</th>
-    <td>12.544</td>
-    <td>38.199</td>
-    <td>110.039</td>
-    <td>125.433</td>
-    <td>184.159</td>
+    <td>12</td>
+    <td>38</td>
+    <td>110</td>
+    <td>125</td>
+    <td>184</td>
   </tr>
   <tr align="right">
     <th>max</th>
-    <td>1468.706</td>
-    <td>1016.577</td>
-    <td>1351.255</td>
-    <td>51036.387</td>
-    <td>21771.170</td>
+    <td>1468</td>
+    <td>1016</td>
+    <td>1351</td>
+    <td>51036</td>
+    <td>21771</td>
   </tr>
   <tr align="right">
     <th>avg</th>
-    <td>19.069</td>
-    <td>46.264</td>
-    <td>120.668</td>
-    <td>153.020</td>
-    <td>213.667</td>
+    <td>19</td>
+    <td>46</td>
+    <td>120</td>
+    <td>153</td>
+    <td>213</td>
   </tr>
 </table>
 
