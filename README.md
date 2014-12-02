@@ -234,7 +234,7 @@ Current harcoded values:
 ## Latency Benchmark (Full Duplex)
 
 <table>
-  <tr>
+  <tr align="right">
     <th>microsecs</th>
     <th>Direct</th>
     <th>Forward</th>
@@ -242,7 +242,7 @@ Current harcoded values:
     <th>MUX-AES</th>
     <th>MUX-SSL</th>
   </tr>
-  <tr>
+  <tr align="right">
     <th>min</th>
     <td>12.544</td>
     <td>38.199</td>
@@ -250,7 +250,7 @@ Current harcoded values:
     <td>125.433</td>
     <td>184.159</td>
   </tr>
-  <tr>
+  <tr align="right">
     <th>max</th>
     <td>1468.706</td>
     <td>1016.577</td>
@@ -258,12 +258,12 @@ Current harcoded values:
     <td>51036.387</td>
     <td>21771.17</td>
   </tr>
-  <tr>
+  <tr align="right">
     <th>avg</th>
     <td>19.069</td>
     <td>46.264</td>
     <td>120.668</td>
-    <td>153.02</td>
+    <td>153.020</td>
     <td>213.667</td>
   </tr>
 </table>
@@ -271,7 +271,7 @@ Current harcoded values:
 ## Throughput Benchmark (Full Duplex)
 
 <table>
-  <tr>
+  <tr align="right">
     <th></th>
     <th>Direct</th>
     <th>Forward</th>
@@ -279,7 +279,7 @@ Current harcoded values:
     <th>MUX-AES</th>
     <th>MUX-SSL</th>
   </tr>
-  <tr>
+  <tr align="right">
     <th>Mbytes</th>
     <td>51</td>
     <td>21</td>
@@ -287,7 +287,7 @@ Current harcoded values:
     <td>4</td>
     <td>4</td>
   </tr>
-  <tr>
+  <tr align="right">
     <th>Mbits</th>
     <td>408</td>
     <td>168</td>
