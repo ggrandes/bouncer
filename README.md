@@ -231,7 +231,44 @@ Current harcoded values:
 
 ---
 
-## Throughput Benchmark
+## Latency Benchmark (Full Duplex)
+
+<table>
+  <tr>
+    <th>microsecs</th>
+    <th>Direct</th>
+    <th>Forward</th>
+    <th>MUX</th>
+    <th>MUX-AES</th>
+    <th>MUX-SSL</th>
+  </tr>
+  <tr>
+    <th>min</th>
+    <td>12.544</td>
+    <td>38.199</td>
+    <td>110.039</td>
+    <td>125.433</td>
+    <td>184.159</td>
+  </tr>
+  <tr>
+    <th>max</th>
+    <td>1468.706</td>
+    <td>1016.577</td>
+    <td>1351.255</td>
+    <td>51036.387</td>
+    <td>21771.17</td>
+  </tr>
+  <tr>
+    <th>avg</th>
+    <td>19.069</td>
+    <td>46.264</td>
+    <td>120.668</td>
+    <td>153.02</td>
+    <td>213.667</td>
+  </tr>
+</table>
+
+## Throughput Benchmark (Full Duplex)
 
 <table>
   <tr>
@@ -244,23 +281,23 @@ Current harcoded values:
   </tr>
   <tr>
     <th>Mbytes</th>
-    <td>39.9</td>
-    <td>31.2</td>
-    <td>20.8</td>
-    <td>7.0</td>
-    <td>7.4</td>
+    <td>51</td>
+    <td>21</td>
+    <td>8</td>
+    <td>4</td>
+    <td>4</td>
   </tr>
   <tr>
     <th>Mbits</th>
-    <td>319</td>
-    <td>249</td>
-    <td>166</td>
-    <td>56</td>
-    <td>59</td>
+    <td>408</td>
+    <td>168</td>
+    <td>64</td>
+    <td>32</td>
+    <td>32</td>
   </tr>
 </table>
 
-###### All test run on localhost. Values are not accurate, but orientative. Higher better.
+###### All test run on localhost with an EchoServer on a Laptop. Values are not accurate, but orientative. Latency { 1 byte/write/read, 100K iterations } Lower Better. Throughput { 1024bytes write/read, 256MBytes } Higher better.
 
 
 ---
