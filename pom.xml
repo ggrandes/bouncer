@@ -5,7 +5,7 @@
 	<groupId>org.javastack</groupId>
 	<artifactId>bouncer</artifactId>
 	<version>2.0.1</version>
-	<description>SimpleBouncer is a Java network tcp proxy, like rinetd (forward proxy) with extra features like Reverse tunneling, SSL tunneling, connection Failover and LoadBalancing.</description>
+	<description>Bouncer is a network TCP port redirector/forward proxy (like rinetd) with extra features like Reverse tunneling (like ssh -R), SSL tunneling (like stunnel), connection Failover and LoadBalancing.</description>
 
 	<build>
 		<plugins>
@@ -35,6 +35,8 @@
 						<exclude>**/log4j.properties</exclude>
 						<exclude>**/bouncer.properties</exclude>
 						<exclude>**/bouncer.conf</exclude>
+						<exclude>**/*.crt</exclude>
+						<exclude>**/*.key</exclude>
 						<exclude>**/sandbox/*</exclude>
 					</excludes>
 				</configuration>
