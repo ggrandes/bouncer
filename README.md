@@ -297,7 +297,7 @@ Current harcoded values:
   </tr>
 </table>
 
-###### All test run on localhost with an EchoServer on a Laptop. Values are not accurate, but orientative. Latency { 1 byte write/read (end-to-end, round-trip), 100K iterations } Lower Better. Throughput { 1024bytes read & write (full-duplex), total 512MBytes } Higher better.
+###### All test run on localhost on a Laptop. Values are not accurate, but orientative. Latency { EchoServer, 1 byte write/read (end-to-end, round-trip), 100K iterations } Lower Better. Throughput { Chargen, 1024bytes read & write (full-duplex), total 512MBytes } Higher better.
 
 
 ---
