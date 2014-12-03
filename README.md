@@ -272,12 +272,12 @@ Current harcoded values:
 
 <table>
   <tr align="right">
-    <th></th>
-    <th>Direct</th>
-    <th>Forward</th>
-    <th>MUX</th>
-    <th>MUX-AES</th>
-    <th>MUX-SSL</th>
+    <th>(transfers)</th>
+    <th>Direct (x2)</th>
+    <th>Forward (x4)</th>
+    <th>MUX (x6)</th>
+    <th>MUX-AES (x6)</th>
+    <th>MUX-SSL (x6)</th>
   </tr>
   <tr align="right">
     <th>Mbytes</th>
