@@ -231,7 +231,7 @@ Current harcoded values:
 
 ---
 
-## Latency Benchmark (Full Duplex)
+## Latency Benchmark
 
 <table>
   <tr align="right">
@@ -268,7 +268,7 @@ Current harcoded values:
   </tr>
 </table>
 
-## Throughput Benchmark (Full Duplex)
+## Throughput Benchmark
 
 <table>
   <tr align="right">
