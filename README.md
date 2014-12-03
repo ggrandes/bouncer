@@ -281,23 +281,23 @@ Current harcoded values:
   </tr>
   <tr align="right">
     <th>Mbytes</th>
+    <td>256</td>
+    <td>128</td>
     <td>51</td>
-    <td>21</td>
-    <td>8</td>
-    <td>4</td>
-    <td>4</td>
+    <td>17</td>
+    <td>19</td>
   </tr>
   <tr align="right">
     <th>Mbits</th>
+    <td>2048</td>
+    <td>1024</td>
     <td>408</td>
-    <td>168</td>
-    <td>64</td>
-    <td>32</td>
-    <td>32</td>
+    <td>136</td>
+    <td>152</td>
   </tr>
 </table>
 
-###### All test run on localhost with an EchoServer on a Laptop. Values are not accurate, but orientative. Latency { 1 byte write/read (end-to-end, round-trip), 100K iterations } Lower Better. Throughput { 1024bytes write/read (end-to-end, round-trip), total 256MBytes } Higher better.
+###### All test run on localhost with an EchoServer on a Laptop. Values are not accurate, but orientative. Latency { 1 byte write/read (end-to-end, round-trip), 100K iterations } Lower Better. Throughput { 1024bytes read & write (full-duplex), total 512MBytes } Higher better.
 
 
 ---
