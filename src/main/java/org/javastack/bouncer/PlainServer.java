@@ -57,9 +57,10 @@ class PlainServer {
 							client.setSoTimeout(pReadTimeout);
 						}
 						Log.info(this.getClass().getSimpleName() + " New client from=" + client);
-						context.submitTask(new PlainConnector(client), "ForwardConnect[" + inboundAddress
-								+ "|" + outboundAddress + "|" + IOHelper.socketRemoteToString(client) + "]",
-								ClientId.newId());
+						context.submitTask(
+								new PlainConnector(client, inboundAddress.getOpts()),
+								"ForwardConnect[" + inboundAddress + "|" + outboundAddress + "|"
+										+ IOHelper.socketRemoteToString(client) + "]", ClientId.newId());
 					} catch (IOException e) {
 						if (!listen.isClosed()) {
 							Log.error(this.getClass().getSimpleName() + " " + e.toString());
@@ -84,11 +85,13 @@ class PlainServer {
 
 	class PlainConnector implements Shutdownable, Runnable {
 		final Socket client;
+		final Options options;
 		Socket remote = null;
 		volatile boolean shutdown = false;
 
-		PlainConnector(final Socket client) {
+		PlainConnector(final Socket client, final Options options) {
 			this.client = client;
+			this.options = options;
 		}
 
 		@Override
@@ -113,6 +116,9 @@ class PlainServer {
 				Log.info(this.getClass().getSimpleName() + " Bouncer from " + client + " to " + remote);
 				final PlainSocketTransfer st1 = new PlainSocketTransfer(client, remote);
 				final PlainSocketTransfer st2 = new PlainSocketTransfer(remote, client);
+				if (options.isOption(Options.PROXY_SEND)) {
+					st1.setHeadersBuffer(ProxyProtocol.getInstance().formatV1(client).getBytes());
+				}
 				st1.setBrother(st2);
 				st2.setBrother(st1);
 				context.submitTask(
@@ -147,6 +153,7 @@ class PlainServer {
 		final InputStream is;
 		final OutputStream os;
 		volatile boolean shutdown = false;
+		byte[] headers = null;
 
 		long keepalive = System.currentTimeMillis();
 		PlainSocketTransfer brother = null;
@@ -162,6 +169,10 @@ class PlainServer {
 			this.brother = brother;
 		}
 
+		void setHeadersBuffer(final byte[] headers) {
+			this.headers = headers;
+		}
+
 		@Override
 		public void setShutdown() {
 			shutdown = true;
@@ -170,6 +181,11 @@ class PlainServer {
 		@Override
 		public void run() {
 			try {
+				if (headers != null) {
+					os.write(headers, 0, headers.length);
+					os.flush();
+					headers = null;
+				}
 				while (true) {
 					try {
 						if (transfer()) {

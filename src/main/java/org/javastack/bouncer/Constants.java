@@ -1,7 +1,7 @@
 package org.javastack.bouncer;
 
 public class Constants {
-	public static final String VERSION = "2.0.1";
+	public static final String VERSION = "2.1.0";
 	public static final String CONFIG_FILE = "/bouncer.conf";
 	public static final String SUITES_FILE = "/ciphersuites.conf";
 

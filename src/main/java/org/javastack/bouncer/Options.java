@@ -10,14 +10,15 @@ public class Options {
 	public static final Integer I_NULL = Integer.valueOf(0);
 	// Load Balancing Policies
 	// @formatter:off
-	public static final int LB_ORDER = 0x00000000; 	// Original order, pick next only on error
-	public static final int LB_RR    = 0x00000001; 	// Round robin
-	public static final int LB_RAND  = 0x00000002; 	// Random pick
-	public static final int TUN_SSL  = 0x00000010; 	// Client is Plain, Remote is SSL (like stunnel)
-	public static final int MUX_AES  = 0x00000020; 	// Encryption of MUX with AES+PreSharedKey
-	public static final int MUX_SSL  = 0x00000040; 	// Encryption of MUX with SSL/TLS
-	public static final int MUX_OUT  = 0x00000100; 	// Multiplexor initiator (outbound)
-	public static final int MUX_IN   = 0x00000200; 	// Multiplexor terminator (inbound)
+	public static final int LB_ORDER     = 0x00000000; 	// Original order, pick next only on error
+	public static final int LB_RR        = 0x00000001; 	// Round robin
+	public static final int LB_RAND      = 0x00000002; 	// Random pick
+	public static final int TUN_SSL      = 0x00000010; 	// Client is Plain, Remote is SSL (like stunnel)
+	public static final int MUX_AES      = 0x00000020; 	// Encryption of MUX with AES+PreSharedKey
+	public static final int MUX_SSL      = 0x00000040; 	// Encryption of MUX with SSL/TLS
+	public static final int MUX_OUT      = 0x00000100; 	// Multiplexor initiator (outbound)
+	public static final int MUX_IN       = 0x00000200; 	// Multiplexor terminator (inbound)
+	public static final int PROXY_SEND   = 0x00001000; 	// Send PROXY protocol (outbound)
 	// @formatter:on
 	//
 	public static final String P_AES = "AES";
@@ -41,6 +42,7 @@ public class Options {
 					put("MUX=IN", MUX_IN);
 					put("MUX=AES", MUX_AES);
 					put("MUX=SSL", MUX_SSL);
+					put("PROXY=SEND", PROXY_SEND);
 				}
 			});
 	//
@@ -52,7 +54,7 @@ public class Options {
 			put(P_AES, S_NULL); 		// AES=<key>
 			put(P_AES_ALG, S_NULL); 	// AESALG=<cipherAlgorithm>
 			put(P_SSL, S_NULL); 		// SSL=server.crt:server.key:client.crt (MUX-IN) ||
-								// SSL=client.crt:client.key:server.crt (MUX-OUT)
+			// SSL=client.crt:client.key:server.crt (MUX-OUT)
 		}
 	});
 	@SuppressWarnings("serial")

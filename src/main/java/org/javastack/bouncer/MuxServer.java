@@ -457,7 +457,26 @@ class MuxServer {
 				unlock(1);
 				context.releaseMuxPacket(mux);
 			} catch (Exception e) {
-				Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
+				Log.error(this.getClass().getSimpleName() + "::syn-send " + e.toString(), e);
+			}
+			// Send Headers
+			if (inboundAddress.getOpts().isOption(Options.PROXY_SEND)) {
+				try {
+					final MuxPacket mux = context.allocateMuxPacket();
+					final byte[] header = ProxyProtocol.getInstance().formatV1(sock).getBytes();
+					mux.put(id, header.length, header);
+					local.sendLocal(mux);
+					while (!lock(header.length)) {
+						if (shutdown) {
+							close();
+							break;
+						}
+					}
+					unlock(header.length);
+					context.releaseMuxPacket(mux);
+				} catch (Exception e) {
+					Log.error(this.getClass().getSimpleName() + "::proxy-send " + e.toString(), e);
+				}
 			}
 			//
 			if (!shutdown) {

@@ -2,7 +2,7 @@
 
 Bouncer is an open source (Apache License, Version 2.0) Java network proxy. Do not require any external lib.
 
-### Current Stable Version is [2.0.1](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/2.0.1/bouncer-2.0.1-bin.zip)
+### Current Stable Version is [2.1.0](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/2.1.0/bouncer-2.1.0-bin.zip)
 
 ---
 
@@ -67,6 +67,8 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
         * **LB=ORDER**: active failover-only in DNS order
         * **LB=RR**: active LoadBalancing in DNS order (round-robin)
         * **LB=RAND**: activate LoadBalancing in DNS random order
+* Options for inbound connections
+    * **PROXY=SEND**: use PROXY protocol (v1), generate header for remote server
 * Options for Forward / Port Redirector (rinetd)
     * **TUN=SSL**: activate SSL/TLS tunneling (origin is plain, destination is SSL/TLS, like stunnel)
 * Options for Reverse Tunneling (MUX)
@@ -200,6 +202,7 @@ You can improve security, simply download **bcprov-jdk15on-`XXX`.jar** from [Bou
     * For AES-256 you need [JCE Unlimited Strength](http://www.oracle.com/technetwork/es/java/javase/downloads/jce-7-download-432124.html) 
 * Allow different tunnels over same MUX(IN/OUT) (v2.0.1)
 * BufferPool for reduce GC pressure (v2.0.1)
+* PROXY protocol (v1) for Outgoing connections (v2.1.0)
 
 ## MISC
 Current harcoded values:
