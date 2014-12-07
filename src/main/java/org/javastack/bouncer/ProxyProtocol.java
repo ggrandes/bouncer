@@ -50,9 +50,8 @@ public class ProxyProtocol {
 		return sb.toString();
 	}
 
-	//
 	/**
-	 * Generate HELO proxy header (Apache mod_myfixip).
+	 * Generate HELO proxy header (Apache mod_myfixip -legacy header-).
 	 * 
 	 * <pre>
 	 * &quot;HELO&lt;ipv4binary32BitAddress&gt;&quot;
