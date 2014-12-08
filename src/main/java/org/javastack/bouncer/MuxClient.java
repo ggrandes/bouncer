@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ConnectException;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.security.GeneralSecurityException;
@@ -44,15 +45,17 @@ class MuxClient {
 		Log.info(this.getClass().getSimpleName() + "::openRemote " + right);
 		remote = new MuxClientRemote(right);
 		remote.setRouter(router);
-		context.addReloadableAwaiter(remote);
+		context.addShutdownable(remote);
 		context.submitTask(remote, "MuxOutRight[" + right + "]", ClientId.newId());
 	}
 
-	void openLocal(final int id, final int idEndPoint) {
-		Log.info(this.getClass().getSimpleName() + "::openLocal id=" + id);
+	void openLocal(final int id, final int idEndPoint, final InetAddress srcAddress) {
+		Log.info(this.getClass().getSimpleName() + "::openLocal id=" + id + " srcAddr="
+				+ String.valueOf(srcAddress));
 		final OutboundAddress left = this.left.get(Integer.valueOf(idEndPoint));
 		final MuxClientLocal local = new MuxClientLocal(left);
 		local.setId(id);
+		local.setSticky(srcAddress);
 		local.setRouter(router);
 		synchronized (mapLocals) {
 			mapLocals.put(id, local);
@@ -119,7 +122,7 @@ class MuxClient {
 		void onReceiveFromRemote(final MuxClientRemote remote, final MuxPacket msg) { // Remote is MUX
 			if (msg.syn()) { // New SubChannel
 				Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
-				openLocal(msg.getIdChannel(), msg.getIdEndPoint());
+				openLocal(msg.getIdChannel(), msg.getIdEndPoint(), msg.getSourceAddress());
 			} else if (msg.fin()) { // End SubChannel
 				Log.info(this.getClass().getSimpleName() + "::onReceiveFromRemote " + msg);
 				final MuxClientLocal local = getLocal(msg.getIdChannel());
@@ -238,7 +241,6 @@ class MuxClient {
 				while (!shutdown) {
 					try {
 						Log.info(this.getClass().getSimpleName() + " Connecting: " + outboundAddress);
-						outboundAddress.resolve();
 						sock = outboundAddress.connect();
 						if (sock == null)
 							throw new ConnectException("Unable to connect to " + outboundAddress);
@@ -288,7 +290,6 @@ class MuxClient {
 						}
 						continue;
 					} catch (EOFException e) {
-						// FIXME: remote fast close
 						Log.error(this.getClass().getSimpleName() + " " + e.toString());
 						doSleep(1000);
 						break;
@@ -327,10 +328,15 @@ class MuxClient {
 		final ArrayBlockingQueue<RawPacket> queue = new ArrayBlockingQueue<RawPacket>(
 				Constants.IO_BUFFERS << 1);
 		int id;
+		InetAddress stickyAddress = null;
 		long keepalive = System.currentTimeMillis();
 
 		MuxClientLocal(final OutboundAddress outboundAddress) {
 			super(outboundAddress);
+		}
+
+		public void setSticky(final InetAddress stickyAddress) {
+			this.stickyAddress = stickyAddress;
 		}
 
 		void unlock(final int size) {
@@ -362,8 +368,7 @@ class MuxClient {
 			Log.info(this.getClass().getSimpleName() + "::run " + outboundAddress);
 			//
 			try {
-				outboundAddress.resolve();
-				sock = outboundAddress.connect();
+				sock = outboundAddress.connectFrom(stickyAddress);
 				if (sock == null)
 					throw new ConnectException("Unable to connect to " + outboundAddress);
 				is = sock.getInputStream();

@@ -44,7 +44,6 @@ class PlainServer {
 		@Override
 		public void run() {
 			try {
-				inboundAddress.resolve();
 				listen = inboundAddress.listen();
 				Log.info(this.getClass().getSimpleName() + " started: " + inboundAddress);
 				while (!shutdown) {
@@ -109,8 +108,7 @@ class PlainServer {
 		public void run() {
 			Log.info(this.getClass().getSimpleName() + " started: " + outboundAddress);
 			try {
-				outboundAddress.resolve();
-				remote = outboundAddress.connect();
+				remote = outboundAddress.connectFrom(client.getInetAddress());
 				if (remote == null)
 					throw new ConnectException("Unable to connect to " + outboundAddress);
 				Log.info(this.getClass().getSimpleName() + " Bouncer from " + client + " to " + remote);

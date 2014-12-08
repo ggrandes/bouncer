@@ -29,6 +29,7 @@ public class Options {
 	public static final String P_READ_TIMEOUT = "READ_TIMEOUT";
 	public static final String P_MUX_NAME = "MUX_NAME";
 	public static final String P_TUN_ID = "TUN_ID";
+	public static final String P_STICKY = "STICKY";
 	//
 	@SuppressWarnings("serial")
 	private final static Map<String, Integer> MAP_FLAGS = Collections
@@ -46,15 +47,17 @@ public class Options {
 				}
 			});
 	//
+	StickyConfig stickyConfig = null;
 	int flags;
 	@SuppressWarnings("serial")
 	final Map<String, String> strParams = Collections.synchronizedMap(new HashMap<String, String>() {
 		{
-			put(P_MUX_NAME, S_NULL); 	// MUX_NAME=<muxName> // FIXME
+			put(P_MUX_NAME, S_NULL); 	// MUX_NAME=<muxName>
 			put(P_AES, S_NULL); 		// AES=<key>
 			put(P_AES_ALG, S_NULL); 	// AESALG=<cipherAlgorithm>
 			put(P_SSL, S_NULL); 		// SSL=server.crt:server.key:client.crt (MUX-IN) ||
 			// SSL=client.crt:client.key:server.crt (MUX-OUT)
+			put(P_STICKY, S_NULL);		// STICKY=MEM:bitmask:elements:ttl
 		}
 	});
 	@SuppressWarnings("serial")
@@ -62,7 +65,7 @@ public class Options {
 		{
 			put(P_CONNECT_TIMEOUT, I_NULL); // CONNECT_TIMEOUT=millis
 			put(P_READ_TIMEOUT, I_NULL); 	// READ_TIMEOUT=millis
-			put(P_TUN_ID, I_NULL); 			// TUN_ID=<idEndPoint> // FIXME
+			put(P_TUN_ID, I_NULL); 			// TUN_ID=<idEndPoint>
 			put(P_AES_BITS, I_NULL); 		// AESBITS=<keyLengthInBits>
 		}
 	});
@@ -94,12 +97,16 @@ public class Options {
 		flags &= ~bits;
 	}
 
-	public String getString(final String name) {
+	public String getString(final String name, final String def) {
 		final String value = strParams.get(name);
 		if (value == S_NULL) {
-			return null;
+			return def;
 		}
 		return value;
+	}
+
+	public String getString(final String name) {
+		return getString(name, null);
 	}
 
 	public void setString(final String name, String value) {
@@ -243,5 +250,24 @@ public class Options {
 
 	public Integer getTunID() {
 		return getInteger(P_TUN_ID, Integer.valueOf(0));
+	}
+
+	public StickyConfig getStickyConfig() {
+		// STICKY=MEM:bitmask:elements:ttl
+		if (stickyConfig == null) {
+			int i = 0;
+			final String cfg = getString(P_STICKY);
+			if (cfg == null) {
+				stickyConfig = StickyConfig.NULL;
+			} else {
+				final String[] toks = cfg.split(":");
+				final StickyConfig.Type type = StickyConfig.Type.valueOf(toks[i++]);
+				final int bitmask = Short.parseShort(toks[i++]);
+				final int elements = Integer.parseInt(toks[i++]);
+				final int ttl = Integer.parseInt(toks[i++]);
+				stickyConfig = new StickyConfig(type, bitmask, elements, ttl);
+			}
+		}
+		return stickyConfig;
 	}
 }

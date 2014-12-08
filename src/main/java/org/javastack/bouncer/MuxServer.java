@@ -177,7 +177,6 @@ class MuxServer {
 
 		MuxServerListen(final InboundAddress inboundAddress) throws IOException {
 			this.inboundAddress = inboundAddress;
-			inboundAddress.resolve();
 			listen = inboundAddress.listen();
 		}
 
@@ -243,7 +242,7 @@ class MuxServer {
 				}
 				local = new MuxServerLocal(socket, inboundAddress);
 				local.setRouter(router);
-				context.addReloadableAwaiter(local);
+				context.addShutdownable(local);
 				listenRemote();
 				context.submitTask(local, "MuxInLeft[" + left + "|" + IOHelper.socketRemoteToString(socket)
 						+ "]", ClientId.newId());
@@ -444,9 +443,8 @@ class MuxServer {
 			// Send SYN
 			try {
 				final MuxPacket mux = context.allocateMuxPacket();
-				// FIXME: Change idEndPoint with getIdEndPointByInboundAddress
 				final int idEndpoint = inboundAddress.getOpts().getTunID();
-				mux.syn(id, idEndpoint);
+				mux.syn(id, idEndpoint, sock.getInetAddress());
 				local.sendLocal(mux);
 				while (!lock(1)) {
 					if (shutdown) {

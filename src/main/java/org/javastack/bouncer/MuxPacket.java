@@ -4,6 +4,8 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 
 import org.javastack.bouncer.GenericPool.GenericPoolFactory;
@@ -60,10 +62,29 @@ public class MuxPacket implements Message {
 	 * @return
 	 */
 	public int getIdEndPoint() {
-		if (payLoadLength != 4)
+		if (payLoadLength < 4)
 			return 0;
 		final int idEndPoint = IOHelper.intFromByteArray(payload, 0);
 		return (idEndPoint & 0x00FFFFFF);
+	}
+
+	/**
+	 * Get Source Address from Payload
+	 * 
+	 * @return
+	 */
+	public InetAddress getSourceAddress() {
+		// idEndPoint(4) + IPlength(1) + IPbytes(4/16)
+		if (payLoadLength >= (4 + 1 + 4)) { // IPv4 (9) / IPv6 (20)
+			try {
+				int off = 4;
+				final int len = payload[off++];
+				return InetAddress.getByAddress(Arrays.copyOfRange(payload, off, off + len));
+			} catch (UnknownHostException e) {
+				Log.error(this.getClass().getSimpleName() + "::getSourceAddress " + e.toString(), e);
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -72,11 +93,17 @@ public class MuxPacket implements Message {
 	 * @param idChannel
 	 * @param idEndPoint
 	 */
-	public void syn(final int idChannel, final int idEndPoint) {
-		// FIXME: Use payload for idEndPoint
+	public void syn(final int idChannel, final int idEndPoint, final InetAddress srcAddr2) {
+		final byte[] srcAddr = srcAddr2.getAddress();
+		// idEndPoint(4) + IPlength(1) + IPbytes(4/16)
 		this.idChannel = ((idChannel & 0x00FFFFFF) | MUX_SYN);
-		this.payLoadLength = 4;
-		IOHelper.intToByteArray(idEndPoint, payload, 0);
+		this.payLoadLength = 4 + 1 + srcAddr.length; // IPv4 (4+1+4) / IPv6 (4+1+16)
+		int offset = 0;
+		IOHelper.intToByteArray(idEndPoint, payload, offset);  // 4
+		offset += 4;
+		payload[offset++] = (byte) (srcAddr.length & 0x7F);    // 1
+		System.arraycopy(srcAddr, 0, payload, offset, srcAddr.length); // IPv4 (4) / IPv6 (16)
+		offset += srcAddr.length;
 	}
 
 	/**

@@ -41,9 +41,14 @@ class InboundAddress extends BouncerAddress {
 
 	@Override
 	void resolve() throws UnknownHostException {
-		addrs = InetAddress.getAllByName(host);
-		Log.info(this.getClass().getSimpleName() + " Resolved " + String.valueOf(this) + //
-				" [" + fromArrAddress(addrs) + "]");
+		if (checkUpdateResolv()) {
+			addrs = InetAddress.getAllByName(host);
+			Log.info(this.getClass().getSimpleName() + " Resolved " + String.valueOf(this) + //
+					" [" + fromArrAddress(addrs) + "]");
+		} else {
+			Log.info(this.getClass().getSimpleName() + " Resolve (cached) " + String.valueOf(this) + //
+					" [" + fromArrAddress(addrs) + "]");
+		}
 	}
 
 	InetSocketAddress[] getSocketAddress() {
@@ -55,6 +60,7 @@ class InboundAddress extends BouncerAddress {
 	}
 
 	ServerSocket listen() throws IOException {
+		resolve();
 		final ServerSocket listen;
 		if (opts.isOption(Options.MUX_SSL)) {
 			listen = sslFactory.createSSLServerSocket();

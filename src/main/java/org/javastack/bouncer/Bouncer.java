@@ -70,7 +70,6 @@ public class Bouncer implements ServerContext {
 	private final SocketRegistrator socketRegistry = new SocketRegistrator();
 	private CipherSuites cipherSuites = null;
 
-	// FIXME: See reload
 	private final LinkedHashMap<String, MuxServer> muxServers = new LinkedHashMap<String, MuxServer>();
 	private final LinkedHashMap<String, MuxClient> muxClients = new LinkedHashMap<String, MuxClient>();
 
@@ -176,6 +175,12 @@ public class Bouncer implements ServerContext {
 				Log.info(this.getClass().getSimpleName() + " Shutdown completed");
 			} else {
 				Log.error(this.getClass().getSimpleName() + " Shutdown Error");
+				// Audit Sockets
+				Log.warn(this.getClass().getSimpleName() + " Autit Connection Begin");
+				for (final Awaiter shut : reloadables) {
+					Log.warn("Audit Connection: " + String.valueOf(shut));
+				}
+				Log.warn(this.getClass().getSimpleName() + " Autit Connection End");
 			}
 			shutdownBarrier = null;
 			reloadables.clear();

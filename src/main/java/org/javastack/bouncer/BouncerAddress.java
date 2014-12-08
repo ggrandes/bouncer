@@ -5,6 +5,7 @@ import java.net.UnknownHostException;
 
 public abstract class BouncerAddress {
 	final ServerContext context;
+	long lastResolv = 0;
 
 	BouncerAddress(final ServerContext context) {
 		this.context = context;
@@ -15,6 +16,15 @@ public abstract class BouncerAddress {
 	abstract Options getOpts();
 
 	abstract void resolve() throws UnknownHostException;
+
+	boolean checkUpdateResolv() {
+		final long now = System.currentTimeMillis();
+		if (lastResolv + 5000 < now) {
+			lastResolv = now;
+			return true;
+		}
+		return false;
+	}
 
 	static String fromArrAddress(final InetAddress[] addrs) {
 		final StringBuilder sb = new StringBuilder();

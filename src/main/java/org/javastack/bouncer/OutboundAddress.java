@@ -6,7 +6,8 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.Random;
+import java.util.Arrays;
+import java.util.Collections;
 
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSession;
@@ -20,6 +21,7 @@ class OutboundAddress extends BouncerAddress {
 	final String host;
 	final int port;
 	final Options opts;
+	final StickyStore<InetAddress, InetAddress> stickies;
 
 	SSLFactory sslFactory = null;
 	InetAddress[] addrs = null;
@@ -30,6 +32,7 @@ class OutboundAddress extends BouncerAddress {
 		this.host = host;
 		this.port = port;
 		this.opts = opts;
+		this.stickies = StickyStore.getInstance(opts.getStickyConfig());
 	}
 
 	@Override
@@ -49,50 +52,84 @@ class OutboundAddress extends BouncerAddress {
 
 	@Override
 	void resolve() throws UnknownHostException {
-		try {
-			roundrobin = 0;
-			addrs = InetAddress.getAllByName(host);
-		} catch (UnknownHostException e) {
-			Log.error(this.getClass().getSimpleName() + " Error resolving " + String.valueOf(this));
-			throw e;
+		if (checkUpdateResolv()) {
+			try {
+				final InetAddress[] addrs = InetAddress.getAllByName(host);
+				if (opts.isOption(Options.LB_ORDER)) {
+					Arrays.sort(addrs, InetAddressComparator.getInstance());
+				}
+				this.addrs = addrs;
+			} catch (UnknownHostException e) {
+				Log.error(this.getClass().getSimpleName() + " Error resolving " + String.valueOf(this));
+				throw e;
+			}
+			Log.info(this.getClass().getSimpleName() + " Resolved " + String.valueOf(this) + " ["
+					+ fromArrAddress(addrs) + "]");
+		} else {
+			Log.info(this.getClass().getSimpleName() + " Resolve (cached) " + String.valueOf(this) + " ["
+					+ fromArrAddress(addrs) + "]");
 		}
-		Log.info(this.getClass().getSimpleName() + " Resolved " + String.valueOf(this) + " ["
-				+ fromArrAddress(addrs) + "]");
 	}
 
-	Socket connect() {
+	Socket connect() throws UnknownHostException {
+		return connectFrom(null);
+	}
+
+	Socket connectFrom(final InetAddress stickyAddr) throws UnknownHostException {
+		resolve();
 		if (addrs == null) {
 			return null;
 		}
-		final int filterFlags = (Options.LB_ORDER | Options.LB_RR | Options.LB_RAND);
 		Socket remote = null;
-		switch (opts.getFlags(filterFlags)) {
-			case Options.LB_ORDER:
-				for (InetAddress addr : addrs) {
-					remote = connect(addr);
-					if (remote != null)
+		// First, try sticky, if any...
+		if ((stickies != null) && (stickyAddr != null)) {
+			final InetAddress dstAddr = stickies.get(stickyAddr);
+			if (dstAddr != null) {
+				for (final InetAddress addr : addrs) {
+					if (addr.equals(dstAddr)) {
+						Log.error(this.getClass().getSimpleName() + " Sticky id=" + stickyAddr + " result="
+								+ addr);
+						remote = connect0(addr);
+						break;
+					}
+				}
+			}
+		}
+		// Else, try another host...
+		if (remote == null) {
+			final int filterFlags = (Options.LB_ORDER | Options.LB_RR | Options.LB_RAND);
+			int begin = 0;
+			InetAddress[] addrs = this.addrs;
+			if (addrs.length > 1) {
+				switch (opts.getFlags(filterFlags)) {
+					case Options.LB_ORDER:
+						break;
+					case Options.LB_RR:
+						begin = roundrobin;
+						break;
+					case Options.LB_RAND:
+						addrs = this.addrs.clone();
+						Collections.shuffle(Arrays.asList(addrs));
 						break;
 				}
-				break;
-			case Options.LB_RR:
-				final int rrbegin = roundrobin;
-				// Use local var to avoid synchronized block
-				int rr = rrbegin;
-				do {
-					remote = connect(addrs[rr]);
-					rr = ((rr + 1) % addrs.length);
-					roundrobin = rr;
-					if (remote != null)
-						break;
-				} while (roundrobin != rrbegin);
-				break;
-			case Options.LB_RAND:
-				final Random r = new Random();
-				remote = connect(addrs[(r.nextInt(Integer.MAX_VALUE) % addrs.length)]);
-				break;
+			}
+			// Use local var to avoid synchronized block
+			int rr = begin;
+			do {
+				final InetAddress addr = addrs[rr];
+				remote = connect0(addr);
+				rr = ((rr + 1) % addrs.length);
+				roundrobin = rr;
+				if (remote != null) {
+					break;
+				}
+			} while (roundrobin != begin);
 		}
 		if (remote != null) {
 			try {
+				if ((stickies != null) && (stickyAddr != null)) {
+					stickies.put(stickyAddr, remote.getInetAddress());
+				}
 				context.registerSocket(remote);
 				final Integer pReadTimeout = opts.getInteger(Options.P_READ_TIMEOUT);
 				if (pReadTimeout != null) {
@@ -105,11 +142,11 @@ class OutboundAddress extends BouncerAddress {
 		return remote;
 	}
 
-	Socket connect(final InetAddress addr) {
+	private Socket connect0(final InetAddress dstAddr) {
 		final boolean isSSL = opts.isOption(Options.TUN_SSL | Options.MUX_SSL);
 		Socket sock = null;
 		try {
-			Log.info(this.getClass().getSimpleName() + " Connecting to " + addr + ":" + port
+			Log.info(this.getClass().getSimpleName() + " Connecting to " + dstAddr + ":" + port
 					+ (isSSL ? " (SSL)" : ""));
 			if (opts.isOption(Options.MUX_SSL)) {
 				sock = sslFactory.createSSLSocket();
@@ -129,23 +166,23 @@ class OutboundAddress extends BouncerAddress {
 			if (pConnectTimeout == null) {
 				pConnectTimeout = Constants.CONNECT_TIMEOUT;
 			}
-			sock.connect(new InetSocketAddress(addr, port), pConnectTimeout);
+			sock.connect(new InetSocketAddress(dstAddr, port), pConnectTimeout);
 			if (sock instanceof SSLSocket) {
 				((SSLSocket) sock).startHandshake();
 			}
 		} catch (IOException e) {
-			Log.error(this.getClass().getSimpleName() + " Error connecting to " + addr + ":" + port
+			Log.error(this.getClass().getSimpleName() + " Error connecting to " + dstAddr + ":" + port
 					+ (isSSL ? " (SSL) " : " ") + e.toString());
 			IOHelper.closeSilent(sock);
 			sock = null;
 		} catch (Exception e) {
-			Log.error(this.getClass().getSimpleName() + " Error connecting to " + addr + ":" + port
+			Log.error(this.getClass().getSimpleName() + " Error connecting to " + dstAddr + ":" + port
 					+ (isSSL ? " (SSL)" : ""), e);
 			IOHelper.closeSilent(sock);
 			sock = null;
 		}
 		if ((sock != null) && sock.isConnected()) {
-			Log.info(this.getClass().getSimpleName() + " Connected to " + addr + ":" + port
+			Log.info(this.getClass().getSimpleName() + " Connected to " + dstAddr + ":" + port
 					+ (isSSL ? " (SSL) " + getSocketProtocol(sock) : ""));
 			return sock;
 		}

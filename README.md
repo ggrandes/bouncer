@@ -2,7 +2,7 @@
 
 Bouncer is an open source (Apache License, Version 2.0) Java network proxy. Do not require any external lib.
 
-### Current Stable Version is [2.1.0](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/2.1.0/bouncer-2.1.0-bin.zip)
+### Current Stable Version is [2.2.1](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/2.2.1/bouncer-2.2.1-bin.zip)
 
 ---
 
@@ -64,9 +64,11 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
 
 * Options for outgoing connections
     * Loadbalancing/Failover (only one option can be used)
-        * **LB=ORDER**: active failover-only in DNS order
+        * **LB=ORDER**: active failover-only in DNS order (IP sorted, lower first)
         * **LB=RR**: active LoadBalancing in DNS order (round-robin)
         * **LB=RAND**: activate LoadBalancing in DNS random order
+    * Sticky Session
+        * **STICKY=MEM:bitmask:elements:ttl**: activate Sticky session based on IP Source Address. Sessions are stored in MEMory, *bitmask* is a [CIDR](http://en.wikipedia.org/wiki/CIDR) to apply in source-ip-address (16=Class B, 24=Class C, 32=Unique host), *elements* for LRU cache, *ttl* is time to live of elements in cache (seconds) 
 * Options for inbound connections
     * **PROXY=SEND**: use PROXY protocol (v1), generate header for remote server
 * Options for Forward / Port Redirector (rinetd)
@@ -99,7 +101,7 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
 
     # <listen-addr> <listen-port> <remote-addr> <remote-port> [opts]
     0.0.0.0 1234 127.1.2.3 9876
-    127.0.0.1 5678 encrypted.google.com 443 LB=RR,TUN=SSL
+    127.0.0.1 5678 encrypted.google.com 443 LB=RR,STICKY=MEM:24:128:300,TUN=SSL
     
 ##### Example config of Reverse Tunnels (equivalent ssh -p 5555 192.168.2.1 -R 127.0.0.1:8080:192.168.1.1:80)
 
@@ -203,6 +205,7 @@ You can improve security, simply download **bcprov-jdk15on-`XXX`.jar** from [Bou
 * Allow different tunnels over same MUX(IN/OUT) (v2.0.1)
 * BufferPool for reduce GC pressure (v2.0.1)
 * PROXY protocol (v1) for Outgoing connections (v2.1.0)
+* Sticky sessions in LoadBalancing (v2.2.1)
 
 ## MISC
 Current harcoded values:
