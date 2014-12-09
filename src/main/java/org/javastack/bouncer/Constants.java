@@ -19,6 +19,7 @@ public class Constants {
 	public static final int READ_TIMEOUT = 300000; 			// Default 5min timeout
 	public static final int MUX_READ_TIMEOUT = 2000;		// Default 2seconds timeout
 	public static final int MUX_KEEP_ALIVE = 30000; 		// Default 30seconds timeout
+	public static final int DNS_CACHE_TIME = 2000; 			// Default 2seconds
 
 	public static final String SEALER_PBKDF_ALG = "PBKDF2WithHmacSHA1";	// Default PBKDF2WithHmacSHA1
 	public static final String SEALER_MD_ALG = "SHA1";					// Default SHA1

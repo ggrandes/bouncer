@@ -215,6 +215,7 @@ Current harcoded values:
 * IO-Buffers: 8
 * TCP `SO_SNDBUF`/`SO_RCVBUF`: BufferLength * IO-Buffers 
 * Connection timeout: 30seconds
+* DNS cache: 2seconds
 * Read timeout: 5minutes
 * MUX Keep-Alive: 30seconds
 * MUX-IN Error retry sleep: 0.5/1seconds

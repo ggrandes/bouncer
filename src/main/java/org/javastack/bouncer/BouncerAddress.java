@@ -19,7 +19,7 @@ public abstract class BouncerAddress {
 
 	boolean checkUpdateResolv() {
 		final long now = System.currentTimeMillis();
-		if (lastResolv + 5000 < now) {
+		if (lastResolv + Constants.DNS_CACHE_TIME < now) {
 			lastResolv = now;
 			return true;
 		}
