@@ -5,13 +5,13 @@ public class StickyConfig {
 	public final Type type;
 	public final int bitmask;
 	public final int elements;
-	public final int ttl;
+	public final int ttlsec;
 
-	public StickyConfig(final Type type, final int bitmask, final int elements, final int ttl) {
+	public StickyConfig(final Type type, final int bitmask, final int elements, final int ttlsec) {
 		this.type = type;
 		this.bitmask = bitmask;
 		this.elements = elements;
-		this.ttl = ttl;
+		this.ttlsec = ttlsec;
 	}
 
 	public enum Type {
