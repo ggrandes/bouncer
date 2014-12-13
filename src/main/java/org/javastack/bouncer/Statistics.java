@@ -7,7 +7,9 @@ import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class Statistics {
+import org.javastack.bouncer.jmx.BouncerStatisticsMBean;
+
+public class Statistics implements BouncerStatisticsMBean {
 	// Concurrents
 	private final AtomicInteger tryingConnections = new AtomicInteger();
 	private final AtomicInteger activeConnections = new AtomicInteger();
@@ -31,6 +33,7 @@ public class Statistics {
 		tryingConnections.decrementAndGet();
 	}
 
+	@Override
 	public int getTryingConnections() {
 		return tryingConnections.get();
 	}
@@ -43,6 +46,7 @@ public class Statistics {
 		activeConnections.decrementAndGet();
 	}
 
+	@Override
 	public int getActiveConnections() {
 		return activeConnections.get();
 	}
@@ -53,6 +57,7 @@ public class Statistics {
 		reloads.incrementAndGet();
 	}
 
+	@Override
 	public int getReloads() {
 		return reloads.get();
 	}
@@ -61,7 +66,8 @@ public class Statistics {
 		attendedConnections.incrementAndGet();
 	}
 
-	public long getAttendedConnection() {
+	@Override
+	public long getAttendedConnections() {
 		return attendedConnections.get();
 	}
 
@@ -69,6 +75,7 @@ public class Statistics {
 		failedConnections.incrementAndGet();
 	}
 
+	@Override
 	public long getFailedConnections() {
 		return failedConnections.get();
 	}
@@ -78,6 +85,7 @@ public class Statistics {
 		return this;
 	}
 
+	@Override
 	public long getInMsgs() {
 		return inMsgs.get();
 	}
@@ -87,6 +95,7 @@ public class Statistics {
 		return this;
 	}
 
+	@Override
 	public long getOutMsgs() {
 		return outMsgs.get();
 	}
@@ -96,6 +105,7 @@ public class Statistics {
 		return this;
 	}
 
+	@Override
 	public long getInBytes() {
 		return inBytes.get();
 	}
@@ -105,6 +115,7 @@ public class Statistics {
 		return this;
 	}
 
+	@Override
 	public long getOutBytes() {
 		return outBytes.get();
 	}

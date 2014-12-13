@@ -41,8 +41,11 @@ import java.util.TimerTask;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
 
+import javax.management.JMException;
+
 import org.javastack.bouncer.GenericPool.GenericPoolFactory;
 import org.javastack.bouncer.TaskManager.AuditableRunner;
+import org.javastack.bouncer.jmx.BouncerStatistics;
 
 /**
  * Simple TCP Bouncer
@@ -76,11 +79,11 @@ public class Bouncer implements ServerContext {
 
 	private final LinkedHashMap<String, MuxServer> muxServers = new LinkedHashMap<String, MuxServer>();
 	private final LinkedHashMap<String, MuxClient> muxClients = new LinkedHashMap<String, MuxClient>();
-	private final Statistics stats = new Statistics();
+	private final BouncerStatistics stats = new BouncerStatistics();
 
 	// ============================== Global code
 
-	public static void main(final String[] args) throws IOException {
+	public static void main(final String[] args) throws Exception {
 		final Bouncer bouncer = new Bouncer();
 		//
 		// Init Log System
@@ -115,6 +118,8 @@ public class Bouncer implements ServerContext {
 			Log.error("Config not found: (classpath)" + Constants.CONFIG_FILE);
 			return;
 		}
+		// Start JMX
+		bouncer.initJMX();
 		// Schedule Statistics
 		timer.scheduleAtFixedRate(new TimerTask() {
 			@Override
@@ -183,6 +188,14 @@ public class Bouncer implements ServerContext {
 			return new SSLFactory(cipherSuites, sslConfig[0], sslConfig[1], sslConfig[2]);
 		}
 		return null;
+	}
+
+	void initJMX() throws JMException {
+		stats.init();
+	}
+
+	void destroyJMX() throws JMException {
+		stats.destroy();
 	}
 
 	void reload(final InputStream isConfig) throws NoSuchAlgorithmException, IOException {
