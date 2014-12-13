@@ -142,12 +142,12 @@ public class Bouncer implements ServerContext {
 		InputStream is = null;
 		try {
 			final Properties p = new Properties();
-			is = Bouncer.class.getResourceAsStream(Constants.MANIFEST_FILE);
+			is = Bouncer.class.getResourceAsStream(Constants.VERSION_FILE);
 			p.load(is);
 			// Implementation-Vendor-Id: ${project.groupId}
 			// Implementation-Title: ${project.name}
 			// Implementation-Version: ${project.version}
-			return p.getProperty("Implementation-Version");
+			return p.getProperty("Bouncer-Version");
 		} catch (Exception e) {
 			return "UNKNOWN";
 		} finally {
