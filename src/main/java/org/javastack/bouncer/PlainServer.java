@@ -27,8 +27,7 @@ class PlainServer {
 	void listenLocal() { // Entry Point
 		final PlainListen acceptator = new PlainListen();
 		context.addReloadableAwaiter(acceptator);
-		context.submitTask(acceptator, "ForwardListen[" + inboundAddress + "|" + outboundAddress + "]",
-				ClientId.newId());
+		context.submitTask(acceptator, "ForwardListen[" + inboundAddress + "]", ClientId.newId());
 	}
 
 	class PlainListen implements Awaiter, Runnable {
@@ -58,7 +57,7 @@ class PlainServer {
 						Log.info(this.getClass().getSimpleName() + " New client from=" + client);
 						context.submitTask(
 								new PlainConnector(client, inboundAddress.getOpts()),
-								"ForwardConnect[" + inboundAddress + "|" + outboundAddress + "|"
+								"ForwardConnect[" + inboundAddress + "|"
 										+ IOHelper.socketRemoteToString(client) + "]", ClientId.newId());
 					} catch (IOException e) {
 						if (!listen.isClosed()) {
