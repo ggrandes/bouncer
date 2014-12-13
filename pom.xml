@@ -26,6 +26,9 @@
 					<finalName>${project.artifactId}-${project.version}</finalName>
 					<forceCreation>true</forceCreation>
 					<archive>
+						<manifest>
+							<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+						</manifest>
 						<manifestEntries>
 							<Built-By>maven</Built-By>
 						</manifestEntries>

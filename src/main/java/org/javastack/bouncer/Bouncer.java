@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
@@ -95,7 +96,7 @@ public class Bouncer implements ServerContext {
 				Log.setMode(Log.LOG_CURR_STDOUT);
 			}
 		}
-		Log.info("Starting " + bouncer.getClass() + " version " + Constants.VERSION
+		Log.info("Starting " + bouncer.getClass() + " version " + getVersion()
 				+ (Log.isDebug() ? " debug-mode" : ""));
 		// Register BouncyCastleProvider if possible
 		try {
@@ -134,6 +135,23 @@ public class Bouncer implements ServerContext {
 				IOHelper.closeSilent(isConfig);
 			}
 			doSleep(Constants.RELOAD_CONFIG);
+		}
+	}
+
+	static String getVersion() {
+		InputStream is = null;
+		try {
+			final Properties p = new Properties();
+			is = Bouncer.class.getResourceAsStream(Constants.MANIFEST_FILE);
+			p.load(is);
+			// Implementation-Vendor-Id: ${project.groupId}
+			// Implementation-Title: ${project.name}
+			// Implementation-Version: ${project.version}
+			return p.getProperty("Implementation-Version");
+		} catch (Exception e) {
+			return "UNKNOWN";
+		} finally {
+			IOHelper.closeSilent(is);
 		}
 	}
 
