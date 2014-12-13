@@ -6,6 +6,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -53,16 +54,26 @@ class OutboundAddress extends BouncerAddress {
 	@Override
 	void resolve() throws UnknownHostException {
 		if (checkUpdateResolv()) {
-			try {
-				final InetAddress[] addrs = InetAddress.getAllByName(host);
-				if (opts.isOption(Options.LB_ORDER)) {
-					Arrays.sort(addrs, InetAddressComparator.getInstance());
+			final String[] hosts = host.split(",");
+			final ArrayList<InetAddress> addresses = new ArrayList<InetAddress>(hosts.length);
+			final ArrayList<String> unknownHosts = new ArrayList<String>(1);
+			for (int i = 0; i < hosts.length; i++) {
+				final String host = hosts[i];
+				try {
+					addresses.addAll(Arrays.asList(InetAddress.getAllByName(host)));
+				} catch (UnknownHostException e) {
+					Log.error(this.getClass().getSimpleName() + " Error resolving " + host);
+					unknownHosts.add(host);
 				}
-				this.addrs = addrs;
-			} catch (UnknownHostException e) {
-				Log.error(this.getClass().getSimpleName() + " Error resolving " + String.valueOf(this));
-				throw e;
 			}
+			if (addresses.isEmpty() && !unknownHosts.isEmpty()) {
+				throw new UnknownHostException(unknownHosts.toString());
+			}
+			final InetAddress[] addrs = addresses.toArray(new InetAddress[addresses.size()]);
+			if (opts.isOption(Options.LB_ORDER) && (addrs.length > 1)) {
+				Arrays.sort(addrs, InetAddressComparator.getInstance());
+			}
+			this.addrs = addrs;
 			Log.info(this.getClass().getSimpleName() + " Resolved " + String.valueOf(this) + " ["
 					+ fromArrAddress(addrs) + "]");
 		} else {

@@ -2,7 +2,7 @@
 
 Bouncer is an open source (Apache License, Version 2.0) Java network proxy. Do not require any external lib.
 
-### Current Stable Version is [2.2.3](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/2.2.3/bouncer-2.2.3-bin.zip)
+### Current Stable Version is [2.2.4](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/2.2.4/bouncer-2.2.4-bin.zip)
 
 ---
 
@@ -176,7 +176,6 @@ You can improve security, simply download **bcprov-jdk15on-`XXX`.jar** from [Bou
 ## TODOs
 
 * NIO?
-* Multiple remote-addr (not only multi DNS A-record)?
 * Use Log4J
 * Limit number of connections
 * Limit absolute timeout/TTL of a connection
@@ -207,6 +206,7 @@ You can improve security, simply download **bcprov-jdk15on-`XXX`.jar** from [Bou
 * Sticky sessions in LoadBalancing (v2.2.1)
 * Statistics/Accounting (v2.2.2)
 * JMX (v2.2.3)
+* Multiple remote-addr (not only multi DNS A-record) (v2.2.4)
 
 ## MISC
 Current harcoded values:
