@@ -10,20 +10,47 @@
 	</formats>
 	<includeBaseDirectory>false</includeBaseDirectory>
 	<fileSets>
+		<!-- Directories -->
+		<fileSet>
+			<directory>${project.basedir}/assembly/empty/</directory>
+			<outputDirectory>/bin/</outputDirectory>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>${project.basedir}/assembly/empty/</directory>
+			<outputDirectory>/lib/</outputDirectory>
+			<directoryMode>0755</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>${project.basedir}/assembly/empty/</directory>
+			<outputDirectory>/conf/</outputDirectory>
+			<directoryMode>0770</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>${project.basedir}/assembly/empty/</directory>
+			<outputDirectory>/keys/</outputDirectory>
+			<directoryMode>0700</directoryMode>
+		</fileSet>
+		<fileSet>
+			<directory>${project.basedir}/assembly/empty/</directory>
+			<outputDirectory>/log/</outputDirectory>
+			<directoryMode>0775</directoryMode>
+		</fileSet>
+		<!-- Directories / Files -->
+		<fileSet>
+			<directory>${project.basedir}/sampleconf/</directory>
+			<outputDirectory>/sampleconf/</outputDirectory>
+			<directoryMode>0770</directoryMode>
+			<fileMode>0660</fileMode>
+		</fileSet>
+		<!-- Files -->
 		<fileSet>
 			<directory>${project.basedir}/linux/</directory>
 			<outputDirectory>/bin/</outputDirectory>
 			<includes>
 				<include>bouncer.sh</include>
 			</includes>
-			<fileMode>0775</fileMode>
-		</fileSet>
-		<fileSet>
-			<directory>${project.basedir}/sampleconf/</directory>
-			<outputDirectory>/sampleconf/</outputDirectory>
-			<includes>
-				<include>bouncer.conf</include>
-			</includes>
+			<fileMode>0755</fileMode>
 		</fileSet>
 		<fileSet>
 			<directory>${project.basedir}/src/main/resources/</directory>
@@ -31,27 +58,7 @@
 			<includes>
 				<include>ciphersuites.conf</include>
 			</includes>
-		</fileSet>
-		<fileSet>
-			<directory>${project.basedir}/assembly/</directory>
-			<outputDirectory>/conf/</outputDirectory>
-			<includes>
-				<include>safeToDelete.tmp</include>
-			</includes>
-		</fileSet>
-		<fileSet>
-			<directory>${project.basedir}/assembly/</directory>
-			<outputDirectory>/keys/</outputDirectory>
-			<includes>
-				<include>safeToDelete.tmp</include>
-			</includes>
-		</fileSet>
-		<fileSet>
-			<directory>${project.basedir}/assembly/</directory>
-			<outputDirectory>/log/</outputDirectory>
-			<includes>
-				<include>safeToDelete.tmp</include>
-			</includes>
+			<fileMode>0660</fileMode>
 		</fileSet>
 		<fileSet>
 			<directory>${project.basedir}/</directory>
@@ -59,10 +66,12 @@
 			<includes>
 				<include>LICENSE</include>
 			</includes>
+			<fileMode>0644</fileMode>
 		</fileSet>
 	</fileSets>
 	<dependencySets>
 		<dependencySet>
+			<fileMode>0644</fileMode>
 			<outputDirectory>/lib/</outputDirectory>
 			<useProjectArtifact>true</useProjectArtifact>
 			<unpack>false</unpack>
