@@ -341,6 +341,7 @@ class MuxServer {
 					msg.toWire(os);
 				}
 			}
+			context.getStatistics().incOutMsgs().incOutBytes(msg.getBufferLen());
 		}
 
 		@Override
@@ -359,6 +360,7 @@ class MuxServer {
 					} else {
 						msg.fromWire(is);
 					}
+					context.getStatistics().incInMsgs().incInBytes(msg.getBufferLen());
 					router.onReceiveFromLocal(this, msg);
 					context.releaseMuxPacket(msg);
 				} catch (SocketTimeoutException e) {
@@ -487,6 +489,7 @@ class MuxServer {
 								if (msg == null)
 									continue;
 								msg.toWire(os);
+								context.getStatistics().incOutMsgs().incOutBytes(msg.getBufferLen());
 								sendACK(msg); // Send ACK
 								context.releaseRawPacket(msg);
 							} catch (IOException e) {
@@ -513,6 +516,7 @@ class MuxServer {
 							break OUTTER;
 						Log.info(this.getClass().getSimpleName() + " Timeout Locking: " + sock);
 					}
+					context.getStatistics().incInMsgs().incInBytes(msg.getBufferLen());
 					router.onReceiveFromRemote(this, msg);
 					context.releaseRawPacket(msg);
 				} catch (SocketTimeoutException e) {

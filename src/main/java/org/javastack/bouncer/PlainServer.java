@@ -108,7 +108,12 @@ class PlainServer {
 		public void run() {
 			Log.info(this.getClass().getSimpleName() + " started: " + outboundAddress);
 			try {
-				remote = outboundAddress.connectFrom(client.getInetAddress());
+				try {
+					context.getStatistics().incTryingConnections();
+					remote = outboundAddress.connectFrom(client.getInetAddress());
+				} finally {
+					context.getStatistics().decTryingConnections();
+				}
 				if (remote == null)
 					throw new ConnectException("Unable to connect to " + outboundAddress);
 				Log.info(this.getClass().getSimpleName() + " Bouncer from " + client + " to " + remote);
@@ -180,6 +185,7 @@ class PlainServer {
 		public void run() {
 			try {
 				if (headers != null) {
+					context.getStatistics().incOutMsgs().incOutBytes(headers.length);
 					os.write(headers, 0, headers.length);
 					os.flush();
 					headers = null;
@@ -224,8 +230,10 @@ class PlainServer {
 				context.closeSilent(sockin);
 				throw new EOFException("EOF");
 			}
+			context.getStatistics().incInMsgs().incInBytes(len);
 			os.write(buf, 0, len);
 			os.flush();
+			context.getStatistics().incOutMsgs().incOutBytes(len);
 			return true;
 		}
 	}

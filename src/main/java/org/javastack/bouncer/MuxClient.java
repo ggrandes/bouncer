@@ -226,6 +226,7 @@ class MuxClient {
 					msg.toWire(os);
 				}
 			}
+			context.getStatistics().incOutMsgs().incOutBytes(msg.getBufferLen());
 		}
 
 		@Override
@@ -241,6 +242,7 @@ class MuxClient {
 				while (!shutdown) {
 					try {
 						Log.info(this.getClass().getSimpleName() + " Connecting: " + outboundAddress);
+						context.getStatistics().incTryingConnections();
 						sock = outboundAddress.connect();
 						if (sock == null)
 							throw new ConnectException("Unable to connect to " + outboundAddress);
@@ -265,6 +267,8 @@ class MuxClient {
 						}
 						close();
 						doSleep(5000);
+					} finally {
+						context.getStatistics().decTryingConnections();
 					}
 				}
 				while (!shutdown || !mapLocals.isEmpty()) {
@@ -279,6 +283,7 @@ class MuxClient {
 						} else {
 							msg.fromWire(is);
 						}
+						context.getStatistics().incInMsgs().incInBytes(msg.getBufferLen());
 						router.onReceiveFromRemote(this, msg);
 						context.releaseMuxPacket(msg);
 					} catch (SocketTimeoutException e) {
@@ -368,7 +373,12 @@ class MuxClient {
 			Log.info(this.getClass().getSimpleName() + "::run " + outboundAddress);
 			//
 			try {
-				sock = outboundAddress.connectFrom(stickyAddress);
+				try {
+					context.getStatistics().incTryingConnections();
+					sock = outboundAddress.connectFrom(stickyAddress);
+				} finally {
+					context.getStatistics().decTryingConnections();
+				}
 				if (sock == null)
 					throw new ConnectException("Unable to connect to " + outboundAddress);
 				is = sock.getInputStream();
@@ -401,6 +411,7 @@ class MuxClient {
 								if (msg == null)
 									continue;
 								msg.toWire(os);
+								context.getStatistics().incOutMsgs().incOutBytes(msg.getBufferLen());
 								sendACK(msg); // Send ACK
 								context.releaseRawPacket(msg);
 							} catch (IOException e) {
@@ -428,6 +439,7 @@ class MuxClient {
 						Log.info(this.getClass().getSimpleName() + " Timeout Locking: " + sock);
 					}
 					// Log.info(this.getClass().getSimpleName() + "::run onReceiveFromLocal: " + sock);
+					context.getStatistics().incInMsgs().incInBytes(msg.getBufferLen());
 					router.onReceiveFromLocal(this, msg);
 					context.releaseRawPacket(msg);
 				} catch (SocketTimeoutException e) {

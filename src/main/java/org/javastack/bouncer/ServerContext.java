@@ -37,4 +37,6 @@ public interface ServerContext {
 	public void closeSilent(final ServerSocket socket);
 
 	public void closeSilent(final Socket socket);
+
+	public Statistics getStatistics();
 }

@@ -186,6 +186,7 @@ class OutboundAddress extends BouncerAddress {
 					+ (isSSL ? " (SSL) " + getSocketProtocol(sock) : ""));
 			return sock;
 		}
+		context.getStatistics().incFailedConnections();
 		return null;
 	}
 

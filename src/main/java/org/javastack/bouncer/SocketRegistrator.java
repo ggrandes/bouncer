@@ -13,32 +13,32 @@ class SocketRegistrator {
 	private final Set<Socket> cliSockets = Collections.synchronizedSet(new HashSet<Socket>());
 	private final Set<ServerSocket> srvSockets = Collections.synchronizedSet(new HashSet<ServerSocket>());
 
-	void registerSocket(final ServerSocket sock) {
+	boolean registerSocket(final ServerSocket sock) {
 		if (sock == null)
 			new NullPointerException("SocketRegistrator.registerSocket(ServerSocket==null)")
 					.printStackTrace(System.out);
-		srvSockets.add(sock);
+		return srvSockets.add(sock);
 	}
 
-	void unregisterSocket(final ServerSocket sock) {
+	boolean unregisterSocket(final ServerSocket sock) {
 		if (sock == null)
 			new NullPointerException("SocketRegistrator.unregisterSocket(ServerSocket==null)")
 					.printStackTrace(System.out);
-		srvSockets.remove(sock);
+		return srvSockets.remove(sock);
 	}
 
-	void registerSocket(final Socket sock) {
+	boolean registerSocket(final Socket sock) {
 		if (sock == null)
 			new NullPointerException("SocketRegistrator.registerSocket(Socket==null)")
 					.printStackTrace(System.out);
-		cliSockets.add(sock);
+		return cliSockets.add(sock);
 	}
 
-	void unregisterSocket(final Socket sock) {
+	boolean unregisterSocket(final Socket sock) {
 		if (sock == null)
 			new NullPointerException("SocketRegistrator.unregisterSocket(Socket==null)")
 					.printStackTrace(System.out);
-		cliSockets.remove(sock);
+		return cliSockets.remove(sock);
 	}
 
 	Set<Socket> getClientSockets() {

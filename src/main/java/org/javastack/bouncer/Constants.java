@@ -10,8 +10,9 @@ public class Constants {
 	public static final String PROP_ERR_FILE = "log.stdErrFile";
 	public static final String PROP_OUT_STDTOO = "log.stdToo";
 
-	public static final long RELOAD_CONFIG = 10000; 		// Default 10seconds
-	public static final long RELOAD_TIMEOUT = 30000; 		// Default 30seconds timeout
+	public static final int RELOAD_CONFIG = 10000; 			// Default 10seconds
+	public static final int RELOAD_TIMEOUT = 30000; 		// Default 30seconds timeout
+	public static final int STATISTICS_PRINT_INTVL = 30000; // Default 30seconds
 	public static final int BUFFER_LEN = 4096; 				// Default 4k page
 	public static final int IO_BUFFERS = 8; 				// Default 8 buffers
 	public static final int BUFFER_POOL_SIZE = 4;			// Default 4 elements (per thread)

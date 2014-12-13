@@ -36,6 +36,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
 
@@ -48,6 +50,7 @@ import org.javastack.bouncer.TaskManager.AuditableRunner;
  * @author Guillermo Grandes / guillermo.grandes[at]gmail.com
  */
 public class Bouncer implements ServerContext {
+	private static final Timer timer = new Timer("scheduled-task", true);
 	private static final GenericPoolFactory<ByteArrayOutputStream> byteArrayOutputStreamFactory = new GenericPoolFactory<ByteArrayOutputStream>() {
 		@Override
 		public ByteArrayOutputStream newInstance() {
@@ -73,6 +76,7 @@ public class Bouncer implements ServerContext {
 
 	private final LinkedHashMap<String, MuxServer> muxServers = new LinkedHashMap<String, MuxServer>();
 	private final LinkedHashMap<String, MuxClient> muxClients = new LinkedHashMap<String, MuxClient>();
+	private final Statistics stats = new Statistics();
 
 	// ============================== Global code
 
@@ -111,6 +115,13 @@ public class Bouncer implements ServerContext {
 			Log.error("Config not found: (classpath)" + Constants.CONFIG_FILE);
 			return;
 		}
+		// Schedule Statistics
+		timer.scheduleAtFixedRate(new TimerTask() {
+			@Override
+			public void run() {
+				Log.info(bouncer.getStatistics().toString());
+			}
+		}, 1000, Constants.STATISTICS_PRINT_INTVL);
 		long lastReloaded = 0;
 		while (true) {
 			InputStream isConfig = null;
@@ -175,6 +186,7 @@ public class Bouncer implements ServerContext {
 	}
 
 	void reload(final InputStream isConfig) throws NoSuchAlgorithmException, IOException {
+		stats.incReloads();
 		if (!reloadables.isEmpty() || !orderedShutdown.isEmpty()) {
 			shutdownBarrier = new CyclicBarrier(reloadables.size() + 1);
 			for (Shutdownable shut : orderedShutdown) {
@@ -446,7 +458,9 @@ public class Bouncer implements ServerContext {
 	@Override
 	public void registerSocket(final Socket socket) throws SocketException {
 		IOHelper.setupSocket(socket);
-		socketRegistry.registerSocket(socket);
+		if (socketRegistry.registerSocket(socket)) {
+			stats.incActiveConnections();
+		}
 	}
 
 	@Override
@@ -458,13 +472,21 @@ public class Bouncer implements ServerContext {
 	@Override
 	public void closeSilent(final Socket sock) {
 		IOHelper.closeSilent(sock);
-		socketRegistry.unregisterSocket(sock);
+		if (socketRegistry.unregisterSocket(sock)) {
+			stats.incAttendedConnections();
+			stats.decActiveConnections();
+		}
 	}
 
 	@Override
 	public void closeSilent(final ServerSocket sock) {
 		IOHelper.closeSilent(sock);
 		socketRegistry.unregisterSocket(sock);
+	}
+
+	@Override
+	public Statistics getStatistics() {
+		return stats;
 	}
 
 	static enum ConnectionType {
