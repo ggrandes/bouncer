@@ -19,7 +19,6 @@ public class BouncerStatistics extends Statistics implements BouncerStatisticsMB
 		final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
 		mbs.registerMBean(new AnnotatedStandardMBean(this, BouncerStatisticsMBean.class), new ObjectName(
 				MY_NAME));
-		System.out.println("INIT: " + MY_NAME);
 	}
 
 	public void destroy() throws JMException {
