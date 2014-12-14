@@ -281,7 +281,7 @@ public class Bouncer implements ServerContext {
 					// Start bouncers
 					if (ConnectionType.getTypeFromString(toks[0]) != ConnectionType.UNKNOWN_VALUE) {
 						// Expected format (bouncer style):
-						// <mux-listen|mux-connect|tun-listen|tun-connect> <mux-name> <address> <port> [opts]
+						// <mux-in|mux-out|tun-listen|tun-connect> <mux-name> <address> <port> [opts]
 						final ConnectionType connType = ConnectionType.getTypeFromString(toks[0]);
 						final String muxName = toks[1];
 						//
