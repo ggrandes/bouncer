@@ -60,7 +60,8 @@ class MuxClient {
 		synchronized (mapLocals) {
 			mapLocals.put(id, local);
 		}
-		context.submitTask(local, "MuxOutLeft-Recv[" + left + "|" + right + "|" + id + "]", ClientId.newId());
+		context.submitTask(local, "MuxOutLeft-Recv[" + id + "|" + right + "]",
+				(((long) id << 48) | ClientId.newId()));
 	}
 
 	void closeLocal(final int id) {
@@ -405,6 +406,7 @@ class MuxClient {
 				context.submitTask(new Runnable() {
 					@Override
 					public void run() {
+						Log.info(this.getClass().getName() + "::run " + sock);
 						while (!shutdown || !queue.isEmpty()) {
 							try {
 								final RawPacket msg = queue.poll(1000, TimeUnit.MILLISECONDS);
@@ -424,7 +426,7 @@ class MuxClient {
 						}
 						close();
 					}
-				}, "MuxOutLeft-Send[" + left + "|" + right + "|" + id + "]", ClientId.getId());
+				}, "MuxOutLeft-Send[" + id + "|" + right + "]", ClientId.getId());
 			}
 			//
 			OUTTER: while (!shutdown) {

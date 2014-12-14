@@ -20,7 +20,7 @@ public interface ServerContext {
 
 	public void releaseMuxPacket(final MuxPacket packet);
 
-	public void submitTask(final Runnable task, final String traceName, final int clientId);
+	public void submitTask(final Runnable task, final String traceName, final long clientId);
 
 	public void addShutdownable(final Shutdownable shutdownable);
 

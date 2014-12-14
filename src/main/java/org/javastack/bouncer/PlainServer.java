@@ -58,7 +58,8 @@ class PlainServer {
 						context.submitTask(
 								new PlainConnector(client, inboundAddress.getOpts()),
 								"ForwardConnect[" + inboundAddress + "|"
-										+ IOHelper.socketRemoteToString(client) + "]", ClientId.newId());
+										+ IOHelper.socketRemoteToString(client) + "]",
+								(((long) client.getPort() << 48) | ClientId.newId()));
 					} catch (IOException e) {
 						if (!listen.isClosed()) {
 							Log.error(this.getClass().getSimpleName() + " " + e.toString());

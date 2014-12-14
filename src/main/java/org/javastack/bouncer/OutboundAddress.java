@@ -60,7 +60,11 @@ class OutboundAddress extends BouncerAddress {
 			for (int i = 0; i < hosts.length; i++) {
 				final String host = hosts[i];
 				try {
-					addresses.addAll(Arrays.asList(InetAddress.getAllByName(host)));
+					final InetAddress[] addrs = InetAddress.getAllByName(host);
+					if (opts.isOption(Options.LB_ORDER) && (addrs.length > 1)) {
+						Arrays.sort(addrs, InetAddressComparator.getInstance());
+					}
+					addresses.addAll(Arrays.asList(addrs));
 				} catch (UnknownHostException e) {
 					Log.error(this.getClass().getSimpleName() + " Error resolving " + host);
 					unknownHosts.add(host);
@@ -69,11 +73,7 @@ class OutboundAddress extends BouncerAddress {
 			if (addresses.isEmpty() && !unknownHosts.isEmpty()) {
 				throw new UnknownHostException(unknownHosts.toString());
 			}
-			final InetAddress[] addrs = addresses.toArray(new InetAddress[addresses.size()]);
-			if (opts.isOption(Options.LB_ORDER) && (addrs.length > 1)) {
-				Arrays.sort(addrs, InetAddressComparator.getInstance());
-			}
-			this.addrs = addrs;
+			this.addrs = addresses.toArray(new InetAddress[addresses.size()]);
 			Log.info(this.getClass().getSimpleName() + " Resolved " + String.valueOf(this) + " ["
 					+ fromArrAddress(addrs) + "]");
 		} else {

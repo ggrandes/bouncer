@@ -1,25 +1,25 @@
 package org.javastack.bouncer;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class ClientId {
-	private static final AtomicInteger atomicId = new AtomicInteger(0);
-	private static final ThreadLocal<Integer> localId = new ThreadLocal<Integer>() {
+	private static final AtomicLong atomicId = new AtomicLong(0);
+	private static final ThreadLocal<Long> localId = new ThreadLocal<Long>() {
 		@Override
-		protected Integer initialValue() {
+		protected Long initialValue() {
 			return atomicId.incrementAndGet();
 		}
 	};
 
-	public static int newId() {
+	public static long newId() {
 		return atomicId.incrementAndGet();
 	}
 
-	public static int getId() {
+	public static long getId() {
 		return localId.get();
 	}
 
-	public static void setId(final Integer id) {
+	public static void setId(final Long id) {
 		localId.set(id);
 	}
 	

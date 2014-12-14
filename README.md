@@ -41,7 +41,7 @@ Bouncer is an open source (Apache License, Version 2.0) Java network proxy. Do n
 
 ---
 
-## Config (params)
+## System Properties (optional)
 
     # To redir stdout/stderr to (auto-daily-rotated) files you can use:
     -Dlog.stdOutFile=/var/log/bouncer.out -Dlog.stdErrFile=/var/log/bouncer.err
@@ -59,12 +59,14 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     # Reverse Tunneling (Bouncer 2.x syntax)
     # <mux-listen|tun-listen> <mux-name> <listen-addr> <listen-port> [opts]
     # <mux-connect|tun-connect> <mux-name> <remote-addr> <remote-port> [opts]
+    
+    # Note: <remote-addr> can be a coma separated list of addresses, like "srv1,srv2,192.168.1.1"
 
 ###### Options are comma separated:
 
 * Options for outgoing connections
     * Loadbalancing/Failover (only one option can be used)
-        * **LB=ORDER**: active failover-only in DNS order (IP sorted, lower first)
+        * **LB=ORDER**: active failover-only in order (DNS resolved IP address are sorted, lower first)
         * **LB=RR**: active LoadBalancing in DNS order (round-robin)
         * **LB=RAND**: activate LoadBalancing in DNS random order
     * Sticky Session
@@ -86,6 +88,12 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
         * **MUX=SSL**: activate SSL/TLS encryption in multiplexor (see SSL=xxx)
             * **SSL=server.crt:server.key:client.crt**: specify files for SSL/TLS config (server/mux-in)
             * **SSL=client.crt:client.key:server.crt**: specify files for SSL/TLS config (client/mux-out)
+
+###### Notes about LB policies:
+
+* **LB=ORDER**: ordering of \<remote-addr\> is preserved, but DNS resolved records are sorted numerically before create address list, Example config: srv3,srv2,10.1.1.1 (DNS query return {10.1.3.7,10.1.3.8} for srv3 and {10.1.2.**9**,10.1.2.**3**} for srv2), the resulting Address list will be: {10.1.3.7,10.1.3.8,10.1.2.**3**,10.1.2.**9**,10.1.1.1}. All connections will be always for 10.1.3.7, if down, 10.1.3.8, and so on. If Sticky is enabled this have preference over address order (no failback). 
+* **LB=RR**: ordering of \<remote-addr\> is preserved, and DNS resolved records are not sorted numerically before create address list, Example config: srv3,srv2,10.1.1.1 (DNS query return {10.1.3.7,10.1.3.8} for srv3 and {10.1.2.9,10.1.2.3} for srv2), the resulting Address list will be: {10.1.3.7,10.1.3.8,10.1.2.9,10.1.2.3,10.1.1.1}. The connections are rotative over all addresses for all clients, 10.1.3.7,10.1.3.8,...,10.1.1.1,and again 10.1.3.7,... if an address is down, picks next, and so on.... until a full turn. 
+* **LB=RAND**: ordering of \<remote-addr\> is not preserved, and DNS resolved records are not sorted numerically before create address list, instead, all addreses are agregated and shuffled on every connection, Example config: srv3,srv2,10.1.1.1 (DNS query return {10.1.3.7,10.1.3.8} for srv3 and {10.1.2.9,10.1.2.3} for srv2), the resulting Address list can be: {10.1.3.8,10.1.1.1,10.1.3.7,10.1.2.9,10.1.2.3}. The connection first try 10.1.3.8, if down, 10.1.1.1, and so on.... until 10.1.2.3. 
 
 ###### Notes about security:
 

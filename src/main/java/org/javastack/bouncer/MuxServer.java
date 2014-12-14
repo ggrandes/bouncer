@@ -267,9 +267,9 @@ class MuxServer {
 			final MuxServerRemote remote = new MuxServerRemote(socket, inboundAddress);
 			remote.setRouter(router);
 			mapRemotes.put(remote.getId(), remote);
-			context.submitTask(remote,
-					"MuxInRight-Recv[" + left + "|" + right + "|" + IOHelper.socketRemoteToString(socket)
-							+ "|" + socket.getPort() + "]", ClientId.newId());
+			context.submitTask(remote, "MuxInRight-Recv[" + socket.getPort() + "|" + left + "|" + right + "|"
+					+ IOHelper.socketRemoteToString(socket) + "]",
+					(((long) socket.getPort() << 48) | ClientId.newId()));
 		}
 	}
 
@@ -502,7 +502,7 @@ class MuxServer {
 						}
 						close();
 					}
-				}, "MuxInRight-Send[" + inboundAddress + "|" + IOHelper.socketRemoteToString(sock) + "|" + id
+				}, "MuxInRight-Send[" + id + "|" + inboundAddress + "|" + IOHelper.socketRemoteToString(sock)
 						+ "]", ClientId.getId());
 			}
 			//

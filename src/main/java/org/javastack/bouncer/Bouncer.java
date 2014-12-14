@@ -435,7 +435,7 @@ public class Bouncer implements ServerContext {
 	}
 
 	@Override
-	public void submitTask(final Runnable task, final String traceName, final int clientId) {
+	public void submitTask(final Runnable task, final String traceName, final long clientId) {
 		taskMgr.submitTask(task, traceName, clientId);
 	}
 

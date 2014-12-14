@@ -15,7 +15,7 @@ class TaskManager {
 	private final Map<Integer, AuditableRunner> taskList = Collections
 			.synchronizedMap(new HashMap<Integer, AuditableRunner>());
 
-	void submitTask(final Runnable task, final String traceName, final int clientId) {
+	void submitTask(final Runnable task, final String traceName, final long clientId) {
 		final int taskNum = taskCounter.incrementAndGet();
 		Log.info("Task: [" + taskNum + "] New: " + task);
 		threadPool.submit(new AuditableRunner() {
@@ -23,8 +23,7 @@ class TaskManager {
 			public void run() {
 				setClientId(clientId);
 				setThread(Thread.currentThread());
-				thread.setName("task" + taskNum + ":th" + Thread.currentThread().getId() + ":id"
-						+ SimpleHex.intAsHex(clientId) + ":" + traceName);
+				thread.setName("task" + taskNum + ":th" + Thread.currentThread().getId() + ":" + traceName);
 				try {
 					taskList.put(taskNum, this);
 					Log.info("Task [" + taskNum + "] Start: " + task);
@@ -33,6 +32,7 @@ class TaskManager {
 					Log.info("Task [" + taskNum + "] End: " + task);
 					taskList.remove(taskNum);
 					setThread(null);
+					destroyClientId();
 				}
 			}
 
@@ -58,12 +58,16 @@ class TaskManager {
 			return thread;
 		}
 
-		int getClientId() {
+		long getClientId() {
 			return ClientId.getId();
 		}
 
-		void setClientId(final int clientId) {
+		void setClientId(final long clientId) {
 			ClientId.setId(clientId);
+		}
+
+		void destroyClientId() {
+			ClientId.destroy();
 		}
 	}
 
