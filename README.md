@@ -57,8 +57,8 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     # <listen-addr> <listen-port> <remote-addr> <remote-port> [opts]
     
     # Reverse Tunneling (Bouncer 2.x syntax)
-    # <mux-listen|tun-listen> <mux-name> <listen-addr> <listen-port> [opts]
-    # <mux-connect|tun-connect> <mux-name> <remote-addr> <remote-port> [opts]
+    # <mux-in|tun-listen> <mux-name> <listen-addr> <listen-port> [opts]
+    # <mux-out|tun-connect> <mux-name> <remote-addr> <remote-port> [opts]
     
     # Note: <remote-addr> can be a coma separated list of addresses, like "srv1,srv2,192.168.1.1"
 
@@ -78,8 +78,8 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
 * Options for Reverse Tunneling (MUX)
     * **TUN_ID=number**: When use Bouncer 2.x syntax you can create multiple Tunnels over same mux, use this ID for associate both ends.
     * Select operation of MUX (only one option can be used) in Bouncer 1.x config
-        * **MUX=IN**: activate input-terminator multiplexor (Bouncer 2.x syntax: `mux-listen, tun-listen`)
-        * **MUX=OUT**: activate output-initiator multiplexor (Bouncer 2.x syntax: `mux-connect, tun-connect`)
+        * **MUX=IN**: activate input-terminator multiplexor (Bouncer 2.x syntax: `mux-in, tun-listen`)
+        * **MUX=OUT**: activate output-initiator multiplexor (Bouncer 2.x syntax: `mux-out, tun-connect`)
     * Options for encryption (optional -AES or SSL or NONE-):
         * **MUX=AES**: activate AES encryption in multiplexor (see AES=sharedsecret)
             * **AES=sharedsecret**: specify the password for AES (no white spaces, no comma sign, no equals sign)
@@ -120,8 +120,8 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     192.168.1.1 80 192.168.2.1 5555 MUX=OUT
     
     ### Bouncer 2.x syntax, with support for multi-port ###
-    # <mux-connect|tun-connect> <mux-name> <remote-addr> <remote-port> [opts]
-    mux-connect mux1 127.0.0.1 5555
+    # <mux-out|tun-connect> <mux-name> <remote-addr> <remote-port> [opts]
+    mux-out mux1 127.0.0.1 5555
     tun-connect mux1 192.168.2.1 80 TUN_ID=1
     tun-connect mux1 192.168.2.1 22 TUN_ID=2
 
@@ -132,8 +132,8 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     192.168.2.1 5555 127.0.0.1 8080 MUX=IN
 
     ### Bouncer 2.x syntax, with support for multi-port ###
-    # <mux-listen|tun-listen> <mux-name> <listen-addr> <listen-port> [opts]
-    mux-listen mux1 192.168.2.1 5555
+    # <mux-in|tun-listen> <mux-name> <listen-addr> <listen-port> [opts]
+    mux-in mux1 192.168.2.1 5555
     tun-listen mux1 127.0.0.1 8080 TUN_ID=1
     tun-listen mux1 127.0.0.1 2222 TUN_ID=2
  
@@ -146,8 +146,8 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     192.168.1.1 80 192.168.2.1 5555 MUX=OUT,MUX=SSL,SSL=peerA.crt:peerA.key:peerB.crt
     
     ### Bouncer 2.x syntax, with support for multi-port ###
-    # <mux-connect|tun-connect> <mux-name> <remote-addr> <remote-port> [opts]
-    mux-connect mux1 127.0.0.1 5555 MUX=SSL,SSL=peerA.crt:peerA.key:peerB.crt
+    # <mux-out|tun-connect> <mux-name> <remote-addr> <remote-port> [opts]
+    mux-out mux1 127.0.0.1 5555 MUX=SSL,SSL=peerA.crt:peerA.key:peerB.crt
     tun-connect mux1 192.168.2.1 80 TUN_ID=1
     tun-connect mux1 192.168.2.1 22 TUN_ID=2
 
@@ -158,8 +158,8 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     192.168.2.1 5555 127.0.0.1 8080 MUX=IN,MUX=SSL,SSL=peerB.crt:peerB.key:peerA.crt
 
     ### Bouncer 2.x syntax, with support for multi-port ###
-    # <mux-listen|tun-listen> <mux-name> <listen-addr> <listen-port> [opts]
-    mux-listen mux1 192.168.2.1 5555 MUX=SSL,SSL=peerB.crt:peerB.key:peerA.crt
+    # <mux-in|tun-listen> <mux-name> <listen-addr> <listen-port> [opts]
+    mux-in mux1 192.168.2.1 5555 MUX=SSL,SSL=peerB.crt:peerB.key:peerA.crt
     tun-listen mux1 127.0.0.1 8080 TUN_ID=1
     tun-listen mux1 127.0.0.1 2222 TUN_ID=2
 

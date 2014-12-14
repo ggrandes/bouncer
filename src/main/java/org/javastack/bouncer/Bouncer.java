@@ -331,6 +331,7 @@ public class Bouncer implements ServerContext {
 			final Options opts) throws IOException, GeneralSecurityException {
 		final SSLFactory sslFactory = getSSLFactory(opts);
 		switch (connType) {
+			case MUX_IN:
 			case MUX_LISTEN: {
 				final Options lopts = new Options(opts).unsetOptionsPlain();
 				final InboundAddress left = new InboundAddress(this, addr, port, lopts); // MUX
@@ -340,6 +341,7 @@ public class Bouncer implements ServerContext {
 				mux.listenLocal();
 				break;
 			}
+			case MUX_OUT:
 			case MUX_CONNECT: {
 				final Options ropts = new Options(opts).unsetOptionsPlain();
 				final OutboundAddress right = new OutboundAddress(this, addr, port, ropts); // MUX
@@ -503,7 +505,7 @@ public class Bouncer implements ServerContext {
 	}
 
 	static enum ConnectionType {
-		MUX_LISTEN, MUX_CONNECT, TUN_LISTEN, TUN_CONNECT, UNKNOWN_VALUE;
+		MUX_IN, MUX_LISTEN, MUX_OUT, MUX_CONNECT, TUN_LISTEN, TUN_CONNECT, UNKNOWN_VALUE;
 
 		static ConnectionType getTypeFromString(final String value) {
 			if (value != null) {
