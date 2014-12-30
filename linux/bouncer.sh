@@ -1,5 +1,4 @@
 #!/bin/bash
-JAVA_HOME=${JAVA_HOME:-/opt/java/java-current}
 BOUNCER_HOME=${BOUNCER_HOME:-/opt/bouncer}
 BOUNCER_CONF=${BOUNCER_CONF:-bouncer.conf}
 BOUNCER_CLASSPATH=$(echo $BOUNCER_HOME/lib/*.jar | tr ' ' ':')
@@ -17,15 +16,21 @@ do_keygen () {
     exit 1;
   fi
   cd "${BOUNCER_HOME}/keys/"
-  ${JAVA_HOME}/bin/java \
+  java \
     -cp "${BOUNCER_CLASSPATH}" \
     org.javastack.bouncer.KeyGenerator $bits $days $cn $filebase
   #chmod go-rwx "${filebase}.key"
   ls -al "${BOUNCER_HOME}/keys/${filebase}."*
 }
+do_run () {
+  cd ${BOUNCER_HOME}
+  java -Dprogram.name=bouncer -Xmx64m \
+    -cp "${BOUNCER_HOME}/conf/:${BOUNCER_HOME}/keys/:${BOUNCER_CLASSPATH}" \
+    org.javastack.bouncer.Bouncer
+}
 do_start () {
   cd ${BOUNCER_HOME}
-  nohup ${JAVA_HOME}/bin/java -Dprogram.name=bouncer -Xmx64m \
+  nohup java -Dprogram.name=bouncer -Xmx64m \
     -cp "${BOUNCER_HOME}/conf/:${BOUNCER_HOME}/keys/:${BOUNCER_CLASSPATH}" \
     -Dlog.stdOutFile=${BOUNCER_HOME}/log/bouncer.out \
     -Dlog.stdErrFile=${BOUNCER_HOME}/log/bouncer.err \
@@ -57,6 +62,11 @@ do_status () {
   fi
 }
 case "$1" in
+  run)
+    do_stop
+    trap do_stop SIGINT SIGTERM
+    do_run
+  ;;
   start)
     do_stop
     do_start
@@ -78,6 +88,6 @@ case "$1" in
     do_keygen $2 $3 $4 $5
   ;;
   *)
-    echo "$0 <start|stop|restart|reload|status|keygen>"
+    echo "$0 <run|start|stop|restart|reload|status|keygen>"
   ;;
 esac
