@@ -1,6 +1,9 @@
 #!/bin/bash
 BOUNCER_HOME=${BOUNCER_HOME:-/opt/bouncer}
 BOUNCER_CONF=${BOUNCER_CONF:-bouncer.conf}
+BOUNCER_MEM_MB=${BOUNCER_MEM_MB:-64}
+BOUNCER_OPTS_DEF="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+PrintGCTimeStamps -showversion -XX:+PrintCommandLineFlags -XX:-PrintFlagsFinal"
+BOUNCER_OPTS="${BOUNCER_OPTS:-${BOUNCER_OPTS_DEF}}"
 BOUNCER_CLASSPATH=$(echo $BOUNCER_HOME/lib/*.jar | tr ' ' ':')
 #
 do_reload () {
@@ -24,17 +27,18 @@ do_keygen () {
 }
 do_run () {
   cd ${BOUNCER_HOME}
-  java -Dprogram.name=bouncer -Xmx64m \
+  java -Dprogram.name=bouncer ${BOUNCER_OPTS} -Xmx${BOUNCER_MEM_MB}m \
     -cp "${BOUNCER_HOME}/conf/:${BOUNCER_HOME}/keys/:${BOUNCER_CLASSPATH}" \
     org.javastack.bouncer.Bouncer
 }
 do_start () {
   cd ${BOUNCER_HOME}
-  nohup java -Dprogram.name=bouncer -Xmx64m \
+  echo "$(date --iso-8601=seconds) Starting" >> ${BOUNCER_HOME}/log/bouncer.bootstrap
+  nohup java -Dprogram.name=bouncer ${BOUNCER_OPTS} -Xmx${BOUNCER_MEM_MB}m \
     -cp "${BOUNCER_HOME}/conf/:${BOUNCER_HOME}/keys/:${BOUNCER_CLASSPATH}" \
     -Dlog.stdOutFile=${BOUNCER_HOME}/log/bouncer.out \
     -Dlog.stdErrFile=${BOUNCER_HOME}/log/bouncer.err \
-    org.javastack.bouncer.Bouncer 1>${BOUNCER_HOME}/log/bouncer.bootstrap 2>&1 &
+    org.javastack.bouncer.Bouncer 1>>${BOUNCER_HOME}/log/bouncer.bootstrap 2>&1 &
   PID="$!"
   echo "Bouncer: STARTED [${PID}]"
 }
@@ -43,6 +47,7 @@ do_stop () {
   if [ "${PID}" = "" ]; then
     echo "Bouncer: NOT RUNNING"
   else
+    echo "$(date --iso-8601=seconds) Killing: ${PID}" >> ${BOUNCER_HOME}/log/bouncer.bootstrap
     echo -n "Bouncer: KILLING [${PID}]"
     kill -TERM ${PID}
     echo -n "["
