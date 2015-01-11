@@ -91,6 +91,11 @@ public class Bouncer implements ServerContext {
 	// ============================== Global code
 
 	public static void main(final String[] args) throws Exception {
+		if (args.length < 1) {
+			System.out.println(Bouncer.class.getName() + " <configName>");
+			return;
+		}
+		final String configFile = args[0];
 		final Bouncer bouncer = new Bouncer();
 		//
 		// Init Log System
@@ -120,9 +125,9 @@ public class Bouncer implements ServerContext {
 			Log.warn("Unable to register BouncyCastleProvider: " + t.toString());
 		}
 		// Read config
-		final URL urlConfig = bouncer.getClass().getResource(Constants.CONFIG_FILE);
+		final URL urlConfig = bouncer.getClass().getResource("/" + configFile);
 		if (urlConfig == null) {
-			Log.error("Config not found: (classpath)" + Constants.CONFIG_FILE);
+			Log.error("Config not found: (classpath) " + configFile);
 			return;
 		}
 		// Start JMX

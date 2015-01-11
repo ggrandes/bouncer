@@ -29,7 +29,7 @@ do_run () {
   cd ${BOUNCER_HOME}
   java -Dprogram.name=bouncer ${BOUNCER_OPTS} -Xmx${BOUNCER_MEM_MB}m \
     -cp "${BOUNCER_HOME}/conf/:${BOUNCER_HOME}/keys/:${BOUNCER_CLASSPATH}" \
-    org.javastack.bouncer.Bouncer
+    org.javastack.bouncer.Bouncer ${BOUNCER_CONF}
 }
 do_start () {
   cd ${BOUNCER_HOME}
@@ -38,7 +38,7 @@ do_start () {
     -cp "${BOUNCER_HOME}/conf/:${BOUNCER_HOME}/keys/:${BOUNCER_CLASSPATH}" \
     -Dlog.stdOutFile=${BOUNCER_HOME}/log/bouncer.out \
     -Dlog.stdErrFile=${BOUNCER_HOME}/log/bouncer.err \
-    org.javastack.bouncer.Bouncer 1>>${BOUNCER_HOME}/log/bouncer.bootstrap 2>&1 &
+    org.javastack.bouncer.Bouncer ${BOUNCER_CONF} 1>>${BOUNCER_HOME}/log/bouncer.bootstrap 2>&1 &
   PID="$!"
   echo "Bouncer: STARTED [${PID}]"
 }
