@@ -54,10 +54,15 @@ class MuxServer {
 
 	void listenRemote() throws IOException {
 		for (InboundAddress right : this.right.values()) {
-			final MuxServerListenRemote remoteListen = new MuxServerListenRemote(right); // Remote is RAW
-			this.remoteListen.add(remoteListen);
-			context.addReloadableAwaiter(remoteListen);
-			context.submitTask(remoteListen, "MuxInListenRight[" + left + "|" + right + "]", ClientId.newId());
+			try {
+				final MuxServerListenRemote remoteListen = new MuxServerListenRemote(right); // Remote is RAW
+				this.remoteListen.add(remoteListen);
+				context.addReloadableAwaiter(remoteListen);
+				context.submitTask(remoteListen, "MuxInListenRight[" + left + "|" + right + "]",
+						ClientId.newId());
+			} catch (IOException e) {
+				Log.error(this.getClass().getSimpleName() + "::listenRemote " + e.toString(), e);
+			}
 		}
 	}
 
@@ -196,24 +201,30 @@ class MuxServer {
 			while (!shutdown) {
 				try {
 					final Socket socket = listen.accept();
-					context.registerSocket(socket);
-					final Integer pReadTimeout = inboundAddress.getOpts().getInteger(Options.P_READ_TIMEOUT);
-					if (pReadTimeout != null) {
-						socket.setSoTimeout(pReadTimeout.intValue());
+					try {
+						context.registerSocket(socket);
+						final Integer pReadTimeout = inboundAddress.getOpts().getInteger(
+								Options.P_READ_TIMEOUT);
+						if (pReadTimeout != null) {
+							socket.setSoTimeout(pReadTimeout.intValue());
+						}
+						if (socket instanceof SSLSocket) {
+							((SSLSocket) socket).startHandshake();
+						}
+						Log.info(this.getClass().getSimpleName() + " new socket: " + socket
+								+ " SendBufferSize=" + socket.getSendBufferSize() + " ReceiveBufferSize="
+								+ socket.getReceiveBufferSize());
+						attender(socket);
+					} catch (Exception e) {
+						Log.error(this.getClass().getSimpleName() + " Exception: " + e.toString(), e);
+						context.closeSilent(socket);
 					}
-					if (socket instanceof SSLSocket) {
-						((SSLSocket) socket).startHandshake();
-					}
-					Log.info(this.getClass().getSimpleName() + " new socket: " + socket + " SendBufferSize="
-							+ socket.getSendBufferSize() + " ReceiveBufferSize="
-							+ socket.getReceiveBufferSize());
-					attender(socket);
-				} catch (IOException e) {
-					if (!shutdown)
-						Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
-					doSleep(500);
+				} catch (SocketTimeoutException e) {
+					continue;
 				} catch (Exception e) {
-					Log.error(this.getClass().getSimpleName() + " Generic exception", e);
+					if (!shutdown) {
+						Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
+					}
 					doSleep(1000);
 				}
 			}
@@ -250,6 +261,7 @@ class MuxServer {
 				// Only one concurrent client, close the new connection
 				Log.error(this.getClass().getSimpleName()
 						+ " This listener already connected, closing socket: " + socket);
+				sendNOP(); // FIXME: Try to check
 				doSleep(1000);
 				context.closeSilent(socket);
 			}
@@ -506,15 +518,17 @@ class MuxServer {
 						+ "]", ClientId.getId());
 			}
 			//
+			int pkt = 0;
 			OUTTER: while (!shutdown) {
 				try {
 					final RawPacket msg = context.allocateRawPacket();
 					msg.fromWire(is);
 					msg.setIdChannel(id);
+					pkt++;
 					while (!lock(msg.getBufferLen())) {
 						if (shutdown)
 							break OUTTER;
-						Log.info(this.getClass().getSimpleName() + " Timeout Locking: " + sock);
+						Log.info(this.getClass().getSimpleName() + " Timeout Locking(" + pkt + "): " + sock);
 					}
 					context.getStatistics().incInMsgs().incInBytes(msg.getBufferLen());
 					router.onReceiveFromRemote(this, msg);

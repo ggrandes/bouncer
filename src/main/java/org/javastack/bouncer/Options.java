@@ -8,6 +8,7 @@ import java.util.Map.Entry;
 public class Options {
 	public static final String S_NULL = "";
 	public static final Integer I_NULL = Integer.valueOf(0);
+	public static final Long L_NULL = Long.valueOf(0);
 	// Load Balancing Policies
 	// @formatter:off
 	public static final int LB_ORDER     = 0x00000000; 	// Original order, pick next only on error
@@ -19,6 +20,8 @@ public class Options {
 	public static final int MUX_OUT      = 0x00000100; 	// Multiplexor initiator (outbound)
 	public static final int MUX_IN       = 0x00000200; 	// Multiplexor terminator (inbound)
 	public static final int PROXY_SEND   = 0x00001000; 	// Send PROXY protocol (outbound)
+	public static final int CLUSTER_AES  = 0x00020000; 	// Encryption of CLUSTER with AES+PreSharedKey
+	public static final int CLUSTER_SSL  = 0x00040000; 	// Encryption of CLUSTER with SSL/TLS
 	// @formatter:on
 	//
 	public static final String P_AES = "AES";
@@ -30,6 +33,7 @@ public class Options {
 	public static final String P_MUX_NAME = "MUX_NAME";
 	public static final String P_TUN_ID = "TUN_ID";
 	public static final String P_STICKY = "STICKY";
+	public static final String P_CLUSTER_ID = "CLUSTER_ID";
 	//
 	@SuppressWarnings("serial")
 	private final static Map<String, Integer> MAP_FLAGS = Collections
@@ -44,6 +48,8 @@ public class Options {
 					put("MUX=AES", MUX_AES);
 					put("MUX=SSL", MUX_SSL);
 					put("PROXY=SEND", PROXY_SEND);
+					put("CLUSTER=AES", CLUSTER_AES);
+					put("CLUSTER=SSL", CLUSTER_SSL);
 				}
 			});
 	//
@@ -55,8 +61,9 @@ public class Options {
 			put(P_MUX_NAME, S_NULL); 	// MUX_NAME=<muxName>
 			put(P_AES, S_NULL); 		// AES=<key>
 			put(P_AES_ALG, S_NULL); 	// AESALG=<cipherAlgorithm>
-			put(P_SSL, S_NULL); 		// SSL=server.crt:server.key:client.crt (MUX-IN) ||
-			// SSL=client.crt:client.key:server.crt (MUX-OUT)
+			// SSL=server.crt:server.key:client.crt (MUX-IN|CLUSTER-LISTER)
+			// SSL=client.crt:client.key:server.crt (MUX-OUT|CLUSTER-PEER)
+			put(P_SSL, S_NULL);
 			put(P_STICKY, S_NULL);		// STICKY=MEM:bitmask:elements:ttl
 		}
 	});
@@ -67,6 +74,13 @@ public class Options {
 			put(P_READ_TIMEOUT, I_NULL); 	// READ_TIMEOUT=millis
 			put(P_TUN_ID, I_NULL); 			// TUN_ID=<idEndPoint>
 			put(P_AES_BITS, I_NULL); 		// AESBITS=<keyLengthInBits>
+		}
+	});
+
+	@SuppressWarnings("serial")
+	final Map<String, Long> longParams = Collections.synchronizedMap(new HashMap<String, Long>() {
+		{
+			put(P_CLUSTER_ID, L_NULL); 		// CLUSTER_ID=<idCluster>
 		}
 	});
 
@@ -82,6 +96,9 @@ public class Options {
 		}
 		for (Entry<String, Integer> e : old.intParams.entrySet()) {
 			intParams.put(e.getKey(), e.getValue());
+		}
+		for (Entry<String, Long> e : old.longParams.entrySet()) {
+			longParams.put(e.getKey(), e.getValue());
 		}
 	}
 
@@ -135,13 +152,30 @@ public class Options {
 		intParams.put(name, value);
 	}
 
+	public Long getLong(final String name, final Long def) {
+		final Long value = longParams.get(name);
+		if (value == L_NULL) {
+			return def;
+		}
+		return value;
+	}
+
+	public Long getLong(final String name) {
+		return getLong(name, null);
+	}
+
+	public void setLong(final String name, Long value) {
+		if (value == null) {
+			value = L_NULL;
+		}
+		longParams.put(name, value);
+	}
+
 	/**
 	 * Helper (remove options that only apply to MUX)
 	 */
 	public Options unsetOptionsMUX() {
 		unsetFlags(MUX_OUT | MUX_IN | MUX_AES | MUX_SSL);
-		setString(P_AES, null);
-		setString(P_SSL, null);
 		return this;
 	}
 
@@ -150,6 +184,14 @@ public class Options {
 	 */
 	public Options unsetOptionsPlain() {
 		unsetFlags(TUN_SSL);
+		return this;
+	}
+
+	/**
+	 * Helper (remove options that only apply to Cluster Connections)
+	 */
+	public Options unsetOptionsCluster() {
+		unsetFlags(CLUSTER_AES | CLUSTER_SSL);
 		return this;
 	}
 
@@ -177,9 +219,9 @@ public class Options {
 			final int KEY = 0, VALUE = 1;
 			final String[] optKV = opt.split("=");
 			// Process Flags
-			final Integer i = MAP_FLAGS.get(opt.toUpperCase());
-			if (i != null) {
-				ret |= i.intValue();
+			final Integer f = MAP_FLAGS.get(opt.toUpperCase());
+			if (f != null) {
+				ret |= f.intValue();
 			}
 			// Process String Params
 			final String s = strParams.get(optKV[KEY].toUpperCase());
@@ -187,9 +229,14 @@ public class Options {
 				strParams.put(optKV[KEY], optKV[VALUE]);
 			}
 			// Process Integer Params
-			final Integer ii = intParams.get(optKV[KEY].toUpperCase());
-			if (ii != null) {
+			final Integer i = intParams.get(optKV[KEY].toUpperCase());
+			if (i != null) {
 				intParams.put(optKV[KEY], Integer.valueOf(optKV[VALUE]));
+			}
+			// Process Long Params
+			final Long l = longParams.get(optKV[KEY].toUpperCase());
+			if (l != null) {
+				longParams.put(optKV[KEY], Long.valueOf(optKV[VALUE]));
 			}
 		}
 		return ret;
@@ -237,11 +284,22 @@ public class Options {
 				i++;
 			}
 		}
+		// Longs
+		for (Entry<String, Long> e : longParams.entrySet()) {
+			final String key = e.getKey();
+			final Long value = e.getValue();
+			if (value != L_NULL) {
+				if (i > 0)
+					sb.append(",");
+				sb.append(key).append("=").append(value);
+				i++;
+			}
+		}
 		return sb.toString();
 	}
 
 	public void setMuxName(final String muxName) {
-		strParams.put(P_MUX_NAME, muxName);
+		setString(P_MUX_NAME, muxName);
 	}
 
 	public String getMuxName() {
@@ -253,7 +311,7 @@ public class Options {
 	}
 
 	public StickyConfig getStickyConfig() {
-		// STICKY=MEM:bitmask:elements:ttl
+		// STICKY=MEM:bitmask:elements:ttl[:cluster-name:replication-name]
 		if (stickyConfig == null) {
 			int i = 0;
 			final String cfg = getString(P_STICKY);
@@ -265,9 +323,19 @@ public class Options {
 				final int bitmask = Short.parseShort(toks[i++]);
 				final int elements = Integer.parseInt(toks[i++]);
 				final int ttl = Integer.parseInt(toks[i++]);
-				stickyConfig = new StickyConfig(type, bitmask, elements, ttl);
+				final long clusterId = ((i < toks.length) ? IOHelper.longIdFromString(toks[i++]) : 0);
+				final long replicationId = ((i < toks.length) ? IOHelper.longIdFromString(toks[i++]) : 0);
+				stickyConfig = new StickyConfig(type, bitmask, elements, ttl, clusterId, replicationId);
 			}
 		}
 		return stickyConfig;
+	}
+
+	public void setClusterID(final long clusterId) {
+		setLong(P_CLUSTER_ID, Long.valueOf(clusterId));
+	}
+
+	public Long getClusterID() {
+		return getLong(P_CLUSTER_ID, Long.valueOf(0));
 	}
 }

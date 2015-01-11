@@ -48,24 +48,29 @@ class PlainServer {
 				while (!shutdown) {
 					try {
 						final Socket client = listen.accept();
-						context.registerSocket(client);
-						final Integer pReadTimeout = inboundAddress.getOpts().getInteger(
-								Options.P_READ_TIMEOUT);
-						if (pReadTimeout != null) {
-							client.setSoTimeout(pReadTimeout);
+						try {
+							context.registerSocket(client);
+							final Integer pReadTimeout = inboundAddress.getOpts().getInteger(
+									Options.P_READ_TIMEOUT);
+							if (pReadTimeout != null) {
+								client.setSoTimeout(pReadTimeout);
+							}
+							Log.info(this.getClass().getSimpleName() + " New client from=" + client);
+							context.submitTask(
+									new PlainConnector(client, inboundAddress.getOpts()),
+									"ForwardConnect[" + inboundAddress + "|"
+											+ IOHelper.socketRemoteToString(client) + "]",
+									(((long) client.getPort() << 48) | ClientId.newId()));
+						} catch (Exception e) {
+							Log.error(this.getClass().getSimpleName() + " Exception: " + e.toString(), e);
+							context.closeSilent(client);
 						}
-						Log.info(this.getClass().getSimpleName() + " New client from=" + client);
-						context.submitTask(
-								new PlainConnector(client, inboundAddress.getOpts()),
-								"ForwardConnect[" + inboundAddress + "|"
-										+ IOHelper.socketRemoteToString(client) + "]",
-								(((long) client.getPort() << 48) | ClientId.newId()));
-					} catch (IOException e) {
-						if (!listen.isClosed()) {
-							Log.error(this.getClass().getSimpleName() + " " + e.toString());
-						}
+					} catch (SocketTimeoutException e) {
+						continue;
 					} catch (Exception e) {
-						Log.error(this.getClass().getSimpleName() + " Generic exception", e);
+						if (!listen.isClosed()) {
+							Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
+						}
 					}
 				}
 			} catch (IOException e) {
@@ -100,8 +105,11 @@ class PlainServer {
 		}
 
 		void close() {
-			context.closeSilent(client);
-			context.closeSilent(remote);
+			// FIXME: java.lang.NullPointerException: SocketRegistrator.unregisterSocket(Socket==null)
+			if (client != null)
+				context.closeSilent(client);
+			if (remote != null)
+				context.closeSilent(remote);
 		}
 
 		@Override

@@ -19,6 +19,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
@@ -28,10 +29,12 @@ import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.security.Provider;
 import java.security.Security;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
@@ -71,6 +74,8 @@ public class Bouncer implements ServerContext {
 			Constants.BUFFER_POOL_SIZE);
 	private final GenericPool<MuxPacket> poolMux = new GenericPool<MuxPacket>(MuxPacket.GENERIC_POOL_FACTORY,
 			Constants.BUFFER_POOL_SIZE);
+	private final GenericPool<ClusterPacket> poolCluster = new GenericPool<ClusterPacket>(
+			ClusterPacket.GENERIC_POOL_FACTORY, Constants.BUFFER_POOL_SIZE);
 	private final GenericPool<ByteArrayOutputStream> poolBAOS = new GenericPool<ByteArrayOutputStream>(
 			byteArrayOutputStreamFactory, Constants.BUFFER_POOL_SIZE);
 	private final TaskManager taskMgr = new TaskManager();
@@ -79,6 +84,8 @@ public class Bouncer implements ServerContext {
 
 	private final LinkedHashMap<String, MuxServer> muxServers = new LinkedHashMap<String, MuxServer>();
 	private final LinkedHashMap<String, MuxClient> muxClients = new LinkedHashMap<String, MuxClient>();
+	private final LinkedHashMap<Long, List<ClusterClient>> clusterClients = new LinkedHashMap<Long, List<ClusterClient>>();
+	private final LinkedHashMap<StickyKey, StickyStore<InetAddress, InetAddress>> clusterStickies = new LinkedHashMap<StickyKey, StickyStore<InetAddress, InetAddress>>();
 	private final BouncerStatistics stats = new BouncerStatistics();
 
 	// ============================== Global code
@@ -257,6 +264,8 @@ public class Bouncer implements ServerContext {
 		}
 		//
 		cipherSuites = new CipherSuites();
+		clusterClients.clear();
+		clusterStickies.clear();
 		//
 		final BufferedReader in = new BufferedReader(new InputStreamReader(isConfig));
 		String line = null;
@@ -283,18 +292,45 @@ public class Bouncer implements ServerContext {
 						// Expected format (bouncer style):
 						// <mux-in|mux-out|tun-listen|tun-connect> <mux-name> <address> <port> [opts]
 						final ConnectionType connType = ConnectionType.getTypeFromString(toks[0]);
-						final String muxName = toks[1];
-						//
-						final String addr = toks[2];
-						final int port = Integer.valueOf(toks[3]);
-						//
-						final String options = ((toks.length > 4) ? toks[4] : "");
-						final Options opts = new Options(options);
-						opts.setMuxName(muxName);
-						//
-						Log.info(this.getClass().getSimpleName() + " Readed type=" + connType + " addr="
-								+ addr + " port=" + port + " options{" + opts + "}");
-						started = startBouncerStyle(connType, addr, port, opts);
+						switch (connType) {
+							case MUX_IN:
+							case MUX_LISTEN:
+							case MUX_OUT:
+							case MUX_CONNECT:
+							case TUN_LISTEN:
+							case TUN_CONNECT: {
+								final String muxName = toks[1];
+								//
+								final String addr = toks[2];
+								final int port = Integer.valueOf(toks[3]);
+								//
+								final String options = ((toks.length > 4) ? toks[4] : "");
+								final Options opts = new Options(options);
+								opts.setMuxName(muxName);
+								//
+								Log.info(this.getClass().getSimpleName() + " Readed type=" + connType
+										+ " addr=" + addr + " port=" + port + " options{" + opts + "}");
+								started = startBouncerStyle(connType, addr, port, opts);
+								break;
+							}
+							// <cluster-in|cluster-out> <cluster-name> <address> <port> [opts]
+							case CLUSTER_IN:
+							case CLUSTER_OUT: {
+								final long clusterId = IOHelper.longIdFromString(toks[1]);
+								//
+								final String addr = toks[2];
+								final int port = Integer.valueOf(toks[3]);
+								//
+								final String options = ((toks.length > 4) ? toks[4] : "");
+								final Options opts = new Options(options);
+								opts.setClusterID(clusterId);
+								//
+								Log.info(this.getClass().getSimpleName() + " Readed type=" + connType
+										+ " addr=" + addr + " port=" + port + " options{" + opts + "}");
+								started = startCluster(connType, clusterId, addr, port, opts);
+								break;
+							}
+						}
 					} else {
 						// Expected format (style rinetd):
 						// <bind-addr> <bind-port> <remote-addr> <remote-port> [opts]
@@ -371,6 +407,39 @@ public class Bouncer implements ServerContext {
 		return true;
 	}
 
+	boolean startCluster(final ConnectionType connType, final long clusterId, final String addr,
+			final int port, final Options opts) throws IOException, GeneralSecurityException {
+		final SSLFactory sslFactory = getSSLFactory(opts);
+		switch (connType) {
+			case CLUSTER_IN: {
+				final Options lopts = new Options(opts).unsetOptionsPlain().unsetOptionsMUX();
+				final InboundAddress left = new InboundAddress(this, addr, port, lopts); // CLUSTER
+				left.setSSLFactory(sslFactory);
+				final ClusterServer cluster = new ClusterServer(this, left);
+				cluster.listenLocal();
+				break;
+			}
+			case CLUSTER_OUT: {
+				final Options ropts = new Options(opts).unsetOptionsPlain().unsetOptionsMUX();
+				final OutboundAddress right = new OutboundAddress(this, addr, port, ropts); // CLUSTER
+				right.setSSLFactory(sslFactory);
+				final ClusterClient cluster = new ClusterClient(this, right);
+				final Long id = Long.valueOf(clusterId);
+				List<ClusterClient> list = clusterClients.get(id); // FIXME
+				if (list == null) {
+					list = new ArrayList<ClusterClient>();
+					clusterClients.put(id, list);
+				}
+				list.add(cluster);
+				cluster.openRemote();
+				break;
+			}
+			default:
+				return false;
+		}
+		return true;
+	}
+
 	boolean startRinetdStyle(final String leftaddr, final int leftport, final String rightaddr,
 			final int rightport, final Options opts) throws IOException, GeneralSecurityException {
 		final SSLFactory sslFactory = getSSLFactory(opts);
@@ -423,6 +492,17 @@ public class Bouncer implements ServerContext {
 	public void releaseMuxPacket(final MuxPacket packet) {
 		packet.clear();
 		poolMux.release(packet);
+	}
+
+	@Override
+	public ClusterPacket allocateClusterPacket() {
+		return poolCluster.checkout();
+	}
+
+	@Override
+	public void releaseClusterPacket(final ClusterPacket packet) {
+		packet.clear();
+		poolCluster.release(packet);
 	}
 
 	@Override
@@ -500,12 +580,103 @@ public class Bouncer implements ServerContext {
 	}
 
 	@Override
+	public void stickyRegister(final StickyStore<InetAddress, InetAddress> stickies) {
+		final long clusterId = stickies.getConfig().clusterId;
+		final long replicationId = stickies.getConfig().replicationId;
+		final StickyKey key = StickyKey.valueOf(clusterId, replicationId);
+		clusterStickies.put(key, stickies);
+	}
+
+	@Override
+	public void stickyLocalUpdateNotify(final long clusterId, final long replicationId,
+			final InetAddress stickyAddr, final InetAddress mapAddr) {
+		// FIXME
+		final List<ClusterClient> list = clusterClients.get(clusterId);
+		if (list != null) {
+			final ClusterPacket packet = allocateClusterPacket();
+			packet.put(clusterId, replicationId, stickyAddr, mapAddr);
+			for (final ClusterClient cluster : list) {
+				try {
+					Log.info("stickyLocalUpdateNotify: " + String.valueOf(packet));
+					cluster.remote.sendRemote(packet);
+				} catch (Exception e) {
+					Log.error("stickyLocalUpdateNotify error: " + e.toString(), e);
+				}
+			}
+			releaseClusterPacket(packet);
+		}
+	}
+
+	@Override
+	public void stickyRemoteUpdateNotify(final ClusterPacket packet) {
+		final long clusterId = packet.getClusterId();
+		final long replicationId = packet.getReplicationId();
+		// FIXME
+		final StickyKey key = StickyKey.valueOf(clusterId, replicationId);
+		final StickyStore<InetAddress, InetAddress> sticky = clusterStickies.get(key);
+		if (sticky != null) {
+			final InetAddress stickyAddr = packet.getStickyAddr();
+			final InetAddress mapAddr = packet.getMapAddr();
+			Log.info("stickyRemoteUpdateNotify: " + String.valueOf(packet));
+			sticky.put(stickyAddr, mapAddr);
+		}
+	}
+
+	@Override
+	public List<StickyStore<InetAddress, InetAddress>> stickyGetForCluster(final long clusterId) {
+		// FIXME
+		final Set<Entry<StickyKey, StickyStore<InetAddress, InetAddress>>> s = clusterStickies.entrySet();
+		final ArrayList<StickyStore<InetAddress, InetAddress>> l = new ArrayList<StickyStore<InetAddress, InetAddress>>();
+		for (final Entry<StickyKey, StickyStore<InetAddress, InetAddress>> e : s) {
+			if (clusterId == e.getKey().clusterId) {
+				l.add(e.getValue());
+			}
+		}
+		return l;
+	}
+
+	@Override
 	public Statistics getStatistics() {
 		return stats;
 	}
 
 	static enum ConnectionType {
-		MUX_IN, MUX_LISTEN, MUX_OUT, MUX_CONNECT, TUN_LISTEN, TUN_CONNECT, UNKNOWN_VALUE;
+		/**
+		 * Mux Connection (Server side)
+		 */
+		MUX_IN,
+		/**
+		 * Mux Connection (Server side) - legacy tag
+		 */
+		MUX_LISTEN,
+		/**
+		 * Mux Connection (Client side)
+		 */
+		MUX_OUT,
+		/**
+		 * Mux Connection (Client side) - legacy tag
+		 */
+		MUX_CONNECT,
+		/**
+		 * Tunnel Connection (Server side)
+		 */
+		TUN_LISTEN,
+		/**
+		 * Tunnel Connection (Client side)
+		 */
+		TUN_CONNECT,
+		/**
+		 * Cluster Connection (Server side)
+		 */
+		CLUSTER_IN,
+		/**
+		 * Cluster Connection (Client side)
+		 */
+		CLUSTER_OUT,
+		/**
+		 * Unknown Parameter
+		 */
+		UNKNOWN_VALUE;
 
 		static ConnectionType getTypeFromString(final String value) {
 			if (value != null) {
@@ -515,6 +686,34 @@ public class Bouncer implements ServerContext {
 				}
 			}
 			return UNKNOWN_VALUE;
+		}
+	}
+
+	static class StickyKey {
+		final long clusterId;
+		final long replicationId;
+
+		StickyKey(final long clusterId, final long replicationId) {
+			this.clusterId = clusterId;
+			this.replicationId = replicationId;
+		}
+
+		static StickyKey valueOf(final long clusterId, final long replicationId) {
+			return new StickyKey(clusterId, replicationId);
+		}
+
+		@Override
+		public boolean equals(final Object obj) {
+			if (obj instanceof StickyKey) {
+				final StickyKey o = (StickyKey) obj;
+				return ((this.clusterId == o.clusterId) && (this.replicationId == o.replicationId));
+			}
+			return false;
+		}
+
+		@Override
+		public int hashCode() {
+			return (int) (this.clusterId ^ (this.clusterId >>> 32) ^ this.replicationId ^ (this.replicationId >>> 32));
 		}
 	}
 }

@@ -4,8 +4,29 @@
 
 	<groupId>org.javastack</groupId>
 	<artifactId>bouncer</artifactId>
-	<version>2.2.4</version>
-	<description>Bouncer is a network TCP port redirector/forward proxy (like rinetd) with extra features like Reverse tunneling (like ssh -R), SSL tunneling (like stunnel), connection Failover and LoadBalancing.</description>
+	<version>2.2.5</version>
+	<description>Bouncer is a network TCP port redirector/forward proxy (like rinetd) with extra features like Reverse tunneling (like ssh -R), SSL tunneling (like stunnel), connection Failover, LoadBalancing and Clustering.</description>
+
+	<name>${project.groupId}:${project.artifactId}</name>
+	<url>https://github.com/ggrandes/${project.artifactId}</url>
+	<licenses>
+		<license>
+			<name>The Apache License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+		</license>
+	</licenses>
+	<developers>
+		<developer>
+			<id>ggrandes</id>
+			<name>Guillermo Grandes</name>
+			<email>guillermo.grandes@gmail.com</email>
+		</developer>
+	</developers>
+	<scm>
+		<connection>scm:git:git@github.com:ggrandes/${project.artifactId}.git</connection>
+		<developerConnection>scm:git:git@github.com:ggrandes/${project.artifactId}.git</developerConnection>
+		<url>git@github.com:ggrandes/${project.artifactId}.git</url>
+	</scm>
 
 	<build>
 		<resources>
@@ -92,6 +113,21 @@
 					</execution>
 				</executions>
 			</plugin>
+			<!-- GPG Signed Components for Maven Central -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<version>1.5</version>
+				<executions>
+					<execution>
+						<id>sign-artifacts</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 		<!-- Deployment Maven-S3 -->
 		<extensions>
@@ -103,7 +139,7 @@
 		</extensions>
 	</build>
 
-	<!-- Deployment -->
+	<!-- Deployment Maven-S3 -->
 	<distributionManagement>
 		<repository>
 			<name>S3 Release Repository</name>

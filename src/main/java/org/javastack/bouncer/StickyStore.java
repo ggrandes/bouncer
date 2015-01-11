@@ -1,10 +1,20 @@
 package org.javastack.bouncer;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 public abstract class StickyStore<K extends InetAddress, V extends InetAddress> {
+	protected final StickyConfig stickyConfig;
+
+	protected StickyStore(final StickyConfig stickyConfig) {
+		this.stickyConfig = stickyConfig;
+	}
+
 	/**
 	 * Get Instance of StickyStore
 	 * 
@@ -16,8 +26,14 @@ public abstract class StickyStore<K extends InetAddress, V extends InetAddress> 
 		switch (stickyConfig.type) {
 			case MEM:
 				return new StickyStoreMEM<K, V>(stickyConfig);
+			case NULL:
+				return new StickyStoreNULL<K, V>();
 		}
 		return null;
+	}
+
+	public StickyConfig getConfig() {
+		return stickyConfig;
 	}
 
 	/**
@@ -36,12 +52,28 @@ public abstract class StickyStore<K extends InetAddress, V extends InetAddress> 
 	 */
 	public abstract V get(final K key);
 
+	/**
+	 * Return inmutable list of associations
+	 * 
+	 * @return
+	 */
+	public abstract List<StickyEntry<K, V>> getEntries();
+
+	static class StickyEntry<K extends InetAddress, V extends InetAddress> {
+		public final K key;
+		public final V value;
+
+		StickyEntry(final K key, final V value) {
+			this.key = key;
+			this.value = value;
+		}
+	}
+
 	static class StickyStoreMEM<K extends InetAddress, V extends InetAddress> extends StickyStore<K, V> {
-		private final StickyConfig stickyConfig;
 		private final Map<K, TSEntry<V>> stickies;
 
 		private StickyStoreMEM(final StickyConfig stickyConfig) {
-			this.stickyConfig = stickyConfig;
+			super(stickyConfig);
 			this.stickies = createMap();
 		}
 
@@ -77,6 +109,15 @@ public abstract class StickyStore<K extends InetAddress, V extends InetAddress> 
 			return null;
 		}
 
+		@Override
+		public synchronized List<StickyEntry<K, V>> getEntries() {
+			final ArrayList<StickyEntry<K, V>> l = new ArrayList<StickyEntry<K, V>>();
+			for (final Entry<K, TSEntry<V>> e : stickies.entrySet()) {
+				l.add(new StickyEntry<K, V>(e.getKey(), e.getValue().value));
+			}
+			return l;
+		}
+
 		static class TSEntry<E> {
 			final long ts;
 			final E value;
@@ -88,11 +129,31 @@ public abstract class StickyStore<K extends InetAddress, V extends InetAddress> 
 		}
 	}
 
+	static class StickyStoreNULL<K extends InetAddress, V extends InetAddress> extends StickyStore<K, V> {
+		private StickyStoreNULL() {
+			super(StickyConfig.NULL);
+		}
+
+		@Override
+		public void put(final K key, final V value) {
+		}
+
+		@Override
+		public V get(final K key) {
+			return null;
+		}
+
+		@Override
+		public List<StickyEntry<K, V>> getEntries() {
+			return Collections.emptyList();
+		}
+	}
+
 	/**
 	 * Simple Text
 	 */
 	public static void main(final String[] args) throws Throwable {
-		StickyConfig cfg = new StickyConfig(StickyConfig.Type.MEM, 32, 2, 1);
+		StickyConfig cfg = new StickyConfig(StickyConfig.Type.MEM, 32, 2, 1, 0, 0);
 		StickyStore<InetAddress, InetAddress> store = StickyStore.getInstance(cfg);
 		InetAddress a1 = InetAddress.getByName("127.0.0.1");
 		store.put(a1, a1);

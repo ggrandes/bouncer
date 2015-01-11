@@ -2,7 +2,7 @@
 
 Bouncer is an open source (Apache License, Version 2.0) Java network proxy. Do not require any external lib.
 
-### Current Stable Version is [2.2.4](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/2.2.4/bouncer-2.2.4-bin.zip)
+### Current Stable Version is [2.2.5](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/2.2.5/bouncer-2.2.5-bin.zip)
 
 ---
 
@@ -61,6 +61,10 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     # <mux-out|tun-connect> <mux-name> <remote-addr> <remote-port> [opts]
     
     # Note: <remote-addr> can be a coma separated list of addresses, like "srv1,srv2,192.168.1.1"
+    
+    # Clustering Config
+    # <cluster-listen> <cluster-id> <listen-addr> <listen-port> [opts]
+    # <cluster-peer> <cluster-id> <remote-addr> <remote-port> [opts]
 
 ###### Options are comma separated:
 
@@ -70,7 +74,7 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
         * **LB=RR**: active LoadBalancing in DNS order (round-robin)
         * **LB=RAND**: activate LoadBalancing in DNS random order
     * Sticky Session
-        * **STICKY=MEM:bitmask:elements:ttl**: activate Sticky session based on IP Source Address. Sessions are stored in MEMory, *bitmask* is a [CIDR](http://en.wikipedia.org/wiki/CIDR) to apply in source-ip-address (16=Class B, 24=Class C, 32=Unique host), *elements* for LRU cache, *ttl* is time to live of elements in cache (seconds) 
+        * **STICKY=MEM:bitmask:elements:ttl[:cluster-id:replication-id]**: activate Sticky session based on IP Source Address. Sessions are stored in MEMory, *bitmask* is a [CIDR](http://en.wikipedia.org/wiki/CIDR) to apply in source-ip-address (16=Class B, 24=Class C, 32=Unique host), *elements* for LRU cache, *ttl* is time to live of elements in cache (seconds), *cluster-id* and *replication-id* in cluster environment is cluster identifier and replication identifier respectively. 
 * Options for inbound connections
     * **PROXY=SEND**: use PROXY protocol (v1), generate header for remote server
 * Options for Forward / Port Redirector (rinetd)
@@ -165,6 +169,8 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
 
 ###### For Encryption Tunnels with AES (no SSL/TLS) you can use `MUX=AES,AES=sharedsecret` in both sides 
 
+* More examples in [sampleconf](https://github.com/ggrandes/bouncer/blob/master/sampleconf/)
+
 ---
 
 ## Running (Linux)
@@ -215,6 +221,7 @@ You can improve security, simply download **bcprov-jdk15on-`XXX`.jar** from [Bou
 * Statistics/Accounting (v2.2.2)
 * JMX (v2.2.3)
 * Multiple remote-addr (not only multi DNS A-record) (v2.2.4)
+* Replicate Sticky Sessions over multiple Bouncers (HA) (v2.2.5)
 
 ## MISC
 Current harcoded values:

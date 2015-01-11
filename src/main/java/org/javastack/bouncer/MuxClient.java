@@ -429,16 +429,18 @@ class MuxClient {
 				}, "MuxOutLeft-Send[" + id + "|" + right + "]", ClientId.getId());
 			}
 			//
+			int pkt = 0;
 			OUTTER: while (!shutdown) {
 				try {
 					// Log.info(this.getClass().getSimpleName() + "::run fromWire: " + sock);
 					final RawPacket msg = context.allocateRawPacket();
 					msg.fromWire(is);
 					msg.setIdChannel(id);
+					pkt++;
 					while (!lock(msg.getBufferLen())) {
 						if (shutdown)
 							break OUTTER;
-						Log.info(this.getClass().getSimpleName() + " Timeout Locking: " + sock);
+						Log.info(this.getClass().getSimpleName() + " Timeout Locking(" + pkt + "): " + sock);
 					}
 					// Log.info(this.getClass().getSimpleName() + "::run onReceiveFromLocal: " + sock);
 					context.getStatistics().incInMsgs().incInBytes(msg.getBufferLen());

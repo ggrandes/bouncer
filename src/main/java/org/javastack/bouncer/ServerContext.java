@@ -1,9 +1,11 @@
 package org.javastack.bouncer;
 
 import java.io.ByteArrayOutputStream;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.List;
 
 public interface ServerContext {
 	public CipherSuites getCipherSuites();
@@ -13,6 +15,10 @@ public interface ServerContext {
 	public void releaseRawPacket(final RawPacket packet);
 
 	public MuxPacket allocateMuxPacket();
+
+	public ClusterPacket allocateClusterPacket();
+
+	public void releaseClusterPacket(final ClusterPacket packet);
 
 	public ByteArrayOutputStream allocateByteArrayOutputStream();
 
@@ -38,5 +44,13 @@ public interface ServerContext {
 
 	public void closeSilent(final Socket socket);
 
+	public void stickyRegister(final StickyStore<InetAddress, InetAddress> stickies);
+
+	public void stickyLocalUpdateNotify(final long clusterId, final long replicationId,
+			final InetAddress stickyAddr, final InetAddress addr);
+
+	public void stickyRemoteUpdateNotify(final ClusterPacket packet);
+
+	public List<StickyStore<InetAddress, InetAddress>> stickyGetForCluster(final long clusterId);
 	public Statistics getStatistics();
 }

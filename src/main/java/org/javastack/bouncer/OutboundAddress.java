@@ -34,6 +34,8 @@ class OutboundAddress extends BouncerAddress {
 		this.port = port;
 		this.opts = opts;
 		this.stickies = StickyStore.getInstance(opts.getStickyConfig());
+		//
+		context.stickyRegister(stickies);
 	}
 
 	@Override
@@ -139,7 +141,15 @@ class OutboundAddress extends BouncerAddress {
 		if (remote != null) {
 			try {
 				if ((stickies != null) && (stickyAddr != null)) {
-					stickies.put(stickyAddr, remote.getInetAddress());
+					final InetAddress currentSticky = stickies.get(stickyAddr);
+					if (!remote.getInetAddress().equals(currentSticky)) {
+						final StickyConfig stickyCfg = opts.getStickyConfig();
+						if (stickyCfg.isReplicated()) {
+							context.stickyLocalUpdateNotify(stickyCfg.clusterId, stickyCfg.replicationId,
+									stickyAddr, remote.getInetAddress());
+						}
+						stickies.put(stickyAddr, remote.getInetAddress());
+					}
 				}
 				context.registerSocket(remote);
 				final Integer pReadTimeout = opts.getInteger(Options.P_READ_TIMEOUT);
