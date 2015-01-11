@@ -61,8 +61,8 @@ public class Options {
 			put(P_MUX_NAME, S_NULL); 	// MUX_NAME=<muxName>
 			put(P_AES, S_NULL); 		// AES=<key>
 			put(P_AES_ALG, S_NULL); 	// AESALG=<cipherAlgorithm>
-			// SSL=server.crt:server.key:client.crt (MUX-IN|CLUSTER-LISTER)
-			// SSL=client.crt:client.key:server.crt (MUX-OUT|CLUSTER-PEER)
+			// SSL=server.crt:server.key:client.crt (MUX-IN|CLUSTER-IN)
+			// SSL=client.crt:client.key:server.crt (MUX-OUT|CLUSTER-OUT)
 			put(P_SSL, S_NULL);
 			put(P_STICKY, S_NULL);		// STICKY=MEM:bitmask:elements:ttl
 		}
