@@ -40,12 +40,12 @@ public class ProxyProtocol {
 		final int srcPort = sock.getPort();
 		final int dstPort = sock.getLocalPort();
 		final StringBuilder sb = new StringBuilder(56);
-		sb.append("PROXY").append(' ') //
-				.append(proto).append(' ') //
-				.append(srcAddr.getHostAddress()).append(' ') //
-				.append(dstAddr.getHostAddress()).append(' ') //
-				.append(srcPort).append(' ') //
-				.append(dstPort).append(' ') //
+		sb.append("PROXY") //
+				.append(' ').append(proto) //
+				.append(' ').append(srcAddr.getHostAddress()) //
+				.append(' ').append(dstAddr.getHostAddress()) //
+				.append(' ').append(srcPort) //
+				.append(' ').append(dstPort) //
 				.append('\r').append('\n');
 		return sb.toString();
 	}
