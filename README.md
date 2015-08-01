@@ -189,7 +189,7 @@ You can improve security, simply download **bcprov-jdk15on-`XXX`.jar** from [Bou
 
 ## TODOs
 
-* NIO? - for C10K problem, in forward mode, try [jrinetd](https://github.com/ggrandes/jrinetd)
+* NIO? - for [C10K problem](https://en.wikipedia.org/wiki/C10k_problem), in forward mode, try [jrinetd](https://github.com/ggrandes/jrinetd)
 * Use Log4J
 * Limit number of connections
 * Limit absolute timeout/TTL of a connection
