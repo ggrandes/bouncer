@@ -62,7 +62,7 @@ class InboundAddress extends BouncerAddress {
 	ServerSocket listen() throws IOException {
 		resolve();
 		final ServerSocket listen;
-		if (opts.isOption(Options.MUX_SSL)) {
+		if (opts.isOption(Options.MUX_SSL | Options.TUN_ENDSSL)) {
 			listen = sslFactory.createSSLServerSocket();
 		} else {
 			listen = new ServerSocket();

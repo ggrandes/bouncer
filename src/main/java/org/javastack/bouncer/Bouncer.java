@@ -192,12 +192,13 @@ public class Bouncer implements ServerContext {
 	}
 
 	SSLFactory getSSLFactory(final Options opts) throws IOException, GeneralSecurityException {
-		if (opts.isOption(Options.MUX_SSL)) {
+		if (opts.isOption(Options.MUX_SSL | Options.TUN_ENDSSL)) {
 			String[] sslConfig = new String[] {
 				"NULL"
 			};
 			sslConfig = opts.getString(Options.P_SSL).split(":");
-			return new SSLFactory(cipherSuites, sslConfig[0], sslConfig[1], sslConfig[2]);
+			return new SSLFactory(cipherSuites, sslConfig[0], sslConfig[1], //
+					(sslConfig.length > 2 ? sslConfig[2] : null));
 		}
 		return null;
 	}
@@ -395,6 +396,7 @@ public class Bouncer implements ServerContext {
 			case TUN_LISTEN: {
 				final Options ropts = new Options(opts).unsetOptionsMUX();
 				final InboundAddress right = new InboundAddress(this, addr, port, ropts); // PLAIN
+				right.setSSLFactory(sslFactory);
 				final MuxServer mux = muxServers.get(ropts.getMuxName());
 				mux.addRight(right);
 				break;
@@ -467,6 +469,7 @@ public class Bouncer implements ServerContext {
 			final Options ropts = new Options(opts).unsetOptionsMUX();
 			final InboundAddress left = new InboundAddress(this, leftaddr, leftport, lopts); // PLAIN
 			final OutboundAddress right = new OutboundAddress(this, rightaddr, rightport, ropts); // PLAIN
+			left.setSSLFactory(sslFactory);
 			new PlainServer(this, left, right).listenLocal();
 		}
 		return true;

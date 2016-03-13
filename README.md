@@ -2,7 +2,7 @@
 
 Bouncer is an open source (Apache License, Version 2.0) Java network proxy. Do not require any external lib.
 
-### Current Stable Version is [2.2.7](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/2.2.7/bouncer-2.2.7-bin.zip)
+### Current Stable Version is [2.2.8](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/2.2.8/bouncer-2.2.8-bin.zip)
 
 ---
 
@@ -78,7 +78,9 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
 * Options for inbound connections
     * **PROXY=SEND**: use PROXY protocol (v1), generate header for remote server
 * Options for Forward / Port Redirector (rinetd)
-    * **TUN=SSL**: activate SSL/TLS tunneling (origin is plain, destination is SSL/TLS, like stunnel)
+    * **TUN=SSL**: activate SSL/TLS tunneling outbound (destination is SSL/TLS, like stunnel)
+    * **TUN=ENDSSL**: activate SSL/TLS tunneling inbound (origin is SSL/TLS, like stunnel)
+        * **SSL=server.crt:server.key[:client.crt]**: specify files for SSL/TLS config
 * Options for Reverse Tunneling (MUX)
     * **TUN_ID=number**: When use Bouncer 2.x syntax you can create multiple Tunnels over same mux, use this ID for associate both ends.
     * Select operation of MUX (only one option can be used) in Bouncer 1.x config
@@ -114,7 +116,8 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     # <listen-addr> <listen-port> <remote-addr> <remote-port> [opts]
     0.0.0.0 1234 127.1.2.3 9876
     127.0.0.1 5678 encrypted.google.com 443 LB=RR,STICKY=MEM:24:128:300,TUN=SSL
-    
+    127.0.0.1 8443 encrypted.google.com 443 TUN=ENDSSL,SSL=server.crt:server.key,TUN=SSL
+
 ##### Example config of Reverse Tunnels (equivalent ssh -p 5555 192.168.2.1 -R 127.0.0.1:8080:192.168.1.1:80)
 
 ###### Machine-A (MUX-OUT):
@@ -154,6 +157,7 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     mux-out mux1 127.0.0.1 5555 MUX=SSL,SSL=peerA.crt:peerA.key:peerB.crt
     tun-connect mux1 192.168.2.1 80 TUN_ID=1
     tun-connect mux1 192.168.2.1 22 TUN_ID=2
+    tun-connect mux1 192.168.2.1 25 TUN_ID=3
 
 ###### Machine-B (MUX-IN):
  
@@ -166,6 +170,7 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     mux-in mux1 192.168.2.1 5555 MUX=SSL,SSL=peerB.crt:peerB.key:peerA.crt
     tun-listen mux1 127.0.0.1 8080 TUN_ID=1
     tun-listen mux1 127.0.0.1 2222 TUN_ID=2
+    tun-listen mux1 127.0.0.1 465 TUN_ID=3,TUN=ENDSSL,SSL=server.crt:server.key
 
 ###### For Encryption Tunnels with AES (no SSL/TLS) you can use `MUX=AES,AES=sharedsecret` in both sides 
 
@@ -223,6 +228,7 @@ You can improve security, simply download **bcprov-jdk15on-`XXX`.jar** from [Bou
 * Multiple remote-addr (not only multi DNS A-record) (v2.2.4)
 * Replicate Sticky Sessions over multiple Bouncers (HA) (v2.2.5)
 * Allow alternative config names (v2.2.6)
+* Support for End SSL (v2.2.8)
 
 ## MISC
 Current harcoded values:

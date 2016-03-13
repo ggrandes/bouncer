@@ -27,12 +27,19 @@ public class SSLFactory {
 	private final KeyStore ks;
 	private final SSLContext ctx;
 	private final CipherSuites cipherSuites;
+	private final boolean needClientCert;
+
+	public SSLFactory(final CipherSuites cipherSuites, final String priCert, final String priKey)
+			throws IOException, GeneralSecurityException {
+		this(cipherSuites, priCert, priKey, null);
+	}
 
 	public SSLFactory(final CipherSuites cipherSuites, final String priCert, final String priKey,
 			final String pubCert) throws IOException, GeneralSecurityException {
 		this.cipherSuites = cipherSuites;
 		this.ks = initKeyStore(loadX509(priCert), loadPriKey(priKey), loadX509(pubCert));
 		this.ctx = initSSLContext(ks);
+		this.needClientCert = ((pubCert != null) && !pubCert.isEmpty());
 	}
 
 	public SSLServerSocket createSSLServerSocket() throws IOException {
@@ -40,7 +47,7 @@ public class SSLFactory {
 		SSLServerSocket listen = (SSLServerSocket) factory.createServerSocket();
 		listen.setEnabledProtocols(cipherSuites.getProtocols());
 		listen.setEnabledCipherSuites(cipherSuites.getServerCipherSuites());
-		listen.setNeedClientAuth(true); // Force Request Client Certificate
+		listen.setNeedClientAuth(needClientCert); // Force Request Client Certificate
 		return listen;
 	}
 
@@ -89,6 +96,9 @@ public class SSLFactory {
 	}
 
 	public static X509Certificate loadX509(final String fileName) throws GeneralSecurityException {
+		if (fileName == null) {
+			return null;
+		}
 		InputStream is = null;
 		X509Certificate crt = null;
 		try {
@@ -105,7 +115,9 @@ public class SSLFactory {
 			final X509Certificate pubCert) throws IOException, GeneralSecurityException {
 		KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
 		ks.load(null);
-		ks.setCertificateEntry(pubCert.getSubjectX500Principal().getName(), pubCert);
+		if (pubCert != null) {
+			ks.setCertificateEntry(pubCert.getSubjectX500Principal().getName(), pubCert);
+		}
 		ks.setKeyEntry("private", priKey, DEFAULT_PWD, new Certificate[] {
 			priCert
 		});
@@ -115,7 +127,8 @@ public class SSLFactory {
 	public static SSLContext initSSLContext(final KeyStore ks) throws GeneralSecurityException {
 		final SSLContext ctx = SSLContext.getInstance("TLS");
 		final KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-		final TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+		final TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory
+				.getDefaultAlgorithm());
 		kmf.init(ks, DEFAULT_PWD);
 		tmf.init(ks);
 		ctx.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
