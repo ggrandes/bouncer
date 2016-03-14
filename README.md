@@ -79,6 +79,7 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     * **PROXY=SEND**: use PROXY protocol (v1), generate header for remote server
 * Options for Forward / Port Redirector (rinetd)
     * **TUN=SSL**: activate SSL/TLS tunneling outbound (destination is SSL/TLS, like stunnel)
+        * **SSL=client.crt:client.key[:server.crt]**: specify files for SSL/TLS config (client mode) (optional)
     * **TUN=ENDSSL**: activate SSL/TLS tunneling inbound (origin is SSL/TLS, like stunnel)
         * **ENDSSL=server.crt:server.key[:client.crt]**: specify files for SSL/TLS config (server mode)
 * Options for Reverse Tunneling (MUX)
@@ -229,6 +230,7 @@ You can improve security, simply download **bcprov-jdk15on-`XXX`.jar** from [Bou
 * Replicate Sticky Sessions over multiple Bouncers (HA) (v2.2.5)
 * Allow alternative config names (v2.2.6)
 * Support for End SSL (v2.2.8)
+* Support client authentication in TUN=SSL (v2.2.8)
 
 ## MISC
 Current harcoded values:

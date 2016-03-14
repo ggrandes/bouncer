@@ -194,9 +194,20 @@ public class Bouncer implements ServerContext {
 	SSLFactory getSSLFactory(final Options opts, final String srcConfig) throws IOException,
 			GeneralSecurityException {
 		if (opts.isOption(Options.MUX_SSL | Options.TUN_ENDSSL | Options.TUN_SSL)) {
-			final String[] sslConfig = opts.getString(srcConfig).split(":");
-			return new SSLFactory(cipherSuites, sslConfig[0], sslConfig[1], //
-					(sslConfig.length > 2 ? sslConfig[2] : null));
+			String p = opts.getString(srcConfig);
+			if (p == null) {
+				if (opts.isOption(Options.TUN_SSL)) {
+					p = ""; // USE_DEFAULT
+				} else {
+					throw new GeneralSecurityException("Invalid " + srcConfig + " param");
+				}
+			}
+			final String[] sslConfig = p.split(":");
+			if (sslConfig.length > 2) {
+				return new SSLFactory(cipherSuites, sslConfig[0], sslConfig[1], sslConfig[2]);
+			} else if (sslConfig.length > 1) {
+				return new SSLFactory(cipherSuites, sslConfig[0], sslConfig[1]);
+			}
 		}
 		return null;
 	}
@@ -402,8 +413,10 @@ public class Bouncer implements ServerContext {
 				break;
 			}
 			case TUN_CONNECT: {
+				final SSLFactory sslFactoryClient = getSSLFactory(opts, Options.P_SSL);
 				final Options lopts = new Options(opts).unsetOptionsMUX();
 				final OutboundAddress left = new OutboundAddress(this, addr, port, lopts); // PLAIN
+				left.setSSLFactory(sslFactoryClient);
 				final MuxClient mux = muxClients.get(lopts.getMuxName());
 				mux.addLeft(left);
 				break;
@@ -468,11 +481,13 @@ public class Bouncer implements ServerContext {
 			new MuxClient(this, left, right).openRemote();
 		} else {
 			final SSLFactory sslFactory = getSSLFactory(opts, Options.P_ENDSSL);
+			final SSLFactory sslFactoryClient = getSSLFactory(opts, Options.P_SSL);
 			final Options lopts = new Options(opts).unsetOptionsMUX();
 			final Options ropts = new Options(opts).unsetOptionsMUX();
 			final InboundAddress left = new InboundAddress(this, leftaddr, leftport, lopts); // PLAIN
 			final OutboundAddress right = new OutboundAddress(this, rightaddr, rightport, ropts); // PLAIN
 			left.setSSLFactory(sslFactory);
+			right.setSSLFactory(sslFactoryClient);
 			new PlainServer(this, left, right).listenLocal();
 		}
 		return true;

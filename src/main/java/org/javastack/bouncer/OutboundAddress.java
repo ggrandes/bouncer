@@ -167,9 +167,11 @@ class OutboundAddress extends BouncerAddress {
 		final boolean isSSL = opts.isOption(Options.TUN_SSL | Options.MUX_SSL);
 		Socket sock = null;
 		try {
-			Log.info(this.getClass().getSimpleName() + " Connecting to " + dstAddr + ":" + port
+			Log.info(getClass().getSimpleName() + " Connecting to " + dstAddr + ":" + port
 					+ (isSSL ? " (SSL)" : ""));
 			if (opts.isOption(Options.MUX_SSL)) {
+				sock = sslFactory.createSSLSocket();
+			} else if (opts.isOption(Options.TUN_SSL) && (sslFactory != null)) {
 				sock = sslFactory.createSSLSocket();
 			} else if (opts.isOption(Options.TUN_SSL)) {
 				final SocketFactory factory = SSLSocketFactory.getDefault();
