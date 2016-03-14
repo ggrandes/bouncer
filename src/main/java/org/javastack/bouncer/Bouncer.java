@@ -191,12 +191,10 @@ public class Bouncer implements ServerContext {
 		}
 	}
 
-	SSLFactory getSSLFactory(final Options opts) throws IOException, GeneralSecurityException {
-		if (opts.isOption(Options.MUX_SSL | Options.TUN_ENDSSL)) {
-			String[] sslConfig = new String[] {
-				"NULL"
-			};
-			sslConfig = opts.getString(Options.P_SSL).split(":");
+	SSLFactory getSSLFactory(final Options opts, final String srcConfig) throws IOException,
+			GeneralSecurityException {
+		if (opts.isOption(Options.MUX_SSL | Options.TUN_ENDSSL | Options.TUN_SSL)) {
+			final String[] sslConfig = opts.getString(srcConfig).split(":");
 			return new SSLFactory(cipherSuites, sslConfig[0], sslConfig[1], //
 					(sslConfig.length > 2 ? sslConfig[2] : null));
 		}
@@ -371,10 +369,10 @@ public class Bouncer implements ServerContext {
 
 	boolean startBouncerStyle(final ConnectionType connType, final String addr, final int port,
 			final Options opts) throws IOException, GeneralSecurityException {
-		final SSLFactory sslFactory = getSSLFactory(opts);
 		switch (connType) {
 			case MUX_IN:
 			case MUX_LISTEN: {
+				final SSLFactory sslFactory = getSSLFactory(opts, Options.P_SSL);
 				final Options lopts = new Options(opts).unsetOptionsPlain();
 				final InboundAddress left = new InboundAddress(this, addr, port, lopts); // MUX
 				left.setSSLFactory(sslFactory);
@@ -385,6 +383,7 @@ public class Bouncer implements ServerContext {
 			}
 			case MUX_OUT:
 			case MUX_CONNECT: {
+				final SSLFactory sslFactory = getSSLFactory(opts, Options.P_SSL);
 				final Options ropts = new Options(opts).unsetOptionsPlain();
 				final OutboundAddress right = new OutboundAddress(this, addr, port, ropts); // MUX
 				right.setSSLFactory(sslFactory);
@@ -394,6 +393,7 @@ public class Bouncer implements ServerContext {
 				break;
 			}
 			case TUN_LISTEN: {
+				final SSLFactory sslFactory = getSSLFactory(opts, Options.P_ENDSSL);
 				final Options ropts = new Options(opts).unsetOptionsMUX();
 				final InboundAddress right = new InboundAddress(this, addr, port, ropts); // PLAIN
 				right.setSSLFactory(sslFactory);
@@ -416,9 +416,9 @@ public class Bouncer implements ServerContext {
 
 	boolean startCluster(final ConnectionType connType, final long clusterId, final String addr,
 			final int port, final Options opts) throws IOException, GeneralSecurityException {
-		final SSLFactory sslFactory = getSSLFactory(opts);
 		switch (connType) {
 			case CLUSTER_IN: {
+				final SSLFactory sslFactory = getSSLFactory(opts, Options.P_SSL);
 				final Options lopts = new Options(opts).unsetOptionsPlain().unsetOptionsMUX();
 				final InboundAddress left = new InboundAddress(this, addr, port, lopts); // CLUSTER
 				left.setSSLFactory(sslFactory);
@@ -427,6 +427,7 @@ public class Bouncer implements ServerContext {
 				break;
 			}
 			case CLUSTER_OUT: {
+				final SSLFactory sslFactory = getSSLFactory(opts, Options.P_SSL);
 				final Options ropts = new Options(opts).unsetOptionsPlain().unsetOptionsMUX();
 				final OutboundAddress right = new OutboundAddress(this, addr, port, ropts); // CLUSTER
 				right.setSSLFactory(sslFactory);
@@ -449,8 +450,8 @@ public class Bouncer implements ServerContext {
 
 	boolean startRinetdStyle(final String leftaddr, final int leftport, final String rightaddr,
 			final int rightport, final Options opts) throws IOException, GeneralSecurityException {
-		final SSLFactory sslFactory = getSSLFactory(opts);
 		if (opts.isOption(Options.MUX_IN)) {
+			final SSLFactory sslFactory = getSSLFactory(opts, Options.P_SSL);
 			final Options lopts = new Options(opts).unsetOptionsPlain();
 			final Options ropts = new Options(opts).unsetOptionsMUX();
 			final InboundAddress left = new InboundAddress(this, leftaddr, leftport, lopts); // MUX
@@ -458,6 +459,7 @@ public class Bouncer implements ServerContext {
 			left.setSSLFactory(sslFactory);
 			new MuxServer(this, left, right).listenLocal();
 		} else if (opts.isOption(Options.MUX_OUT)) {
+			final SSLFactory sslFactory = getSSLFactory(opts, Options.P_SSL);
 			final Options lopts = new Options(opts).unsetOptionsMUX();
 			final Options ropts = new Options(opts).unsetOptionsPlain();
 			final OutboundAddress left = new OutboundAddress(this, leftaddr, leftport, lopts); // PLAIN
@@ -465,6 +467,7 @@ public class Bouncer implements ServerContext {
 			right.setSSLFactory(sslFactory);
 			new MuxClient(this, left, right).openRemote();
 		} else {
+			final SSLFactory sslFactory = getSSLFactory(opts, Options.P_ENDSSL);
 			final Options lopts = new Options(opts).unsetOptionsMUX();
 			final Options ropts = new Options(opts).unsetOptionsMUX();
 			final InboundAddress left = new InboundAddress(this, leftaddr, leftport, lopts); // PLAIN

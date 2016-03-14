@@ -29,6 +29,7 @@ public class Options {
 	public static final String P_AES_ALG = "AESALG";
 	public static final String P_AES_BITS = "AESBITS";
 	public static final String P_SSL = "SSL";
+	public static final String P_ENDSSL = "ENDSSL";
 	public static final String P_CONNECT_TIMEOUT = "CONNECT_TIMEOUT";
 	public static final String P_READ_TIMEOUT = "READ_TIMEOUT";
 	public static final String P_MUX_NAME = "MUX_NAME";
@@ -66,6 +67,7 @@ public class Options {
 			// SSL=server.crt:server.key:client.crt (MUX-IN|CLUSTER-IN)
 			// SSL=client.crt:client.key:server.crt (MUX-OUT|CLUSTER-OUT)
 			put(P_SSL, S_NULL);
+			put(P_ENDSSL, S_NULL);
 			put(P_STICKY, S_NULL);		// STICKY=MEM:bitmask:elements:ttl
 		}
 	});

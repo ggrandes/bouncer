@@ -80,7 +80,7 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
 * Options for Forward / Port Redirector (rinetd)
     * **TUN=SSL**: activate SSL/TLS tunneling outbound (destination is SSL/TLS, like stunnel)
     * **TUN=ENDSSL**: activate SSL/TLS tunneling inbound (origin is SSL/TLS, like stunnel)
-        * **SSL=server.crt:server.key[:client.crt]**: specify files for SSL/TLS config
+        * **ENDSSL=server.crt:server.key[:client.crt]**: specify files for SSL/TLS config (server mode)
 * Options for Reverse Tunneling (MUX)
     * **TUN_ID=number**: When use Bouncer 2.x syntax you can create multiple Tunnels over same mux, use this ID for associate both ends.
     * Select operation of MUX (only one option can be used) in Bouncer 1.x config
@@ -116,7 +116,7 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     # <listen-addr> <listen-port> <remote-addr> <remote-port> [opts]
     0.0.0.0 1234 127.1.2.3 9876
     127.0.0.1 5678 encrypted.google.com 443 LB=RR,STICKY=MEM:24:128:300,TUN=SSL
-    127.0.0.1 8443 encrypted.google.com 443 TUN=ENDSSL,SSL=server.crt:server.key,TUN=SSL
+    127.0.0.1 8443 encrypted.google.com 443 TUN=ENDSSL,ENDSSL=server.crt:server.key,TUN=SSL
 
 ##### Example config of Reverse Tunnels (equivalent ssh -p 5555 192.168.2.1 -R 127.0.0.1:8080:192.168.1.1:80)
 
@@ -170,7 +170,7 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     mux-in mux1 192.168.2.1 5555 MUX=SSL,SSL=peerB.crt:peerB.key:peerA.crt
     tun-listen mux1 127.0.0.1 8080 TUN_ID=1
     tun-listen mux1 127.0.0.1 2222 TUN_ID=2
-    tun-listen mux1 127.0.0.1 465 TUN_ID=3,TUN=ENDSSL,SSL=server.crt:server.key
+    tun-listen mux1 127.0.0.1 465 TUN_ID=3,TUN=ENDSSL,ENDSSL=server.crt:server.key
 
 ###### For Encryption Tunnels with AES (no SSL/TLS) you can use `MUX=AES,AES=sharedsecret` in both sides 
 
