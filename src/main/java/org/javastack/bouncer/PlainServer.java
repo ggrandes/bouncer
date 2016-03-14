@@ -60,7 +60,8 @@ class PlainServer {
 							if (client instanceof SSLSocket) {
 								((SSLSocket) client).startHandshake();
 							}
-							Log.info(this.getClass().getSimpleName() + " New client from=" + client);
+							Log.info(this.getClass().getSimpleName() + " New client from=" + client + " "
+									+ SSLFactory.getSocketProtocol(client));
 							context.submitTask(
 									new PlainConnector(client, inboundAddress.getOpts()),
 									"ForwardConnect[" + inboundAddress + "|"

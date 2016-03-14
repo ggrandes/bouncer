@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.Socket;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.KeyStore;
@@ -17,6 +18,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
@@ -133,5 +135,15 @@ public class SSLFactory {
 		tmf.init(ks);
 		ctx.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
 		return ctx;
+	}
+
+	public static String getSocketProtocol(final Socket sock) {
+		if (sock instanceof SSLSocket) {
+			final SSLSocket sslSock = (SSLSocket) sock;
+			final SSLSession session = sslSock.getSession();
+			final String id = SimpleHex.bytesAsHex(session.getId());
+			return session.getProtocol() + ":" + session.getCipherSuite() + " ID=" + id;
+		}
+		return "";
 	}
 }

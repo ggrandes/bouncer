@@ -11,7 +11,6 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import javax.net.SocketFactory;
-import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
@@ -206,19 +205,10 @@ class OutboundAddress extends BouncerAddress {
 		}
 		if ((sock != null) && sock.isConnected()) {
 			Log.info(this.getClass().getSimpleName() + " Connected to " + dstAddr + ":" + port
-					+ (isSSL ? " (SSL) " + getSocketProtocol(sock) : ""));
+					+ (isSSL ? " (SSL) " + SSLFactory.getSocketProtocol(sock) : ""));
 			return sock;
 		}
 		context.getStatistics().incFailedConnections();
 		return null;
-	}
-
-	String getSocketProtocol(final Socket sock) {
-		if (sock instanceof SSLSocket) {
-			final SSLSocket sslSock = (SSLSocket) sock;
-			final SSLSession session = sslSock.getSession();
-			return session.getProtocol() + ":" + session.getCipherSuite();
-		}
-		return "";
 	}
 }

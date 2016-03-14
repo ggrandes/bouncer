@@ -211,8 +211,9 @@ class MuxServer {
 						if (socket instanceof SSLSocket) {
 							((SSLSocket) socket).startHandshake();
 						}
-						Log.info(this.getClass().getSimpleName() + " new socket: " + socket
-								+ " SendBufferSize=" + socket.getSendBufferSize() + " ReceiveBufferSize="
+						Log.info(this.getClass().getSimpleName() + " new socket: " + socket + " "
+								+ SSLFactory.getSocketProtocol(socket) + " SendBufferSize="
+								+ socket.getSendBufferSize() + " ReceiveBufferSize="
 								+ socket.getReceiveBufferSize());
 						attender(socket);
 					} catch (Exception e) {
