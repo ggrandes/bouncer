@@ -70,6 +70,7 @@ class InboundAddress extends BouncerAddress {
 		InetSocketAddress bind = new InetSocketAddress(addrs[0], port);
 		context.registerSocket(listen);
 		try {
+			listen.setReuseAddress(true);
 			listen.bind(bind);
 		} catch (IOException e) {
 			throw new IOException("Error binding socket: " + String.valueOf(bind), e);

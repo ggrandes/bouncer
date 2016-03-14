@@ -74,9 +74,7 @@ class PlainServer {
 					}
 				}
 			} catch (IOException e) {
-				if (!listen.isClosed()) {
-					Log.error(this.getClass().getSimpleName() + " " + e.toString());
-				}
+				Log.error(this.getClass().getSimpleName() + " " + e.toString());
 			} catch (Exception e) {
 				Log.error(this.getClass().getSimpleName() + " Generic exception", e);
 			} finally {
