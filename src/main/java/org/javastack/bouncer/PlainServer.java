@@ -9,6 +9,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 
+import javax.net.ssl.SSLSocket;
+
 /**
  * Forward Plain Connections
  */
@@ -54,6 +56,9 @@ class PlainServer {
 									Options.P_READ_TIMEOUT);
 							if (pReadTimeout != null) {
 								client.setSoTimeout(pReadTimeout);
+							}
+							if (client instanceof SSLSocket) {
+								((SSLSocket) client).startHandshake();
 							}
 							Log.info(this.getClass().getSimpleName() + " New client from=" + client);
 							context.submitTask(
