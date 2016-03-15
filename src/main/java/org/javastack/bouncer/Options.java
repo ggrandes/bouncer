@@ -110,12 +110,14 @@ public class Options {
 		return (flags & filterBits);
 	}
 
-	public void setFlags(final int bits) {
+	public Options setFlags(final int bits) {
 		flags |= bits;
+		return this;
 	}
 
-	public void unsetFlags(final int bits) {
+	public Options unsetFlags(final int bits) {
 		flags &= ~bits;
+		return this;
 	}
 
 	public String getString(final String name, final String def) {

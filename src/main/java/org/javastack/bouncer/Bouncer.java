@@ -480,10 +480,10 @@ public class Bouncer implements ServerContext {
 			right.setSSLFactory(sslFactory);
 			new MuxClient(this, left, right).openRemote();
 		} else {
-			final SSLFactory sslFactory = getSSLFactory(opts, Options.P_ENDSSL);
-			final SSLFactory sslFactoryClient = getSSLFactory(opts, Options.P_SSL);
-			final Options lopts = new Options(opts).unsetOptionsMUX();
-			final Options ropts = new Options(opts).unsetOptionsMUX();
+			final Options lopts = new Options(opts).unsetOptionsMUX().unsetFlags(Options.TUN_SSL);
+			final Options ropts = new Options(opts).unsetOptionsMUX().unsetFlags(Options.TUN_ENDSSL);
+			final SSLFactory sslFactory = getSSLFactory(lopts, Options.P_ENDSSL);
+			final SSLFactory sslFactoryClient = getSSLFactory(ropts, Options.P_SSL);
 			final InboundAddress left = new InboundAddress(this, leftaddr, leftport, lopts); // PLAIN
 			final OutboundAddress right = new OutboundAddress(this, rightaddr, rightport, ropts); // PLAIN
 			left.setSSLFactory(sslFactory);
