@@ -230,7 +230,6 @@ class PlainServer {
 				Log.error(this.getClass().getSimpleName() + " Generic exception", e);
 			} finally {
 				IOHelper.closeSilent(is);
-				IOHelper.closeSilent(os);
 				context.closeSilent(sockin);
 				Log.info(this.getClass().getSimpleName() + " Connection closed " + sockin);
 			}
