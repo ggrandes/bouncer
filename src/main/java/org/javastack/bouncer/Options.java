@@ -67,7 +67,7 @@ public class Options {
 			// SSL=server.crt:server.key:client.crt (MUX-IN|CLUSTER-IN)
 			// SSL=client.crt:client.key:server.crt (MUX-OUT|CLUSTER-OUT)
 			put(P_SSL, S_NULL);
-			// SSL=server.crt:server.key[:client.crt]
+			// ENDSSL=server.crt:server.key[:client.crt]
 			put(P_ENDSSL, S_NULL);
 			put(P_STICKY, S_NULL);		// STICKY=MEM:bitmask:elements:ttl
 		}
