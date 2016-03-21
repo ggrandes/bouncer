@@ -11,6 +11,8 @@ import java.net.SocketException;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 
+import javax.net.ssl.SSLSocket;
+
 public class IOHelper {
 	private static final Charset UTF8 = Charset.forName("UTF-8");
 	private static final String MD_ALG = "MD5";
@@ -182,13 +184,15 @@ public class IOHelper {
 	public static void closeSilent(final Socket sock) {
 		if (sock == null)
 			return;
-		try {
-			sock.shutdownInput();
-		} catch (Exception ign) {
-		}
-		try {
-			sock.shutdownOutput();
-		} catch (Exception ign) {
+		if (!(sock instanceof SSLSocket)) {
+			try {
+				sock.shutdownInput();
+			} catch (Exception ign) {
+			}
+			try {
+				sock.shutdownOutput();
+			} catch (Exception ign) {
+			}
 		}
 		try {
 			sock.close();
