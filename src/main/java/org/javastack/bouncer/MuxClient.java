@@ -18,6 +18,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import javax.net.ssl.SSLSocket;
+
 // ============================================ Mux Client
 
 // MuxClient (MUX=OUT) Local=RAW, Remote=MUX
@@ -187,7 +189,17 @@ class MuxClient {
 			// Graceful Shutdown: don't call close()
 		}
 
-		void close() {
+		synchronized void close() {
+			if (((sock == null) || sock.isClosed()))
+				return;
+			if (sock instanceof SSLSocket) {
+				try {
+					sock.setSoTimeout(1000);
+					is.read();
+				} catch (Exception e) {
+					Log.error(this.getClass().getSimpleName() + " Closing: " + sock + ": " + e);
+				}
+			}
 			IOHelper.closeSilent(is);
 			IOHelper.closeSilent(os);
 			if (sock != null)
