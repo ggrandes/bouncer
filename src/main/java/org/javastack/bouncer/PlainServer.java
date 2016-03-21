@@ -202,23 +202,22 @@ class PlainServer {
 					os.flush();
 					headers = null;
 				}
-				while (true) {
+				final int TIMEOUT = sockin.getSoTimeout();
+				sockin.setSoTimeout(250);
+				while (!shutdown) {
 					try {
-						if (transfer()) {
+						if (!shutdown && transfer()) {
 							keepalive = System.currentTimeMillis();
 							continue;
 						}
 					} catch (SocketTimeoutException e) {
-						Log.info(this.getClass().getSimpleName() + " " + e.toString());
-						if (brother == null)
-							break;
-						try {
-							// Idle Timeout
-							if ((System.currentTimeMillis() - brother.keepalive) > sockin.getSoTimeout()) {
-								break;
+						// Idle Timeout
+						if (TIMEOUT > 0) {
+							final long now = System.currentTimeMillis();
+							if (((now - keepalive) > TIMEOUT) || ((now - brother.keepalive) > TIMEOUT)) {
+								Log.info(this.getClass().getSimpleName() + " " + e.toString());
+								setShutdown();
 							}
-						} catch (Exception brk) {
-							break;
 						}
 					}
 				}
@@ -229,8 +228,10 @@ class PlainServer {
 			} catch (Exception e) {
 				Log.error(this.getClass().getSimpleName() + " Generic exception", e);
 			} finally {
-				IOHelper.closeSilent(is);
 				context.closeSilent(sockin);
+				if (brother != null) {
+					brother.setShutdown();
+				}
 				Log.info(this.getClass().getSimpleName() + " Connection closed " + sockin);
 			}
 		}
