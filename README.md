@@ -2,7 +2,7 @@
 
 Bouncer is an open source (Apache License, Version 2.0) Java network proxy. Do not require any external lib.
 
-### Current Stable Version is [2.2.8](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/2.2.8/bouncer-2.2.8-bin.zip)
+### Current Stable Version is [2.2.9](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/2.2.9/bouncer-2.2.9-bin.zip)
 
 ---
 
@@ -183,6 +183,14 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
 
     ./bin/bouncer.sh <start|stop|restart|reload|status>
 
+## Running (command line without config file)
+
+    java -jar bouncer-x.x.x.jar -- "...config.line.1..." "...config.line.2..."
+    
+    Example:
+    java -jar bouncer-x.x.x.jar -- "0.0.0.0 1234 127.1.2.3 9876" "127.0.0.1 5678 encrypted.google.com 443 TUN=SSL"
+    
+
 ## RSA Key / X.509 Certificate Generation for MUX-SSL (optional)
 
     ./bin/bouncer.sh keygen <bits> <days> <CommonName> <filename-without-extension>
@@ -231,6 +239,7 @@ You can improve security, simply download **bcprov-jdk15on-`XXX`.jar** from [Bou
 * Allow alternative config names (v2.2.6)
 * Support for End SSL (v2.2.8)
 * Support client authentication in TUN=SSL (v2.2.8)
+* Support basic command line config without file (scripts,containers,etc) (v2.2.9)
 
 ## MISC
 Current harcoded values:

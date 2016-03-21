@@ -15,16 +15,20 @@
 package org.javastack.bouncer;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLStreamHandler;
+import java.nio.charset.Charset;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.security.Provider;
@@ -125,9 +129,9 @@ public class Bouncer implements ServerContext {
 			Log.warn("Unable to register BouncyCastleProvider: " + t.toString());
 		}
 		// Read config
-		final URL urlConfig = bouncer.getClass().getResource("/" + configFile);
+		final URL urlConfig = bouncer.getConfigSource(configFile, args);
 		if (urlConfig == null) {
-			Log.error("Config not found: (classpath) " + configFile);
+			Log.error("Config not found: " + configFile);
 			return;
 		}
 		// Start JMX
@@ -189,6 +193,48 @@ public class Bouncer implements ServerContext {
 		} catch (InterruptedException ie) {
 			Thread.currentThread().interrupt();
 		}
+	}
+
+	URL getConfigSource(final String configFile, final String[] args) throws MalformedURLException {
+		if (configFile.startsWith("http:") || configFile.startsWith("https:")
+				|| configFile.startsWith("file:")) {
+			return new URL(configFile);
+		}
+		if (configFile.equals("--")) {
+			final Charset ISO = Charset.forName("ISO-8859-1");
+			final long mtime = System.currentTimeMillis();
+			final StringBuilder sb = new StringBuilder();
+			final ByteArrayInputStream baos;
+			for (final String a : args) {
+				if (a == null || a.isEmpty() || a.equals("--") || a.startsWith("#")) {
+					continue;
+				}
+				sb.append(a).append("\r\n");
+			}
+			baos = new ByteArrayInputStream(sb.toString().getBytes(ISO));
+			return new URL(null, "mem://.", new URLStreamHandler() {
+				@Override
+				protected URLConnection openConnection(final URL u) throws IOException {
+					return new URLConnection(u) {
+						@Override
+						public void connect() throws IOException {
+						}
+
+						@Override
+						public InputStream getInputStream() throws IOException {
+							baos.reset();
+							return baos;
+						}
+
+						@Override
+						public long getLastModified() {
+							return mtime;
+						}
+					};
+				}
+			});
+		}
+		return getClass().getResource("/" + configFile);
 	}
 
 	SSLFactory getSSLFactory(final Options opts, final String srcConfig) throws IOException,
