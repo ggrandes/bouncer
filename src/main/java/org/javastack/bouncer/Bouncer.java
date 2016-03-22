@@ -96,7 +96,7 @@ public class Bouncer implements ServerContext {
 
 	public static void main(final String[] args) throws Exception {
 		if (args.length < 1) {
-			System.out.println(Bouncer.class.getName() + " <configName>");
+			System.out.println(Bouncer.class.getName() + " <configName|configURL>");
 			return;
 		}
 		final String configFile = args[0];
