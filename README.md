@@ -189,6 +189,10 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
     
     Example:
     java -jar bouncer-x.x.x.jar -- "0.0.0.0 1234 127.1.2.3 9876" "127.0.0.1 5678 encrypted.google.com 443 TUN=SSL"
+
+## Running (command line with remote config file)
+
+    java -jar bouncer-x.x.x.jar https://config.acme.com/bouncer.conf
     
 
 ## RSA Key / X.509 Certificate Generation for MUX-SSL (optional)
@@ -240,6 +244,7 @@ You can improve security, simply download **bcprov-jdk15on-`XXX`.jar** from [Bou
 * Support for End SSL (v2.2.8)
 * Support client authentication in TUN=SSL (v2.2.8)
 * Support basic command line config without file (scripts,containers,etc) (v2.2.9)
+* Support remote config file (http/https) (v2.2.9)
 
 ## MISC
 Current harcoded values:
