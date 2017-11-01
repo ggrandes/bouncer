@@ -125,8 +125,8 @@ public class KeyGenerator {
 		ext.set(BasicConstraintsExtension.NAME, new BasicConstraintsExtension(Boolean.TRUE, true, 0)); // Critical|isCA|pathLen
 		ext.set(SubjectKeyIdentifierExtension.NAME,
 				new SubjectKeyIdentifierExtension(new KeyIdentifier(pair.getPublic()).getIdentifier()));
-		ext.set(AuthorityKeyIdentifierExtension.NAME, new AuthorityKeyIdentifierExtension(new KeyIdentifier(
-				pair.getPublic()), null, null));
+		ext.set(AuthorityKeyIdentifierExtension.NAME,
+				new AuthorityKeyIdentifierExtension(new KeyIdentifier(pair.getPublic()), null, null));
 		// Extended Key Usage Extension
 		final Vector<ObjectIdentifier> ekue = new Vector<ObjectIdentifier>();
 		ekue.add(new ObjectIdentifier(new int[] {
@@ -167,9 +167,16 @@ public class KeyGenerator {
 
 	static void writeKey(OutputStream out, PrivateKey pk) throws Exception {
 		final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		baos.write("-----BEGIN RSA PRIVATE KEY-----\r\n".getBytes());
-		writeBufferBase64(baos, pk.getEncoded());
-		baos.write("-----END RSA PRIVATE KEY-----\r\n".getBytes());
+		final String fmt = pk.getFormat();
+		if ("PKCS#8".equals(fmt)) {
+			baos.write("-----BEGIN PRIVATE KEY-----\r\n".getBytes());
+			writeBufferBase64(baos, pk.getEncoded());
+			baos.write("-----END PRIVATE KEY-----\r\n".getBytes());
+		} else if ("PKCS#1".equals(fmt)) {
+			baos.write("-----BEGIN RSA PRIVATE KEY-----\r\n".getBytes());
+			writeBufferBase64(baos, pk.getEncoded());
+			baos.write("-----END RSA PRIVATE KEY-----\r\n".getBytes());
+		}
 		out.write(baos.toByteArray());
 		out.flush();
 		out.close();
