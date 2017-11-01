@@ -1,7 +1,22 @@
+# Binary/Package Files #
 bin
+target
+*.class
+*.jar
+*.war
+*.ear
+# Eclipse #
 .metadata
 .settings
-target
+.classpath
+.project
+# IntelliJ #
+.idea
+*.iml
+# Configuration never packaged
+log4j*.properties
+log4j*.xml
+#
 src/main/resources/*.properties
 src/main/resources/*.crt
 src/main/resources/*.key
