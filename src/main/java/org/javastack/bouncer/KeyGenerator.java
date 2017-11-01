@@ -114,8 +114,14 @@ public class KeyGenerator {
 		final AlgorithmId algo = AlgorithmId.get(algName);
 		info.set(X509CertInfo.VALIDITY, interval);
 		info.set(X509CertInfo.SERIAL_NUMBER, new CertificateSerialNumber(sn));
-		info.set(X509CertInfo.SUBJECT, new CertificateSubjectName(owner));
-		info.set(X509CertInfo.ISSUER, new CertificateIssuerName(owner));
+		try {
+			info.set(X509CertInfo.SUBJECT, new CertificateSubjectName(owner));
+			info.set(X509CertInfo.ISSUER, new CertificateIssuerName(owner));
+		} catch (Exception e) {
+			// Ugly workaround for Java 1.8 [issue #21]
+			info.set(X509CertInfo.SUBJECT, owner);
+			info.set(X509CertInfo.ISSUER, owner);
+		}
 		info.set(X509CertInfo.KEY, new CertificateX509Key(pair.getPublic()));
 		info.set(X509CertInfo.VERSION, new CertificateVersion(CertificateVersion.V3));
 		info.set(X509CertInfo.ALGORITHM_ID, new CertificateAlgorithmId(algo));
