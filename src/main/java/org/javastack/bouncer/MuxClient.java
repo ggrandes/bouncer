@@ -472,6 +472,7 @@ class MuxClient {
 				} catch (EOFException e) {
 					break;
 				} catch (IOException e) {
+					if (sock == null) break;
 					if (!sock.isClosed() && !shutdown) {
 						Log.error(this.getClass().getSimpleName() + " " + e.toString());
 					}
