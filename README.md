@@ -2,7 +2,7 @@
 
 Bouncer is an open source (Apache License, Version 2.0) Java network proxy. Do not require any external lib.
 
-### Current Stable Version is [2.2.10](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/2.2.10/bouncer-2.2.10-bin.zip)
+### Current Stable Version is [2.2.11](https://maven-release.s3.amazonaws.com/release/org/javastack/bouncer/2.2.11/bouncer-2.2.11-bin.zip)
 
 ---
 

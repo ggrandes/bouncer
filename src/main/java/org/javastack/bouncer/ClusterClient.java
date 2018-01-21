@@ -197,7 +197,7 @@ class ClusterClient {
 						doSleep(1000);
 						break;
 					} catch (IOException e) {
-						if (!sock.isClosed() && !shutdown) {
+						if ((sock != null) && !sock.isClosed() && !shutdown) {
 							Log.error(this.getClass().getSimpleName() + " " + e.toString());
 						}
 						break;

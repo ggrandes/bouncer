@@ -28,6 +28,8 @@ class TaskManager {
 					taskList.put(taskNum, this);
 					Log.info("Task [" + taskNum + "] Start: " + task);
 					task.run();
+				} catch (Exception e) {
+					Log.error("Task [" + taskNum + "] Exception: " + e, e);
 				} finally {
 					Log.info("Task [" + taskNum + "] End: " + task);
 					taskList.remove(taskNum);

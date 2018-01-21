@@ -68,21 +68,21 @@ class PlainServer {
 											+ IOHelper.socketRemoteToString(client) + "]",
 									(((long) client.getPort() << 48) | ClientId.newId()));
 						} catch (Exception e) {
-							Log.error(this.getClass().getSimpleName() + " Exception: " + e.toString(), e);
+							Log.error(this.getClass().getSimpleName() + " Exception: " + e, e);
 							context.closeSilent(client);
 						}
 					} catch (SocketTimeoutException e) {
 						continue;
 					} catch (Exception e) {
-						if (!listen.isClosed()) {
-							Log.error(this.getClass().getSimpleName() + " " + e.toString(), e);
+						if ((listen != null) && !listen.isClosed()) {
+							Log.error(this.getClass().getSimpleName() + " Exception: " + e, e);
 						}
 					}
 				}
 			} catch (IOException e) {
 				Log.error(this.getClass().getSimpleName() + " " + e.toString());
 			} catch (Exception e) {
-				Log.error(this.getClass().getSimpleName() + " Generic exception", e);
+				Log.error(this.getClass().getSimpleName() + " Exception: " + e, e);
 			} finally {
 				Log.info(this.getClass().getSimpleName() + " await end");
 				context.awaitShutdown(this);
@@ -150,7 +150,7 @@ class PlainServer {
 				Log.error(this.getClass().getSimpleName() + " " + e.toString());
 				close();
 			} catch (Exception e) {
-				Log.error(this.getClass().getSimpleName() + " Generic exception", e);
+				Log.error(this.getClass().getSimpleName() + " Exception: " + e, e);
 				close();
 			} finally {
 				Log.info(this.getClass().getSimpleName() + " ended: " + outboundAddress);
@@ -226,7 +226,7 @@ class PlainServer {
 					Log.error(this.getClass().getSimpleName() + " " + e.toString() + " " + sockin);
 				}
 			} catch (Exception e) {
-				Log.error(this.getClass().getSimpleName() + " Generic exception", e);
+				Log.error(this.getClass().getSimpleName() + " Exception: " + e, e);
 			} finally {
 				context.closeSilent(sockin);
 				if (brother != null) {

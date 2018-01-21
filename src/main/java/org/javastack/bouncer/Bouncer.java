@@ -162,7 +162,7 @@ public class Bouncer implements ServerContext {
 					Log.info("Reloaded config");
 				}
 			} catch (Exception e) {
-				Log.error("Load config error", e);
+				Log.error("Load config error: " + e, e);
 			} finally {
 				IOHelper.closeSilent(isConfig);
 			}

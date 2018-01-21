@@ -387,7 +387,7 @@ class MuxServer {
 				} catch (EOFException e) {
 					break;
 				} catch (IOException e) {
-					if (!sock.isClosed() && !shutdown) {
+					if ((sock != null) && !sock.isClosed() && !shutdown) {
 						Log.error(this.getClass().getSimpleName() + " " + e.toString());
 					}
 					break;
@@ -506,11 +506,11 @@ class MuxServer {
 								sendACK(msg); // Send ACK
 								context.releaseRawPacket(msg);
 							} catch (IOException e) {
-								if (!sock.isClosed() && !shutdown) {
+								if ((sock != null) && !sock.isClosed() && !shutdown) {
 									Log.error(this.getClass().getName() + "::sendRemote " + e.toString());
 								}
 							} catch (Exception e) {
-								Log.error(this.getClass().getName() + " Generic exception", e);
+								Log.error(this.getClass().getName() + " Exception: " + e, e);
 							}
 						}
 						close();
@@ -548,12 +548,12 @@ class MuxServer {
 				} catch (EOFException e) {
 					break;
 				} catch (IOException e) {
-					if (!sock.isClosed() && !shutdown) {
+					if ((sock != null) && !sock.isClosed() && !shutdown) {
 						Log.error(this.getClass().getSimpleName() + " " + e.toString());
 					}
 					break;
 				} catch (Exception e) {
-					Log.error(this.getClass().getSimpleName() + " Generic exception", e);
+					Log.error(this.getClass().getSimpleName() + " Exception: " + e, e);
 					break;
 				}
 			}

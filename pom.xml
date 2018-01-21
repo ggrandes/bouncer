@@ -4,7 +4,7 @@
 
 	<groupId>org.javastack</groupId>
 	<artifactId>bouncer</artifactId>
-	<version>2.2.10</version>
+	<version>2.2.11</version>
 	<description>Bouncer is a network TCP port redirector/forward proxy (like rinetd) with extra features like Reverse tunneling (like ssh -R), SSL tunneling (like stunnel), connection Failover, LoadBalancing and Clustering.</description>
 
 	<name>${project.groupId}:${project.artifactId}</name>
