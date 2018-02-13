@@ -95,6 +95,15 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
         * **MUX=SSL**: activate SSL/TLS encryption in multiplexor (see SSL=xxx)
             * **SSL=server.crt:server.key:client.crt**: specify files for SSL/TLS config (server/mux-in)
             * **SSL=client.crt:client.key:server.crt**: specify files for SSL/TLS config (client/mux-out)
+* Options for Clustering (TCP only)
+    * Options for encryption (optional -AES or SSL or NONE-):
+        * **CLUSTER=AES**: activate AES encryption in cluster (see AES=sharedsecret)
+            * **AES=sharedsecret**: specify the password for AES (no white spaces, no comma sign, no equals sign)
+            * **AESBITS=bits** (optional): specify the keysize for AES (default: `128`)
+            * **AESALG=algorithm** (optional): specify the transformation for AES (default: `AES/CTR/NoPadding`)
+        * **CLUSTER=SSL**: activate SSL/TLS encryption in cluster (see SSL=xxx)
+            * **SSL=server.crt:server.key:client.crt**: specify files for SSL/TLS config (server/cluster-in)
+            * **SSL=client.crt:client.key:server.crt**: specify files for SSL/TLS config (client/cluster-out)
 
 ###### Notes about LB policies:
 
@@ -104,13 +113,13 @@ Config file must be in class-path `${BOUNCER_HOME}/conf/`, general format is:
 
 ###### Notes about security:
 
-* If use MUX=SSL
+* If use MUX=SSL or CLUSTER=SSL
     * Keys/Certificates are pairs, must be configured in the two ends (MUX-IN & MUX-OUT)
     * files.crt are X.509 public certificates
     * files.key are RSA Keys in PKCS#8 format (no encrypted)
     * files.crt/.key must be in class-path `${BOUNCER_HOME}/keys/`
     * be careful about permissions of "files.key" (unix permission 600 may be good)
-* If use MUX=AES, you need to protect the "bouncer.conf" from indiscrete eyes (unix permission 600 may be good)
+* If use MUX=AES or CLUSTER=AES, you need to protect the "bouncer.conf" from indiscrete eyes (unix permission 600 may be good)
 
 ##### Example config of Forward / Port Redirector (rinetd style):
 
