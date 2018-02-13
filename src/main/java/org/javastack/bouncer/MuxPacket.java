@@ -227,7 +227,7 @@ public class MuxPacket implements Message {
 
 	@Override
 	public String toString() {
-		final StringBuffer sb = new StringBuffer();
+		final StringBuilder sb = new StringBuilder();
 		sb.append("MuxPacket[").append("id=").append(getIdChannel()).append(' ').append("len=")
 				.append(getBufferLen()).append("]");
 		if (syn()) {

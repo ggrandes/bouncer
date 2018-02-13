@@ -79,7 +79,7 @@ public class RawPacket implements Message {
 
 	@Override
 	public String toString() {
-		final StringBuffer sb = new StringBuffer();
+		final StringBuilder sb = new StringBuilder();
 		sb.append("RawPacket[").append("id=").append(getIdChannel()).append(" ").append("len=")
 				.append(getBufferLen()).append("]");
 		// if (payLoadLength > 0) sb.append(new String(payload, 0, payLoadLength));
